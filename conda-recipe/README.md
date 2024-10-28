@@ -75,14 +75,6 @@ To install rocPyDecode conda package on virtual environment use the following co
     conda deactivate
 ```
 
-## Building rocPyDecode conda package using .sh script
-* build_conda_package.sh
-
-The provided 'build_conda_package.sh' script contains all necessary steps to install miniconda, making sure the wheel has been created, and finally create conda package. To follow the steps below to run the script on bash shell:
-```bash
-    chmod 777 build_conda_package.sh    # chmod to execute
-    ./build_conda_package.sh            # execute the script
-```
 
 
 
