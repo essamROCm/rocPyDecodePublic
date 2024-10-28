@@ -36,7 +36,7 @@ The rocDecode Python Binding, rocPyDecode, is a tool that allows users to access
 * [PyBind11](https://github.com/pybind/pybind11)
 
   ```shell
-  sudo apt install pybind11-dev
+  sudo pip3 install pybind11
   ```
 
 * [rocDecode](https://github.com/ROCm/rocDecode)

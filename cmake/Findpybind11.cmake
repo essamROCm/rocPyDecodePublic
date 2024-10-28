@@ -52,11 +52,16 @@ find_package_handle_standard_args(pybind11
         FOUND_VAR pybind11_FOUND
         REQUIRED_VARS pybind11_INCLUDE_DIR
 )
-message(STATUS "pybind11 was FOUND: ${pybind11_FOUND} --- HEADERS: ${pybind11_INCLUDE_DIR}"  )
-mark_as_advanced(pybind11_FOUND)
 
-check_required_components(pybind11)
-include("${PYBIND11_CMAKE_FOLDER}/pybind11Targets.cmake")
-add_library(pybind11::headers IMPORTED INTERFACE)
-set_target_properties(pybind11::headers PROPERTIES INTERFACE_LINK_LIBRARIES pybind11::pybind11_headers)
-include("${PYBIND11_CMAKE_FOLDER}/pybind11Common.cmake")
+if(pybind11_FOUND)
+    message(STATUS "pybind11 was FOUND: ${pybind11_FOUND} --- HEADERS: ${pybind11_INCLUDE_DIR}"  )
+    mark_as_advanced(pybind11_FOUND)
+    check_required_components(pybind11)
+    include("${PYBIND11_CMAKE_FOLDER}/pybind11Targets.cmake")
+    add_library(pybind11::headers IMPORTED INTERFACE)
+    set_target_properties(pybind11::headers PROPERTIES INTERFACE_LINK_LIBRARIES pybind11::pybind11_headers)
+    include("${PYBIND11_CMAKE_FOLDER}/pybind11Common.cmake")
+else()
+    message(FATAL_ERROR "{Red}Findpybind11 -- pybind11 NOT FOUND${ColourReset}")
+endif()
+
