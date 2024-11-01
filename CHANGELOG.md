@@ -1,27 +1,28 @@
 # rocPyDecode changelog
 
-Documentation for rocPyDecode is available at
-[https://rocm.docs.amd.com/projects/rocPyDecode/en/latest/](https://rocm.docs.amd.com/projects/rocPyDecode/en/latest/)
+Full documentation for for rocPyDecode is available at [https://rocm.docs.amd.com/projects/rocPyDecode/en/latest/](https://rocm.docs.amd.com/projects/rocPyDecode/en/latest/)
 
-## rocPyDecode 0.2.0 (Unreleased)
+## rocPyDecode 0.2.0 for ROCm 6.3
 
-### Changes
+### Added
 
-* Clang - Default CXX compiler
-* Rgb & Yuv pytorch tensors
-* Producing python standard wheel (.whl)
-* Updated rocPyDecode README
-* Updated samples README
+* RGB and YUV pytorch tensors
+* Python distribution wheel (.whl)
+* Multiple usecase samples
 
-### Removals
+### Changed
 
-* CTest - Core tests for make test and package test
-* hipcc - now using default CXX
+* Clang is now the default CXX compiler.
 
-### Optimizations
+### Removed
 
-* Setup Script - Build and runtime install options
-* pre-requisite installation helper python scripts
+* Make tests have been removed. CTEST is now used for both Make tests and package tests.
+* hipcc. Clang is now the default CXX compiler.
+
+### Optimized
+
+* Setup Script: Build and runtime install options
+* Pre-requisite installation helper python scripts
 * Same GPU memory viewed as pytorch tensor
 
 ### Resolved issues
@@ -29,24 +30,6 @@ Documentation for rocPyDecode is available at
 * Setup
   * no dependency on hipcc
   * building rocPyDecode only once
-* Sample
-  * multiple use cases samples added
-
-### Known issues
-
-### Upcoming changes
-
-### Tested configurations
-
-* Linux
-  * Ubuntu - `20.04` / `22.04`
-  * RHEL - `8` / `9`
-  * SLES - `15 SP5`
-* ROCm:
-  * rocm-core - `6.2.0.60200-66`
-  * amdgpu-core - `1:6.2.60200-2009582`
-* rocDecode
-  * latest release 0.7.0
 
 ## rocPyDecode 0.1.0
 
