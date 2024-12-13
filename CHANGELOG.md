@@ -9,7 +9,7 @@ Full documentation for for rocPyDecode is available at [https://rocm.docs.amd.co
 ### Changed
 
 * AMD Clang is now the default CXX and C compiler.
-* Moved MD5 code out of roc video decode utility
+* MD5 code moved in rocDecode to a separate class provider under utilities. This move is transparent to rocPyDecode.
 
 ### Removed
 
