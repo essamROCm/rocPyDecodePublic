@@ -25,6 +25,9 @@ THE SOFTWARE.
 #include "roc_video_dec.h"
 #include "roc_pydecode.h"
 #include "video_post_process.h"
+#ifdef MD5_MOVED_CHECK
+#include "md5.h"
+#endif
 
 typedef enum ReconfigFlushMode_enum {
     RECONFIG_FLUSH_MODE_NONE = 0,               /**<  Just flush to get the frame count */
@@ -36,6 +39,9 @@ typedef enum ReconfigFlushMode_enum {
 typedef struct ReconfigDumpFileStruct_t {
     bool b_dump_frames_to_file;
     std::string output_file_name;
+#ifdef MD5_MOVED_CHECK
+    void *md5_generator_handle;
+#endif
 } ReconfigDumpFileStruct;
 
 //
@@ -118,6 +124,9 @@ class PyRocVideoDecoder : public RocVideoDecoder {
         size_t CalculateRgbImageSize(OutputFormatEnum& e_output_format, OutputSurfaceInfo* p_surf_info);
         std::shared_ptr <ConfigInfo> configInfo;
         void InitConfigStructure();
+#ifdef MD5_MOVED_CHECK
+        MD5Generator *md5_generator = nullptr;
+#endif
 
         // for flush back to support multi-resolution video streams
         ReconfigParams PyReconfigParams;

@@ -82,6 +82,13 @@ int PyReconfigureFlushCallback(void *p_viddec_obj, uint32_t flush_mode, void * p
                 }
             } else if (flush_mode == ReconfigFlushMode::RECONFIG_FLUSH_MODE_CALCULATE_MD5) {
 #if MD5_MOVED_CHECK
+                ReconfigDumpFileStruct *p_dump_file_struct = static_cast<ReconfigDumpFileStruct *>(p_user_struct);
+                if (p_dump_file_struct) {
+                    if (p_dump_file_struct->md5_generator_handle) {
+                        MD5Generator *md5_generator = static_cast<MD5Generator *>(p_dump_file_struct->md5_generator_handle);
+                        md5_generator->UpdateMd5ForFrame(pframe, surf_info);
+                    }
+                }
 #else
                 viddec->UpdateMd5ForFrame(pframe, surf_info);
 #endif
@@ -99,6 +106,11 @@ py::object PyRocVideoDecoder::PySetReconfigParams(int flush_mode, std::string& o
     if(!output_file_name_in.empty()) {
         PyReconfigDumpFileStruct.output_file_name = output_file_name_in;
         PyReconfigDumpFileStruct.b_dump_frames_to_file = true;
+#if MD5_MOVED_CHECK
+        if(!md5_generator)
+            PyInitMd5();
+        PyReconfigDumpFileStruct.md5_generator_handle = static_cast<void*>(md5_generator);
+#endif
     } else {
         if(mode == RECONFIG_FLUSH_MODE_DUMP_TO_FILE)
             mode = RECONFIG_FLUSH_MODE_NONE;
@@ -384,6 +396,10 @@ uintptr_t PyRocVideoDecoder::PyGetOutputSurfaceInfo() {
 // for python binding
 py::object PyRocVideoDecoder::PyInitMd5() {
 #if MD5_MOVED_CHECK
+    if (!md5_generator) {
+        md5_generator = new MD5Generator();
+    }
+    md5_generator->InitMd5();
 #else
     InitMd5();
 #endif
@@ -392,17 +408,26 @@ py::object PyRocVideoDecoder::PyInitMd5() {
 
 // for python binding
 py::object PyRocVideoDecoder::PyUpdateMd5ForFrame(uintptr_t& surf_mem, uintptr_t& surface_info) {
+    if(surface_info && surf_mem) {
 #if MD5_MOVED_CHECK
+        if(md5_generator) {
+            md5_generator->UpdateMd5ForFrame((void *)surf_mem, reinterpret_cast<OutputSurfaceInfo*>(surface_info));
+        }
 #else
-    if(surface_info && surf_mem)
         UpdateMd5ForFrame((void *)surf_mem, reinterpret_cast<OutputSurfaceInfo*>(surface_info));
 #endif
+    }
     return py::cast<py::none>(Py_None);
 }
 
 // for python binding
 py::object PyRocVideoDecoder::PyFinalizeMd5(uintptr_t& digest_back) {
 #if MD5_MOVED_CHECK
+    if(md5_generator) {
+        uint8_t * digest;
+        md5_generator->FinalizeMd5(&digest);
+        memcpy(reinterpret_cast<uint8_t*>(digest_back), digest,  sizeof(uint8_t) * 16);
+    }
 #else
     uint8_t * digest;
     FinalizeMd5(&digest);
