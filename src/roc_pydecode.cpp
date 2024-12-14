@@ -106,6 +106,11 @@ PYBIND11_MODULE(rocPyDecode, m) {
     // --------------------------------------
     PyRocVideoDecoderInitializer(m);
 
+    // --------------------------------------
+    // AMD Video Decoder 'PyRocVideoDecoderCpu' -- FFMpeg Decode
+    // --------------------------------------
+    PyRocVideoDecoderCpuInitializer(m);
+
     // ----------------
     // Structures:
     // ----------------

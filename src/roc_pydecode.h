@@ -80,5 +80,8 @@ rocDecVideoCodec ConvertAVCodecString2RocDecVideoCodec(std::string codec_name);
 // defined in roc_pyvideodecoder.cpp
 void PyRocVideoDecoderInitializer(py::module& m);
 
+// defined in roc_pyvideodecodercpu.cpp
+void PyRocVideoDecoderCpuInitializer(py::module& m);
+
 // defined in BufferInterface.cpp
 void PyExportInitializer(py::module& m);
