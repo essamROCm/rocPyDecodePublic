@@ -9,8 +9,11 @@ def runCompileCommand(platform, project, jobName, boolean debug=false, boolean s
     
     def command = """#!/usr/bin/env bash
                 set -ex
-
+                
                 echo Build rocDecode
+                pwd
+                cd ${project.paths.project_build_prefix}/..
+                pwd
                 rm -rf rocDecode
                 git clone http://github.com/ROCm/rocDecode.git
                 cd rocDecode
@@ -23,8 +26,9 @@ def runCompileCommand(platform, project, jobName, boolean debug=false, boolean s
                 cd ../..
 
                 echo Build rocPyDecode - ${buildTypeDir}
-                cd ${project.paths.project_build_prefix}
-                
+                pwd
+                cd rocpydecode
+                pwd
                 wget https://github.com/dmlc/dlpack/archive/refs/tags/v0.6.tar.gz
                 tar -xvf v0.6.tar.gz
                 cd dlpack-0.6
@@ -59,8 +63,9 @@ def runTestCommand (platform, project) {
     def command = """#!/usr/bin/env bash
                 set -ex
                 export HOME=/home/jenkins
+                export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64/:/usr/local/lib/x86_64-linux-gnu:\$LD_LIBRARY_PATH
                 echo make samples
-                sudo pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/rocm6.0
+                sudo pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/rocm6.2
                 cd ${project.paths.project_build_prefix}
                 echo \$PYTHONPATH
                 LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:/opt/rocm/lib${libLocation} sudo python3 samples/videodecode.py
