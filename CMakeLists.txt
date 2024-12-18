@@ -207,7 +207,8 @@ if(HIP_FOUND AND rocDecode_FOUND AND pybind11_FOUND AND Python3_FOUND AND FFMPEG
     message("-- ${BoldBlue}rocPyDecode Install Path -- ${CMAKE_INSTALL_PREFIX_PYTHON}${ColourReset}")
 
     # add symlinks to videos exist in rocDecode shared folder
-    execute_process(COMMAND /bin/sh -c "ln -s /opt/rocm/share/rocdecode/video/AMD_driving_virtual_20-* data/videos/." WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} RESULT_VARIABLE LN_RESULT ERROR_VARIABLE LN_ERROR)
+    set(CP_SYMLINK "ln -s ${ROCM_PATH}/share/rocdecode/video/AMD_driving_virtual_20-* data/videos/.")
+    execute_process(COMMAND /bin/sh -c ${CP_SYMLINK} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} RESULT_VARIABLE LN_RESULT ERROR_VARIABLE LN_ERROR)
     message("-- ${BoldBlue}Created symlink(s) to video files exist under rocDecode shared util folder.${ColourReset}")
 
     # make test with CTest
