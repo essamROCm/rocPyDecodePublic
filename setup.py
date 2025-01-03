@@ -72,7 +72,7 @@ class custom_bdist_wheel(_bdist_wheel):
 # Call CMake to configure and build the project
 build_dir = os.path.join(os.getcwd(), 'build')
 os.makedirs(build_dir, exist_ok=True)
-cmake_args=["cmake", ".", "-B"+build_dir, "-H"+os.getcwd()]
+cmake_args=["cmake", ".", "-B"+build_dir, '-DBUILD_WITH_AMD_ADVANCE=TRUE', "-H"+os.getcwd()]
 
 subprocess.check_call(cmake_args,cwd=os.getcwd())
 
