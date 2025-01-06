@@ -161,7 +161,7 @@ This sample uses MPI to allow scalability while decoding video files. It scale t
 
 ### Example of shell command
 This command will invoke the mpi to run the python example on 4 cores (locally), and saves the decoded frames into file named outputfile.yuv
-* *mpiexec* -n 4 *python3* samples/videodecode_mpi.py **-i** data/videos/AMD_driving_virtual_20-AV1.mp4 **-o** outputfile.yuv
+* *mpiexec* -n 4 *python3* samples/videodecode_mpi.py **-i** /opt/rocm/share/rocdecode/video/AMD_driving_virtual_20-AV1.mp4 **-o** outputfile.yuv
 
 ### Arguments
 The following are full list of arguments that can be passed to the sample.
