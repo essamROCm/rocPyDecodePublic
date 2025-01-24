@@ -10,7 +10,7 @@ Full documentation for for rocPyDecode is available at [https://rocm.docs.amd.co
 
 ### Removed
 
-All MD5 functionality, APIs and sample code have been removed.
+All MD5 functionality, APIs, and sample code have been removed.
 
 ### Optimized
 
