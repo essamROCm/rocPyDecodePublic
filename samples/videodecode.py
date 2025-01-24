@@ -13,8 +13,6 @@ def Decoder(
         mem_type,
         b_force_zero_latency,
         crop_rect,
-        b_generate_md5,
-        ref_md5_file,
         seek_frame,
         seek_mode,
         seek_criteria,
@@ -63,23 +61,10 @@ def Decoder(
           str(cfg.pci_device_id))
     print("info: decoding started, please wait! \n")
 
-    # md5 file full path & md5 flag
-    b_md5_check = False
-    if (ref_md5_file is not None):
-        if os.path.exists(ref_md5_file):
-            b_generate_md5 = True
-            b_md5_check = True
-
-    # init MD5 if requested
-    if b_generate_md5:
-        viddec.InitMd5()
-
     # set reconfiguration params based on user arguments
     flush_mode = 0
     if (output_file_path is not None):
         flush_mode = 1
-    elif b_generate_md5:
-        flush_mode = 2
 
     viddec.SetReconfigParams(flush_mode, output_file_path if (output_file_path is not None) else str(""))
 
@@ -108,9 +93,6 @@ def Decoder(
 
         for i in range(n_frame_returned):
             viddec.GetFrameYuv(packet)
-            if (b_generate_md5):
-                surface_info = viddec.GetOutputSurfaceInfo()
-                viddec.UpdateMd5ForFrame(packet.frame_adrs, surface_info)
 
             if (resize_dim is not None):
                 surface_info = viddec.GetOutputSurfaceInfo()
@@ -157,26 +139,6 @@ def Decoder(
             print("info: avg frame per second: " +"{0:0.2f}".format(round(frame_per_second,2)) +"\n")
         else:
             print("info: frame count= ", n_frame)
-
-    # if MD5 check requested
-    if b_generate_md5:
-        digest = viddec.FinalizeMd5()
-        print("MD5 message digest: ", end=" ")
-        str_digest = ""
-        for i in range(16):
-            str_digest = str_digest + str(format('%02x' % int(digest[i])))
-        print(str_digest)
-
-        if (b_md5_check):
-            f = open(ref_md5_file)
-            md5_from_file = f.read(16 * 2)
-            b_match = (md5_from_file == str_digest)
-            if (b_match):
-                print("MD5 digest matches the reference MD5 digest.\n")
-            else:
-                print(
-                    "MD5 digest does not match the reference MD5 digest: ",
-                    md5_from_file)
 
 
 if __name__ == "__main__":
@@ -226,19 +188,6 @@ if __name__ == "__main__":
         help='Crop rectangle (left, top, right, bottom), optional, default: no cropping',
         required=False)
     parser.add_argument(
-        '-md5',
-        '--generate_md5',
-        type=str,
-        default='no',
-        choices=['yes', 'no'],
-        help='Generate MD5 message digest')
-    parser.add_argument(
-        '-md5_check',
-        '--input_md5',
-        type=str,
-        help='Input MD5 file path, optional',
-        required=False)
-    parser.add_argument(
         '-s',
         '--seek',
         type=int,
@@ -279,8 +228,6 @@ if __name__ == "__main__":
     mem_type = args.mem_type
     b_force_zero_latency = args.zero_latency.upper()
     crop_rect = args.crop_rect
-    b_generate_md5 = args.generate_md5.upper()
-    ref_md5_file = args.input_md5
     seek_frame = args.seek
     seek_mode = args.seek_mode
     seek_criteria = args.seek_criteria
@@ -298,7 +245,6 @@ if __name__ == "__main__":
     # handle params
     mem_type = 0 if (mem_type < 0 or mem_type > 3) else mem_type
     b_force_zero_latency = True if b_force_zero_latency == 'YES' else False
-    b_generate_md5 = True if b_generate_md5 == 'YES' else False
     if not os.path.exists(input_file_path):  # Input file (must exist)
         print("ERROR: input file doesn't exist.")
         exit()
@@ -310,8 +256,6 @@ if __name__ == "__main__":
         mem_type,
         b_force_zero_latency,
         crop_rect,
-        b_generate_md5,
-        ref_md5_file,
         seek_frame,
         seek_mode,
         seek_criteria,

@@ -37,7 +37,6 @@ Example:
 	
 	packet = demuxer.DemuxFrame()
 	n_frame_returned = viddec.DecodeFrame(packet)
-	viddec.UpdateMd5ForFrame(packet.frame_adrs, surface_info)
 
 .. _configinfo:
 

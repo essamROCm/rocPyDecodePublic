@@ -127,17 +127,6 @@ class decoder(object):
     def GetNumOfFlushedFrames(self):
         return self.viddec.GetNumOfFlushedFrames()
 
-    def InitMd5(self):
-        return self.viddec.InitMd5()
-
-    def UpdateMd5ForFrame(self, frame_adrs: np.uint64, surface_info: np.uint8):
-        return self.viddec.UpdateMd5ForFrame(frame_adrs, surface_info)
-
-    def FinalizeMd5(self):
-        digest = np.zeros(16, np.uint8)
-        self.viddec.FinalizeMd5(digest.ctypes.data)
-        return digest
-
     def SetReconfigParams(self, flush_mode, out_file_name):
         return self.viddec.SetReconfigParams(flush_mode, out_file_name)
 

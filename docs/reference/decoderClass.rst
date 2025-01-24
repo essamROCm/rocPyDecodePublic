@@ -188,56 +188,6 @@ Example:
 		# beyond the decoding loop
 		n_frame += viddec.GetNumOfFlushedFrames()  
 	
-InitMd5()
----------
-
-Initialize the process to obtain the MD5 of the decoded frames.  
-
-Example:
-^^^^^^^^
-
-.. code-block:: python
-	
-		# init MD5 
-		viddec.InitMd5()
-		
-UpdateMd5ForFrame(frame_adrs, surface_info)
--------------------------------------------
-
-Update the MD5 calculation with the current decoded frame.  
-
-- **frame_adrs**: The current frame/tensor pointer, obtained from the used packet
-- **surface_info**: The current decode frame surface information structure pointer
-
-Example:
-^^^^^^^^
-
-.. code-block:: python
-	
-		# update MD5 with current decoded frame
-		surface_info = viddec.GetOutputSurfaceInfo()
-		viddec.UpdateMd5ForFrame(packet.frame_adrs, surface_info)
-
-FinalizeMd5()
---------------
-
-Ends the MD5 process and returns the digest 16 character.  
-
-Example:
-^^^^^^^^
-
-.. code-block:: python
-	
-		# finalize and print MD5 check 
-		digest = viddec.FinalizeMd5()
-
-		print("MD5 message digest: ", end=" ")
-		str_digest = ""
-		for i in range(16):
-			str_digest = str_digest + str(format('%02x' % int(digest[i])))
-
-		print(str_digest)
-		
 SetReconfigParams(flush_mode, out_file_name)
 --------------------------------------------
 
@@ -247,7 +197,6 @@ Specify the flush mode and the output file name to use in multi resolution video
 
 	- 0: Just flush to get the frame count
 	- 1: The remaining frames will be dumped to file in this mode
-	- 2: Calculate the MD5 of the flushed frames
 
 - **out_file_name**: The full path disk file name to save the YUV frames
 
@@ -261,7 +210,5 @@ Example:
 
 		if (output_file_path is not None):
 			flush_mode = 1
-		elif b_generate_md5:
-			flush_mode = 2
 
 		viddec.SetReconfigParams(flush_mode, output_file_path if (output_file_path is not None) else str(""))

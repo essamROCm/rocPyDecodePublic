@@ -25,23 +25,16 @@ THE SOFTWARE.
 #include "roc_video_dec.h"
 #include "roc_pydecode.h"
 #include "video_post_process.h"
-#ifdef MD5_MOVED_CHECK
-#include "md5.h"
-#endif
 
 typedef enum ReconfigFlushMode_enum {
     RECONFIG_FLUSH_MODE_NONE = 0,               /**<  Just flush to get the frame count */
     RECONFIG_FLUSH_MODE_DUMP_TO_FILE = 1,       /**<  The remaining frames will be dumped to file in this mode */
-    RECONFIG_FLUSH_MODE_CALCULATE_MD5 = 2,      /**<  Calculate the MD5 of the flushed frames */
 } ReconfigFlushMode;
 
 // this struct is used by videodecode and videodecodeMultiFiles to dump last frames to file
 typedef struct ReconfigDumpFileStruct_t {
     bool b_dump_frames_to_file;
     std::string output_file_name;
-#ifdef MD5_MOVED_CHECK
-    void *md5_generator_handle;
-#endif
 } ReconfigDumpFileStruct;
 
 //
@@ -87,15 +80,6 @@ class PyRocVideoDecoder : public RocVideoDecoder {
         py::object PyGetNumOfFlushedFrames();    
 
         // for python binding
-        py::object PyInitMd5();
-
-        // for python binding
-        py::object PyUpdateMd5ForFrame(uintptr_t& surf_mem, uintptr_t& surface_info);
-
-        // for python binding
-        py::object PyFinalizeMd5(uintptr_t& digest_back);
-
-        // for python binding
         py::int_ PyGetWidth();
 
         // for python binding
@@ -124,9 +108,6 @@ class PyRocVideoDecoder : public RocVideoDecoder {
         size_t CalculateRgbImageSize(OutputFormatEnum& e_output_format, OutputSurfaceInfo* p_surf_info);
         std::shared_ptr <ConfigInfo> configInfo;
         void InitConfigStructure();
-#ifdef MD5_MOVED_CHECK
-        MD5Generator *md5_generator = nullptr;
-#endif
 
         // for flush back to support multi-resolution video streams
         ReconfigParams PyReconfigParams;

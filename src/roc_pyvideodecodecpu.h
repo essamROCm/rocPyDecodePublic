@@ -30,7 +30,6 @@ THE SOFTWARE.
 typedef enum ReconfigFlushMode_enum {
     RECONFIG_FLUSH_MODE_NONE = 0,               /**<  Just flush to get the frame count */
     RECONFIG_FLUSH_MODE_DUMP_TO_FILE = 1,       /**<  The remaining frames will be dumped to file in this mode */
-    RECONFIG_FLUSH_MODE_CALCULATE_MD5 = 2,      /**<  Calculate the MD5 of the flushed frames */
 } ReconfigFlushMode;
 
 // this struct is used by videodecode and videodecodeMultiFiles to dump last frames to file
@@ -80,15 +79,6 @@ class PyRocVideoDecoderCpu : public FFMpegVideoDecoder {
  
         // for python binding
         py::object PyGetNumOfFlushedFrames();    
-
-        // for python binding
-        py::object PyInitMd5();
-
-        // for python binding
-        py::object PyUpdateMd5ForFrame(uintptr_t& surf_mem, uintptr_t& surface_info);
-
-        // for python binding
-        py::object PyFinalizeMd5(uintptr_t& digest_back);
 
         // for python binding
         py::int_ PyGetWidth();

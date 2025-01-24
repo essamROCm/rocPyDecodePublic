@@ -46,9 +46,6 @@ void PyRocVideoDecoderCpuInitializer(py::module& m) {
         .def("GetResizedOutputSurfaceInfo",&PyRocVideoDecoderCpu::PyGetResizedOutputSurfaceInfo)
         .def("GetNumOfFlushedFrames",&PyRocVideoDecoderCpu::PyGetNumOfFlushedFrames)
         .def("SetReconfigParams",&PyRocVideoDecoderCpu::PySetReconfigParams)
-        .def("InitMd5",&PyRocVideoDecoderCpu::PyInitMd5)
-        .def("FinalizeMd5",&PyRocVideoDecoderCpu::PyFinalizeMd5)
-        .def("UpdateMd5ForFrame",&PyRocVideoDecoderCpu::PyUpdateMd5ForFrame)
         .def("IsCodecSupported",&PyRocVideoDecoderCpu::PyCodecSupported)
         .def("GetBitDepth",&PyRocVideoDecoderCpu::PyGetBitDepth)
 // TODO: Change after merging with mainline #if ROCDECODE_CHECK_VERSION(0,6,0)
@@ -80,11 +77,6 @@ int PyReconfigureFlushCallbackCpu(void *p_viddec_obj, uint32_t flush_mode, void 
                 if (p_dump_file_struct->b_dump_frames_to_file) {
                     viddec->SaveFrameToFile(p_dump_file_struct->output_file_name, pframe, surf_info);
                 }
-            } else if (flush_mode == ReconfigFlushMode::RECONFIG_FLUSH_MODE_CALCULATE_MD5) {
-#if MD5_MOVED_CHECK
-#else
-                viddec->UpdateMd5ForFrame(pframe, surf_info);
-#endif
             }
         }
         // release and flush frame
@@ -379,36 +371,6 @@ uintptr_t PyRocVideoDecoderCpu::PyGetOutputSurfaceInfo() {
        return reinterpret_cast<std::uintptr_t>(l_surface_info);
     }
     return 0;
-}
- 
-// for python binding
-py::object PyRocVideoDecoderCpu::PyInitMd5() {
-#if MD5_MOVED_CHECK
-#else
-    InitMd5();
-#endif
-    return py::cast<py::none>(Py_None);
-}
-
-// for python binding
-py::object PyRocVideoDecoderCpu::PyUpdateMd5ForFrame(uintptr_t& surf_mem, uintptr_t& surface_info) {
-#if MD5_MOVED_CHECK
-#else
-    if(surface_info && surf_mem)
-        UpdateMd5ForFrame((void *)surf_mem, reinterpret_cast<OutputSurfaceInfo*>(surface_info));
-#endif
-    return py::cast<py::none>(Py_None);
-}
-
-// for python binding
-py::object PyRocVideoDecoderCpu::PyFinalizeMd5(uintptr_t& digest_back) {
-#if MD5_MOVED_CHECK
-#else
-    uint8_t * digest;
-    FinalizeMd5(&digest);
-    memcpy(reinterpret_cast<uint8_t*>(digest_back), digest,  sizeof(uint8_t) * 16);
-#endif
-    return py::cast<py::none>(Py_None);
 }
 
 // for python binding
