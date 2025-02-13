@@ -42,8 +42,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED On)
 set(VERSION "0.4.0")
 
 # Set Project Version and Language
-project(rocpydecode VERSION ${VERSION} LANGUAGES CXX)
-set(TARGET_NAME rocpydecode)
+project(rocPyDecode VERSION ${VERSION} LANGUAGES CXX)
+set(TARGET_NAME rocPyDecode)
 
 set(CMAKE_INSTALL_LIBDIR "lib" CACHE STRING "Library install directory")
 set(CMAKE_INSTALL_INCLUDEDIR "include" CACHE STRING "Include install directory")
@@ -121,6 +121,9 @@ else()
 endif()
 message("-- ${White}${PROJECT_NAME} -- AMD GPU_TARGETS: ${GPU_TARGETS}${ColourReset}")
 
+# Allow specifying a Python version via -D PYTHON_EXECUTABLE_SUGGESTED
+option(PYTHON_EXECUTABLE_SUGGESTED "Suggested Python version for installation" "")
+
 # rocPyDecode build
 set(BUILD_ROCPYDECODE true)
 set(CMAKE_SKIP_BUILD_RPATH true)
@@ -128,10 +131,33 @@ set(CMAKE_SKIP_BUILD_RPATH true)
 # Find dependencies
 find_package(HIP QUIET)
 find_package(rocDecode QUIET)
-find_package(Python3 QUIET COMPONENTS Interpreter Development)
 find_package(pybind11 QUIET)
 find_package(dlpack QUIET)
 find_package(FFmpeg QUIET)
+
+# Check if PYTHON_EXECUTABLE_SUGGESTED is set
+if (PYTHON_EXECUTABLE_SUGGESTED)
+    find_package(Python3 QUIET COMPONENTS Interpreter Development)
+    include_directories(${Python3_INCLUDE_DIRS})
+else()
+    # Search for all installed Python versions on the system
+    execute_process(
+        COMMAND bash -c "compgen -c | grep -E '^python3\.[0-9]+$' | sort -Vru"
+        OUTPUT_VARIABLE PYTHON_EXECUTABLES
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    # Convert space-separated list to CMake list
+    string(REPLACE "\n" ";" PYTHON_EXECUTABLES_LIST "${PYTHON_EXECUTABLES}")
+
+    # Check if the list is empty
+    if (PYTHON_EXECUTABLES_LIST STREQUAL "")
+        set(Python3_FOUND FALSE)
+        message(WARNING "No Python versions found. Python3_FOUND set to FALSE.")
+    else()
+        set(Python3_FOUND TRUE)
+        message(STATUS "Found Python versions: ${PYTHON_EXECUTABLES_LIST}")
+    endif()
+endif()
 
 # HIP
 if(NOT HIP_FOUND)
@@ -172,8 +198,6 @@ if(BUILD_ROCPYDECODE)
         ${ROCM_PATH}/share/rocdecode/utils
         ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode)
     set(LINK_LIBRARY_LIST ${LINK_LIBRARY_LIST} ${ROCDECODE_LIBRARY})
-    # Python3
-    include_directories(${Python3_INCLUDE_DIRS})
     # PyBind11
     include_directories(${pybind11_INCLUDE_DIRS})
     # FFMPEG
@@ -206,12 +230,6 @@ if(BUILD_ROCPYDECODE)
         target_compile_definitions(${TARGET_NAME} PUBLIC CODEC_SUPPORTED_CHECK=0)
     endif()
 
-    set_target_properties(${TARGET_NAME} PROPERTIES
-        PREFIX "${PYTHON_MODULE_PREFIX}"
-        SUFFIX "${PYTHON_MODULE_EXTENSION}"
-        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${TARGET_NAME}/${CMAKE_INSTALL_LIBDIR}")
-    set(TARGET_PYMODULE_NAME "${PYTHON_MODULE_PREFIX}${TARGET_NAME}${PYTHON_MODULE_EXTENSION}")
-
     foreach (filename ${pyfiles})
         get_filename_component(target "${filename}" REALPATH)
         #to maintain folder structure
@@ -226,8 +244,80 @@ if(BUILD_ROCPYDECODE)
     install(FILES ${CPACK_RESOURCE_FILE_LICENSE} DESTINATION ${CMAKE_INSTALL_DOCDIR} COMPONENT runtime) 
     install(FILES ${CPACK_RESOURCE_FILE_LICENSE} DESTINATION ${CMAKE_INSTALL_DOCDIR}-asan COMPONENT asan)
 
+    # Detect Conda Installation
+    execute_process(
+        COMMAND which conda
+        OUTPUT_VARIABLE CONDA_EXECUTABLE
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+    set(CONDA_PYTHON_VERSIONS "")
+
+    if (CONDA_EXECUTABLE)
+        message(STATUS "Conda detected at: ${CONDA_EXECUTABLE}")
+
+        # Extract Conda Python paths
+        execute_process(
+            COMMAND bash -c "conda env list | awk 'NF && !/^#/ && $1 != \"base\" {print $1}'"
+            OUTPUT_VARIABLE CONDA_ENV_NAMES
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+
+        # Iterate through Conda environments to get Python paths
+        foreach(ENV_NAME ${CONDA_ENV_NAMES})
+            execute_process(
+                COMMAND conda run -n ${ENV_NAME} which python
+                OUTPUT_VARIABLE CONDA_PYTHON_EXEC
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                ERROR_QUIET
+            )
+
+            if (NOT CONDA_PYTHON_EXEC STREQUAL "")
+                list(APPEND CONDA_PYTHON_VERSIONS ${CONDA_PYTHON_EXEC})
+                message(STATUS "Found Conda Python: ${CONDA_PYTHON_EXEC} in environment ${ENV_NAME}")
+            endif()
+        endforeach()
+    else()
+        message(STATUS "No Conda installation detected.")
+    endif()
+
+    # Merge system and Conda Python versions
+    list(APPEND PYTHON_EXECUTABLES_LIST ${CONDA_PYTHON_VERSIONS})
+
     #install rocPyDecode pybind libs
+    if (NOT PYTHON_EXECUTABLES_LIST STREQUAL "")
+        # Iterate through found Python versions and install rocPyDecode for each
+        foreach(PYTHON_EXECUTABLE ${PYTHON_EXECUTABLES_LIST})
+            find_package(PYTHON_EXECUTABLE QUIET COMPONENTS Interpreter Development)
+            include_directories(${Python3_INCLUDE_DIRS})
+
+            # Get the correct Python site-packages directory
+            execute_process(
+                COMMAND ${PYTHON_EXECUTABLE} -c
+                "import sysconfig; print(sysconfig.get_path('purelib'))"
+                OUTPUT_VARIABLE SITE_PACKAGES_DIR
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+            )
+
+            set_target_properties(${TARGET_NAME} PROPERTIES
+                PREFIX "${PYTHON_MODULE_PREFIX}"
+                SUFFIX "${PYTHON_MODULE_EXTENSION}"
+                LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${TARGET_NAME}/${CMAKE_INSTALL_LIBDIR}")
+            set(TARGET_PYMODULE_NAME "${PYTHON_MODULE_PREFIX}${TARGET_NAME}${PYTHON_MODULE_EXTENSION}")
+            message(STATUS "Building and installing rocPyDecode for ${PYTHON_EXECUTABLE}")
+
+            #install rocPyDecode
+            install(FILES ${CMAKE_BINARY_DIR}/${TARGET_NAME}/${CMAKE_INSTALL_LIBDIR}/${TARGET_PYMODULE_NAME} DESTINATION ${SITE_PACKAGES_DIR} COMPONENT runtime)
+            install(DIRECTORY pyRocVideoDecode DESTINATION  ${SITE_PACKAGES_DIR} COMPONENT runtime)
+            install(DIRECTORY samples DESTINATION ${SITE_PACKAGES_DIR}/pyRocVideoDecode COMPONENT runtime)
+
+        endforeach()
+    endif()
+
+    #install rocPyDecode
     install(FILES ${CMAKE_BINARY_DIR}/${TARGET_NAME}/${CMAKE_INSTALL_LIBDIR}/${TARGET_PYMODULE_NAME} DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime)
+
+    #install rocPyDecode other
     install(DIRECTORY pyRocVideoDecode DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime)
     install(DIRECTORY samples DESTINATION ${CMAKE_INSTALL_LIBDIR}/pyRocVideoDecode COMPONENT runtime)
     # Test - Installed
