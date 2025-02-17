@@ -139,6 +139,8 @@ git clone https://github.com/ROCm/rocPyDecode.git
   make -j8
   sudo make install
   ```
+  >[!IMPORTANT]
+> * Use `-D PYTHON_VERSION_SUGGESTED=3.x` with `cmake` for using a specific Python3 version if required. If this option is not used; rocPyDecode will be installed to all Python versions found on the system.
 
   + run tests - [test option instructions](https://github.com/ROCm/MIVisionX/wiki/CTest)
   ```shell
