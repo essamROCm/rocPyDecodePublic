@@ -124,7 +124,7 @@ message("-- ${White}${PROJECT_NAME} -- AMD GPU_TARGETS: ${GPU_TARGETS}${ColourRe
 # Allow specifying a Python version via -D PYTHON_VERSION_SUGGESTED
 option(PYTHON_VERSION_SUGGESTED "Suggested Python version for installation" "")
 set(USER_DEFINED FALSE)
-if(PYTHON_VERSION_SUGGESTED)
+if(NOT (PYTHON_VERSION_SUGGESTED STREQUAL OFF))
     set(USER_DEFINED TRUE)
     message("-- ${White}${USER_DEFINED} -- USER DEFINED PYTHON: ${PYTHON_VERSION_SUGGESTED}${ColourReset}")
 endif()
@@ -327,10 +327,10 @@ if(BUILD_ROCPYDECODE)
     endif()
 
     # Was rocPyDecode Installed?
-    if(NOT (ROCPYDECODE_INSTALLED AND USER_DEFINED))
-        message("-- ${Red}rocPyDecode wasn't installed, user defined python version ${PYTHON_VERSION_SUGGESTED} was not found.${ColourReset}")
-    else()
-        if(NOT ROCPYDECODE_INSTALLED)
+    if(NOT ROCPYDECODE_INSTALLED)
+        if(USER_DEFINED)
+            message("-- ${Red}rocPyDecode wasn't installed, user defined python version ${PYTHON_VERSION_SUGGESTED} was not found.${ColourReset}")
+        else()
             message("-- ${Red}rocPyDecode wasn't installed, no python installation was found.${ColourReset}")
         endif()
     endif()
