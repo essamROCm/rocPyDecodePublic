@@ -141,7 +141,7 @@ git clone https://github.com/ROCm/rocPyDecode.git
   ```
 
 >[!IMPORTANT]
-> * rocPyDecode will be installed for all Python versions on the system. To install rocPyDecode for a specific Python version, use the cmake `-D PYTHON_VERSION_SUGGESTED=version_num` directive, where version_num is the target Python version.```
+> * rocPyDecode will be installed for all Python versions on the system. To install rocPyDecode for a specific Python version, use the cmake `-D PYTHON_VERSION_SUGGESTED=version_num` directive, where version_num is the target Python version.
 
   + run tests - [test option instructions](https://github.com/ROCm/MIVisionX/wiki/CTest)
   ```shell
