@@ -129,6 +129,15 @@ if(NOT (PYTHON_VERSION_SUGGESTED STREQUAL OFF))
     message("-- ${White}${USER_DEFINED} -- USER DEFINED PYTHON: ${PYTHON_VERSION_SUGGESTED}${ColourReset}")
 endif()
 
+# Allow specifying a Python version located on specific folder via -D PYTHON_FOLDER_SUGGESTED
+# This folder will be added to all other discovered python folders if 'USER_DEFINED' is FALSE
+option(PYTHON_FOLDER_SUGGESTED "Suggested Python version folder to include in the installation" "")
+set(USER_PY_FOLDER FALSE)
+if(NOT (PYTHON_FOLDER_SUGGESTED STREQUAL OFF))
+    set(USER_PY_FOLDER TRUE)
+    message("-- ${White}${USER_PY_FOLDER} -- USER DEFINED PYTHON FOLDER: ${PYTHON_FOLDER_SUGGESTED}${ColourReset}")
+endif()
+
 # rocPyDecode build
 set(BUILD_ROCPYDECODE true)
 set(CMAKE_SKIP_BUILD_RPATH true)
@@ -144,6 +153,10 @@ find_package(FFmpeg QUIET)
 execute_process(COMMAND bash -c "compgen -c | grep -E '^python3\.[0-9]+$' | sort -Vru" OUTPUT_VARIABLE PYTHON_EXECUTABLES OUTPUT_STRIP_TRAILING_WHITESPACE)
 # Convert space-separated list to CMake list
 string(REPLACE "\n" ";" PYTHON_EXECUTABLES_LIST "${PYTHON_EXECUTABLES}")
+# Merge the user defined python folder if passed here
+if(USER_PY_FOLDER)
+    list(APPEND PYTHON_EXECUTABLES_LIST ${PYTHON_FOLDER_SUGGESTED})
+endif()
 # Check if the list is empty
 if (PYTHON_EXECUTABLES_LIST STREQUAL "")
     set(Python3_FOUND FALSE)
@@ -321,7 +334,7 @@ if(BUILD_ROCPYDECODE)
                 install(DIRECTORY pyRocVideoDecode DESTINATION  ${SITE_PACKAGES_DIR} COMPONENT runtime)
                 install(DIRECTORY samples DESTINATION ${SITE_PACKAGES_DIR}/pyRocVideoDecode COMPONENT runtime)
             else()
-                message(STATUS "[Python Version DOES NOT EXIST] :${CURRENT_PY_EXECUTABLE}")
+                message(STATUS "[Python Version DOES NOT EXIST] :${PYTHON_VERSION}")
             endif() # (EXISTS ${CURRENT_PY_EXECUTABLE})
         endforeach()
     endif()
