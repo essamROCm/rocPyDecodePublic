@@ -42,8 +42,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED On)
 set(VERSION "0.4.0")
 
 # Set Project Version and Language
-project(rocPyDecode VERSION ${VERSION} LANGUAGES CXX)
-set(TARGET_NAME rocPyDecode)
+project(rocpydecode VERSION ${VERSION} LANGUAGES CXX)
+set(TARGET_NAME rocpydecode)
 
 set(CMAKE_INSTALL_LIBDIR "lib" CACHE STRING "Library install directory")
 set(CMAKE_INSTALL_INCLUDEDIR "include" CACHE STRING "Include install directory")
