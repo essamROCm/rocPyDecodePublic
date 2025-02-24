@@ -149,6 +149,12 @@ find_package(pybind11 QUIET)
 find_package(dlpack QUIET)
 find_package(FFmpeg QUIET)
 
+# Use pkg-config to find FFmpeg shared libraries
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(FFMPEG REQUIRED libavcodec libavformat libavutil libswscale) # libavfilter
+set(CMAKE_FIND_LIBRARY_SUFFIXES ".so")
+set(BUILD_SHARED_LIBS ON)
+
 # Search for all installed Python versions on the system
 execute_process(COMMAND bash -c "compgen -c | grep -E '^python3\.[0-9]+$' | sort -Vru" OUTPUT_VARIABLE PYTHON_EXECUTABLES OUTPUT_STRIP_TRAILING_WHITESPACE)
 # Convert space-separated list to CMake list
