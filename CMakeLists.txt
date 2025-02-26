@@ -212,6 +212,25 @@ if(NOT FFMPEG_FOUND)
 endif()
 
 if(BUILD_ROCPYDECODE)
+    # TODO: remove after ROCDECODE_CHECK_VERSION macro is pushed to mainline
+    if(${ROCDECODE_VER_MAJOR} VERSION_GREATER_EQUAL "0" AND ${ROCDECODE_VER_MINOR} VERSION_GREATER_EQUAL "6" AND ${ROCDECODE_VER_MICRO} VERSION_GREATER_EQUAL "0")
+        set(OVERHEAD_SUPPORT 1)
+    else()
+        set(OVERHEAD_SUPPORT 0)
+    endif()
+    # TODO: remove after ROCDECODE_CHECK_VERSION macro is pushed to mainline
+    if(${ROCDECODE_VER_MAJOR} VERSION_GREATER_EQUAL "0" AND ${ROCDECODE_VER_MINOR} VERSION_GREATER_EQUAL "7" AND ${ROCDECODE_VER_MICRO} VERSION_GREATER_EQUAL "0")
+        set(CODEC_SUPPORTED_CHECK 1)
+    else()
+        set(CODEC_SUPPORTED_CHECK 0)
+    endif()
+    # TODO: remove after ROCDECODE_CHECK_VERSION macro is pushed to mainline
+    if(${ROCDECODE_VER_MAJOR} VERSION_GREATER_EQUAL "0" AND ${ROCDECODE_VER_MINOR} VERSION_GREATER_EQUAL "8" AND ${ROCDECODE_VER_MICRO} VERSION_GREATER_EQUAL "0")
+        set(FFMPEG_DECODE 1)
+    else()
+        set(FFMPEG_DECODE 0)
+    endif()
+
     # HIP
     set(LINK_LIBRARY_LIST ${LINK_LIBRARY_LIST} hip::device)
     # rocDecode
@@ -226,8 +245,18 @@ if(BUILD_ROCPYDECODE)
     include_directories(src)
 
     file(GLOB_RECURSE pyfiles pyRocVideoDecode/*.py pyRocVideoDecode/*.pyi)
-    file(GLOB_RECURSE include src/*.h ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.h ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.h)
-    file(GLOB_RECURSE sources src/*.cpp  ${ROCM_PATH}/share/rocdecode/utils/*.cpp ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.cpp ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.cpp)
+    if(FFMPEG_DECODE)
+        file(GLOB_RECURSE include src/*.h ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.h ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.h)
+        file(GLOB_RECURSE sources src/*.cpp  ${ROCM_PATH}/share/rocdecode/utils/*.cpp ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.cpp ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.cpp)
+    else()
+        file(GLOB_RECURSE include src/*.h ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.h)
+        file(GLOB_RECURSE sources src/*.cpp  ${ROCM_PATH}/share/rocdecode/utils/*.cpp ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.cpp)
+
+        # Exclude ffmpeg files if not supported in this version
+        list(REMOVE_ITEM include src/roc_pyvideodecodecpu.h)
+        list(REMOVE_ITEM sources src/roc_pyvideodecodecpu.cpp)
+        list(REMOVE pyfiles pyRocVideoDecode/decodercpu.py)
+    endif()
 
     message("-- ${White}rocPyDecode -- Link Libraries: ${LINK_LIBRARY_LIST}${ColourReset}")
     message("-- ${White}rocPyDecode -- CMAKE_CXX_FLAGS:${CMAKE_CXX_FLAGS}${ColourReset}")
@@ -299,18 +328,10 @@ if(BUILD_ROCPYDECODE)
                 # include
                 target_include_directories(${TARGET_NAME_VERSIONED} PRIVATE ${pybind11_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIR})
 
-                # TODO: remove after ROCDECODE_CHECK_VERSION macro is pushed to mainline
-                if(${ROCDECODE_VER_MAJOR} VERSION_GREATER_EQUAL "0" AND ${ROCDECODE_VER_MINOR} VERSION_GREATER_EQUAL "6" AND ${ROCDECODE_VER_MICRO} VERSION_GREATER_EQUAL "0")
-                    target_compile_definitions(${TARGET_NAME_VERSIONED} PUBLIC OVERHEAD_SUPPORT=1)
-                else()
-                    target_compile_definitions(${TARGET_NAME_VERSIONED} PUBLIC OVERHEAD_SUPPORT=0)
-                endif()
-                # TODO: remove after ROCDECODE_CHECK_VERSION macro is pushed to mainline
-                if(${ROCDECODE_VER_MAJOR} VERSION_GREATER_EQUAL "0" AND ${ROCDECODE_VER_MINOR} VERSION_GREATER_EQUAL "7" AND ${ROCDECODE_VER_MICRO} VERSION_GREATER_EQUAL "0")
-                    target_compile_definitions(${TARGET_NAME_VERSIONED} PUBLIC CODEC_SUPPORTED_CHECK=1)
-                else()
-                    target_compile_definitions(${TARGET_NAME_VERSIONED} PUBLIC CODEC_SUPPORTED_CHECK=0)
-                endif()
+                # set target_compile_definitions
+                target_compile_definitions(${TARGET_NAME_VERSIONED} PUBLIC OVERHEAD_SUPPORT)
+                target_compile_definitions(${TARGET_NAME_VERSIONED} PUBLIC CODEC_SUPPORTED_CHECK)
+                target_compile_definitions(${TARGET_NAME_VERSIONED} PUBLIC FFMPEG_DECODE)
 
                 foreach (filename ${pyfiles})
                     get_filename_component(target "${filename}" REALPATH)
