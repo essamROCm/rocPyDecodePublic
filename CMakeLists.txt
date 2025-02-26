@@ -331,7 +331,6 @@ if(BUILD_ROCPYDECODE)
                 # set target_compile_definitions
                 target_compile_definitions(${TARGET_NAME_VERSIONED} PUBLIC OVERHEAD_SUPPORT)
                 target_compile_definitions(${TARGET_NAME_VERSIONED} PUBLIC CODEC_SUPPORTED_CHECK)
-                target_compile_definitions(${TARGET_NAME_VERSIONED} PUBLIC FFMPEG_DECODE)
 
                 foreach (filename ${pyfiles})
                     get_filename_component(target "${filename}" REALPATH)
