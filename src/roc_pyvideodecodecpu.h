@@ -21,7 +21,7 @@ THE SOFTWARE.
 */
 
 #pragma once
-
+#if FFMPEG_DECODE
 #include "roc_video_dec.h"
 #include "roc_pydecode.h"
 #include "video_post_process.h"
@@ -123,3 +123,4 @@ class PyRocVideoDecoderCpu : public FFMpegVideoDecoder {
         size_t resized_image_size_in_bytes = 0;
         OutputSurfaceInfo *resized_surf_info = nullptr;
 };
+#endif // FFMPEG_DECODE

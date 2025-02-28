@@ -245,18 +245,8 @@ if(BUILD_ROCPYDECODE)
     include_directories(src)
 
     file(GLOB_RECURSE pyfiles pyRocVideoDecode/*.py pyRocVideoDecode/*.pyi)
-    if(FFMPEG_DECODE)
-        file(GLOB_RECURSE include src/*.h ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.h ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.h)
-        file(GLOB_RECURSE sources src/*.cpp  ${ROCM_PATH}/share/rocdecode/utils/*.cpp ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.cpp ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.cpp)
-    else()
-        file(GLOB_RECURSE include src/*.h ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.h)
-        file(GLOB_RECURSE sources src/*.cpp  ${ROCM_PATH}/share/rocdecode/utils/*.cpp ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.cpp)
-
-        # Exclude ffmpeg files if not supported in this version
-        list(REMOVE_ITEM include src/roc_pyvideodecodecpu.h)
-        list(REMOVE_ITEM sources src/roc_pyvideodecodecpu.cpp)
-        list(REMOVE pyfiles pyRocVideoDecode/decodercpu.py)
-    endif()
+    file(GLOB_RECURSE include src/*.h ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.h ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.h)
+    file(GLOB_RECURSE sources src/*.cpp  ${ROCM_PATH}/share/rocdecode/utils/*.cpp ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.cpp ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.cpp)
 
     message("-- ${White}rocPyDecode -- Link Libraries: ${LINK_LIBRARY_LIST}${ColourReset}")
     message("-- ${White}rocPyDecode -- CMAKE_CXX_FLAGS:${CMAKE_CXX_FLAGS}${ColourReset}")
@@ -331,6 +321,7 @@ if(BUILD_ROCPYDECODE)
                 # set target_compile_definitions
                 target_compile_definitions(${TARGET_NAME_VERSIONED} PUBLIC OVERHEAD_SUPPORT)
                 target_compile_definitions(${TARGET_NAME_VERSIONED} PUBLIC CODEC_SUPPORTED_CHECK)
+                target_compile_definitions(${TARGET_NAME_VERSIONED} PUBLIC FFMPEG_DECODE)
 
                 foreach (filename ${pyfiles})
                     get_filename_component(target "${filename}" REALPATH)

@@ -19,7 +19,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-
+#if FFMPEG_DECODE
 #include "roc_pyvideodecodecpu.h"
 #include "colorspace_kernels.h"
 #include "resize_kernels.h"
@@ -421,3 +421,4 @@ py::object PyRocVideoDecoderCpu::PyGetDecoderSessionOverHead(int session_id) {
 }
 
 #endif
+#endif // FFMPEG_DECODE
