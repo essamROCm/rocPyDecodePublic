@@ -19,48 +19,13 @@
 # THE SOFTWARE.
  
 # # rocDecVideoSurfaceFormat
-# from rocpyjpegdecode.JpegTypes import rocDecVideoSurfaceFormat_NV12
-# from rocpyjpegdecode.JpegTypes import rocDecVideoSurfaceFormat_P016
-# from rocpyjpegdecode.JpegTypes import rocDecVideoSurfaceFormat_YUV444
-# from rocpyjpegdecode.JpegTypes import rocDecVideoSurfaceFormat_YUV444_16Bit
+# from rocpyjpegdecode.JpegTypes import 
+# from rocpyjpegdecode.JpegTypes import 
+# from rocpyjpegdecode.JpegTypes import 
+# from rocpyjpegdecode.JpegTypes import 
 
-# # Video Packet Flags
-# from rocpyjpegdecode.JpegTypes import ROCDEC_PKT_ENDOFSTREAM
-# from rocpyjpegdecode.JpegTypes import ROCDEC_PKT_TIMESTAMP
-# from rocpyjpegdecode.JpegTypes import ROCDEC_PKT_DISCONTINUITY
-# from rocpyjpegdecode.JpegTypes import ROCDEC_PKT_ENDOFPICTURE
-# from rocpyjpegdecode.JpegTypes import ROCDEC_PKT_NOTIFY_EOS
 
-# # Video Codecs
-# from rocpyjpegdecode.JpegTypes import rocDecVideoCodec_AVC
-# from rocpyjpegdecode.JpegTypes import rocDecVideoCodec_HEVC
-
-# #  OutputFormatEnum - Types of images
-# from rocpyjpegdecode.JpegTypes import native
-# from rocpyjpegdecode.JpegTypes import bgr
-# from rocpyjpegdecode.JpegTypes import bgr48
-# from rocpyjpegdecode.JpegTypes import rgb
-# from rocpyjpegdecode.JpegTypes import rgb48
-# from rocpyjpegdecode.JpegTypes import bgra
-# from rocpyjpegdecode.JpegTypes import bgra64
-# from rocpyjpegdecode.JpegTypes import rgba
-# from rocpyjpegdecode.JpegTypes import rgba64
-
-# _known_types = {
-#     rocDecVideoSurfaceFormat_NV12: ("rocDecVideoSurfaceFormat_NV12", rocDecVideoSurfaceFormat_NV12),
-#     rocDecVideoSurfaceFormat_P016: ("rocDecVideoSurfaceFormat_P016", rocDecVideoSurfaceFormat_P016),
-#     rocDecVideoSurfaceFormat_YUV444: ("rocDecVideoSurfaceFormat_YUV444", rocDecVideoSurfaceFormat_YUV444),
-#     rocDecVideoSurfaceFormat_YUV444_16Bit: ("rocDecVideoSurfaceFormat_YUV444_16Bit", rocDecVideoSurfaceFormat_YUV444_16Bit),
-    
-#     ROCDEC_PKT_ENDOFSTREAM: ("ROCDEC_PKT_ENDOFSTREAM", ROCDEC_PKT_ENDOFSTREAM),
-#     ROCDEC_PKT_TIMESTAMP: ("ROCDEC_PKT_TIMESTAMP", ROCDEC_PKT_TIMESTAMP),
-#     ROCDEC_PKT_DISCONTINUITY: ("ROCDEC_PKT_DISCONTINUITY", ROCDEC_PKT_DISCONTINUITY),
-#     ROCDEC_PKT_ENDOFPICTURE: ("ROCDEC_PKT_ENDOFPICTURE", ROCDEC_PKT_ENDOFPICTURE),
-#     ROCDEC_PKT_NOTIFY_EOS: ("ROCDEC_PKT_NOTIFY_EOS", ROCDEC_PKT_NOTIFY_EOS),
-
-#     rocDecVideoCodec_AVC: ("rocDecVideoCodec_AVC",rocDecVideoCodec_AVC),
-#     rocDecVideoCodec_HEVC: ("rocDecVideoCodec_HEVC",rocDecVideoCodec_HEVC),
-
+# _known_types = {   
 #     native: ("native",native),
 #     bgr: ("bgr",bgr),
 #     bgr48: ("bgr48",bgr48),
