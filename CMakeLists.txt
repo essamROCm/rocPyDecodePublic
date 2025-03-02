@@ -39,11 +39,12 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED On)
 
 # lib version - NOTE: update version across multiple files
-set(VERSION "0.4.0")
+set(VERSION "0.5.0")
 
 # Set Project Version and Language
 project(rocpydecode VERSION ${VERSION} LANGUAGES CXX)
 set(TARGET_NAME rocpydecode)
+set(TARGET_NAME_JPEG rocpyjpegdecode)
 
 set(CMAKE_INSTALL_LIBDIR "lib" CACHE STRING "Library install directory")
 set(CMAKE_INSTALL_INCLUDEDIR "include" CACHE STRING "Include install directory")
@@ -159,6 +160,7 @@ set(CMAKE_SKIP_BUILD_RPATH true)
 # Find dependencies
 find_package(HIP QUIET)
 find_package(rocDecode QUIET)
+find_package(rocJPEG QUIET)
 find_package(pybind11 QUIET)
 find_package(dlpack QUIET)
 find_package(FFmpeg QUIET)
@@ -183,32 +185,40 @@ endif()
 # HIP
 if(NOT HIP_FOUND)
     set(BUILD_ROCPYDECODE false)
-    message("-- ${Yellow}NOTE: {PROJECT_NAME} library requires HIP, Not Found ${ColourReset}")
+    message("-- ${Yellow}NOTE: ${PROJECT_NAME} library requires HIP, Not Found ${ColourReset}")
 endif()
 # rocDecode
 if(NOT ROCDECODE_FOUND)
     set(BUILD_ROCPYDECODE false)
-    message("-- ${Yellow}NOTE: {PROJECT_NAME} library requires rocDecode, Not Found ${ColourReset}")
+    message("-- ${Yellow}NOTE: ${PROJECT_NAME} library requires rocDecode, Not Found ${ColourReset}")
+endif()
+# rocJPEG
+if(NOT ROCJPEG_FOUND)
+    set(ROCJPEG_FOUND 0)
+    message("-- ${Yellow}NOTE: ${PROJECT_NAME} library optional rocJPEG, Not Found ${ColourReset}")
+else()
+    set(ROCJPEG_FOUND 1)
+    message("-- ${Yellow}NOTE: ${PROJECT_NAME} library optional rocJPEG, Was Found ${ColourReset}")
 endif()
 # Python3
 if(NOT Python3_FOUND)
     set(BUILD_ROCPYDECODE false)
-    message("-- ${Yellow}NOTE: {PROJECT_NAME} library requires Python3, Not Found ${ColourReset}")	
+    message("-- ${Yellow}NOTE: ${PROJECT_NAME} library requires Python3, Not Found ${ColourReset}")	
 endif()
 # pybind11
 if(NOT pybind11_FOUND)
     set(BUILD_ROCPYDECODE false)
-    message("-- ${Yellow}NOTE: {PROJECT_NAME} library requires pybind11, Not Found ${ColourReset}")	
+    message("-- ${Yellow}NOTE: ${PROJECT_NAME} library requires pybind11, Not Found ${ColourReset}")	
 endif()
 # dlpack
 if(NOT dlpack_FOUND)
     set(BUILD_ROCPYDECODE false)
-    message("-- ${Yellow}NOTE: {PROJECT_NAME} library requires dlpack, Not Found ${ColourReset}")	
+    message("-- ${Yellow}NOTE: ${PROJECT_NAME} library requires dlpack, Not Found ${ColourReset}")	
 endif()
 # FFmpeg
 if(NOT FFMPEG_FOUND)
     set(BUILD_ROCPYDECODE false)
-    message("-- ${Yellow}NOTE: {PROJECT_NAME} library requires FFmpeg, Not Found ${ColourReset}")	
+    message("-- ${Yellow}NOTE: ${PROJECT_NAME} library requires FFmpeg, Not Found ${ColourReset}")	
 endif()
 
 if(BUILD_ROCPYDECODE)
@@ -222,12 +232,19 @@ if(BUILD_ROCPYDECODE)
     # FFMPEG
     include_directories(${AVUTIL_INCLUDE_DIR} ${AVCODEC_INCLUDE_DIR} ${AVFORMAT_INCLUDE_DIR})
     set(LINK_LIBRARY_LIST ${LINK_LIBRARY_LIST} ${FFMPEG_LIBRARIES})
-    # rocPyDecode include
-    include_directories(src)
+    # rocPyDecode 
+    include_directories(src)  
+    file(GLOB pyfiles pyRocVideoDecode/*.py pyRocVideoDecode/*.pyi )
+    file(GLOB include src/*.h ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.h ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.h)
+    file(GLOB sources src/*.cpp  ${ROCM_PATH}/share/rocdecode/utils/*.cpp ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.cpp ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.cpp)
 
-    file(GLOB_RECURSE pyfiles pyRocVideoDecode/*.py pyRocVideoDecode/*.pyi)
-    file(GLOB_RECURSE include src/*.h ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.h ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.h)
-    file(GLOB_RECURSE sources src/*.cpp  ${ROCM_PATH}/share/rocdecode/utils/*.cpp ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.cpp ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.cpp)
+    # rocJPEG
+    if(ROCJPEG_FOUND)
+        include_directories(${ROCJPEG_INCLUDE_DIR})    
+        file(GLOB pyfiles_jpeg pyRocJpegDecode/*.py pyRocJpegDecode/*.pyi)
+        file(GLOB include_jpeg src/rocjpeg/*.h)
+        file(GLOB sources_jpeg src/rocjpeg/*.cpp)
+    endif()
 
     message("-- ${White}rocPyDecode -- Link Libraries: ${LINK_LIBRARY_LIST}${ColourReset}")
     message("-- ${White}rocPyDecode -- CMAKE_CXX_FLAGS:${CMAKE_CXX_FLAGS}${ColourReset}")
@@ -311,7 +328,6 @@ if(BUILD_ROCPYDECODE)
                 else()
                     target_compile_definitions(${TARGET_NAME_VERSIONED} PUBLIC CODEC_SUPPORTED_CHECK=0)
                 endif()
-
                 foreach (filename ${pyfiles})
                     get_filename_component(target "${filename}" REALPATH)
                     #to maintain folder structure
@@ -319,22 +335,40 @@ if(BUILD_ROCPYDECODE)
                     message(STATUS "Copying ${filename} to ${TARGET_NAME_VERSIONED}/${ITEM_PATH_REL}")
                     configure_file("${filename}" "${CMAKE_BINARY_DIR}/${TARGET_NAME_VERSIONED}/${ITEM_PATH_REL}" COPYONLY)
                 endforeach (filename)
-
                 #Get this python .so file extension (full name)
                 execute_process(COMMAND ${CURRENT_PY_EXECUTABLE} -c "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))" OUTPUT_VARIABLE PYTHON_MODULE_EXTENSION OUTPUT_STRIP_TRAILING_WHITESPACE)
-
                 set_target_properties(${TARGET_NAME_VERSIONED} PROPERTIES PREFIX "${PYTHON_MODULE_PREFIX}" SUFFIX "${PYTHON_MODULE_EXTENSION}" LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${TARGET_NAME}/${CMAKE_INSTALL_LIBDIR}")
-
-                set(SO_SRC ${CMAKE_BINARY_DIR}/${TARGET_NAME}/${CMAKE_INSTALL_LIBDIR}/${PYTHON_MODULE_PREFIX}${TARGET_NAME_VERSIONED}${PYTHON_MODULE_EXTENSION})
-                set(SO_DST ${CMAKE_BINARY_DIR}/${TARGET_NAME}/${CMAKE_INSTALL_LIBDIR}/${PYTHON_MODULE_PREFIX}${TARGET_NAME}${PYTHON_MODULE_EXTENSION})
-
-                message(STATUS "Building and installing rocPyDecode for ${PYTHON_VERSION}")
-
+                set(SO_SRC_1 ${CMAKE_BINARY_DIR}/${TARGET_NAME}/${CMAKE_INSTALL_LIBDIR}/${PYTHON_MODULE_PREFIX}${TARGET_NAME_VERSIONED}${PYTHON_MODULE_EXTENSION})
+                set(SO_DST_1 ${CMAKE_BINARY_DIR}/${TARGET_NAME}/${CMAKE_INSTALL_LIBDIR}/${PYTHON_MODULE_PREFIX}${TARGET_NAME}${PYTHON_MODULE_EXTENSION})
                 # Add a custom command to rename the shared library only after it's built
-                add_custom_command(TARGET ${TARGET_NAME_VERSIONED} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${SO_SRC} ${SO_DST} COMMENT "Renaming shared library after build: ${SO_SRC} -> ${SO_DST}" VERBATIM)
-                #install rocPyDecode .so
+                add_custom_command(TARGET ${TARGET_NAME_VERSIONED} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${SO_SRC_1} ${SO_DST_1} COMMENT "Renaming shared library after build: ${SO_SRC_1} -> ${SO_DST_1}" VERBATIM)                
+                #install .so
                 set(ROCPYDECODE_INSTALLED TRUE)
-                install(FILES ${SO_DST} DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime)
+                message(STATUS "Building and installing rocPyDecode for ${PYTHON_VERSION}")
+                install(FILES ${SO_DST_1} DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime)
+
+                if(ROCJPEG_FOUND)
+                    set(TARGET_NAME_JPEG_VERSIONED "${TARGET_NAME_JPEG}.${PYTHON_INDEX}")
+                    #add-rocpyjpegdecode-pybind11-module
+                    pybind11_add_module(${TARGET_NAME_JPEG_VERSIONED} MODULE ${sources_jpeg})
+                    target_link_libraries(${TARGET_NAME_JPEG_VERSIONED} PRIVATE ${LINK_LIBRARY_LIST})
+                    #include
+                    target_include_directories(${TARGET_NAME_JPEG_VERSIONED} PRIVATE ${pybind11_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIR})
+                    foreach (filename ${pyfiles_jpeg})
+                        get_filename_component(target "${filename}" REALPATH)
+                        #to maintain folder structure
+                        file(RELATIVE_PATH ITEM_PATH_REL ${CMAKE_CURRENT_SOURCE_DIR} ${filename})
+                        message(STATUS "Copying ${filename} to ${TARGET_NAME_JPEG_VERSIONED}/${ITEM_PATH_REL}")
+                        configure_file("${filename}" "${CMAKE_BINARY_DIR}/${TARGET_NAME_JPEG_VERSIONED}/${ITEM_PATH_REL}" COPYONLY)
+                    endforeach (filename)                
+                    set_target_properties(${TARGET_NAME_JPEG_VERSIONED} PROPERTIES PREFIX "${PYTHON_MODULE_PREFIX}" SUFFIX "${PYTHON_MODULE_EXTENSION}" LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${TARGET_NAME_JPEG}/${CMAKE_INSTALL_LIBDIR}")
+                    set(SO_SRC_2 ${CMAKE_BINARY_DIR}/${TARGET_NAME_JPEG}/${CMAKE_INSTALL_LIBDIR}/${PYTHON_MODULE_PREFIX}${TARGET_NAME_JPEG_VERSIONED}${PYTHON_MODULE_EXTENSION})
+                    set(SO_DST_2 ${CMAKE_BINARY_DIR}/${TARGET_NAME_JPEG}/${CMAKE_INSTALL_LIBDIR}/${PYTHON_MODULE_PREFIX}${TARGET_NAME_JPEG}${PYTHON_MODULE_EXTENSION})
+                    add_custom_command(TARGET ${TARGET_NAME_JPEG_VERSIONED} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${SO_SRC_2} ${SO_DST_2} COMMENT "Renaming shared library after build: ${SO_SRC_2} -> ${SO_DST_2}" VERBATIM)
+                    message(STATUS "Building and installing rocpyjpegdecode for ${PYTHON_VERSION}")
+                    install(FILES ${SO_DST_2} DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime)
+                endif()
+
             else()
                 message(STATUS "[Python Version DOES NOT EXIST] :${PYTHON_VERSION}")
             endif() # (EXISTS ${CURRENT_PY_EXECUTABLE})
@@ -354,9 +388,17 @@ if(BUILD_ROCPYDECODE)
     install(DIRECTORY pyRocVideoDecode DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime)
     install(DIRECTORY samples DESTINATION ${CMAKE_INSTALL_LIBDIR}/pyRocVideoDecode COMPONENT runtime)
 
-    # Test - Installed
+    #install rocpyjpegdecode API folder -and- samples folder
+    install(DIRECTORY pyRocJpegDecode DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime)
+    install(DIRECTORY samples/rocjpeg DESTINATION ${CMAKE_INSTALL_LIBDIR}/pyRocJpegDecode COMPONENT runtime)
+
+    # Test - Installed -rocpydecode
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/tests DESTINATION ${CMAKE_INSTALL_DATADIR}/rocpydecode COMPONENT test)
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/cmake DESTINATION ${CMAKE_INSTALL_DATADIR}/rocpydecode COMPONENT test)
+
+    # Test - Installed -rocpyjpegdecode
+    install(DIRECTORY ${CMAKE_SOURCE_DIR}/tests DESTINATION ${CMAKE_INSTALL_DATADIR}/rocpyjpegdecode COMPONENT test)
+    install(DIRECTORY ${CMAKE_SOURCE_DIR}/cmake DESTINATION ${CMAKE_INSTALL_DATADIR}/rocpyjpegdecode COMPONENT test)
 
     message("-- ${Green}ROCm Video Decode Library Python Binding - rocPyDecode module added ${ColourReset}")
     message("-- ${BoldBlue}rocPyDecode Version -- ${VERSION}${ColourReset}")
