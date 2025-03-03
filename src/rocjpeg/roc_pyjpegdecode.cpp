@@ -25,30 +25,68 @@ THE SOFTWARE.
 using namespace std;
 
 void PyRocJpegDecoderInitializer(py::module& m) {
-    //     py::class_<PyRocJpegDecoder> (m, "PyRocJpegDecoder")
-    //     .def(py::init<int,int,rocDecVideoCodec,bool,const Rect *,int,int,uint32_t>(),
-    //                 py::arg("device_id") = 0, py::arg("out_mem_type") = 0, py::arg("codec") = rocDecVideoCodec_HEVC, py::arg("force_zero_latency") = false, 
-    //                 py::arg("p_crop_rect") = nullptr, py::arg("max_width") = 0, py::arg("max_height") = 0, py::arg("clk_rate") = 1000)
-    //     //.def("GetDeviceinfo",&PyRocJpegDecoder::PyGetDeviceinfo)
-    // ;
+    py::class_<PyRocJpegDecoder> (m, "PyRocJpegDecoder")
+        .def(py::init<>())
+        .def("PyGetFilePaths",&PyRocJpegDecoder::PyGetFilePaths)
+        .def("PyInitHipDevice",&PyRocJpegDecoder::PyInitHipDevice)
+        .def("rocPyJpegCreate",&PyRocJpegDecoder::rocPyJpegCreate)
+        .def("rocPyJpegStreamCreate",&PyRocJpegDecoder::rocPyJpegStreamCreate)
+        ;
 }
   
 
 void PyRocJpegDecoder::InitConfigStructure() {
-    // // init config struct
-    // configInfo.reset(new ConfigInfo());
-    // configInfo.get()->device_name = std::string("");
-    // configInfo.get()->gcn_arch_name = std::string("");
-    // configInfo.get()->pci_bus_id = 0;
-    // configInfo.get()->pci_domain_id = 0;
-    // configInfo.get()->pci_device_id = 0;
-    // // init flush callback struct: support multi-resolution video streams
-    // PyReconfigDumpFileStruct.b_dump_frames_to_file = false;
-    // PyReconfigDumpFileStruct.output_file_name.clear();
-    // PyReconfigParams.p_fn_reconfigure_flush = nullptr;
-    // PyReconfigParams.p_reconfig_user_struct = nullptr;
-    // PyReconfigParams.reconfig_flush_mode = 0;
 }
 
-PyRocJpegDecoder::~PyRocJpegDecoder() {
+py::object PyRocJpegDecoder::rocPyJpegStreamCreate() {
+    RocJpegStreamHandle rocjpeg_stream_handle = nullptr;
+    CHECK_ROCJPEG(rocJpegStreamCreate(&rocjpeg_stream_handle));
+    return py::cast(rocjpeg_stream_handle);
+}
+
+py::object PyRocJpegDecoder::rocPyJpegStreamParse(const unsigned char *data, size_t length, RocJpegStreamHandle jpeg_stream_handle) {
+   return py::cast(rocJpegStreamParse(data, length, jpeg_stream_handle));
+}
+
+py::object PyRocJpegDecoder::rocPyJpegStreamDestroy(RocJpegStreamHandle jpeg_stream_handle) {
+    return py::cast(rocJpegStreamDestroy(jpeg_stream_handle));
+}
+
+py::object PyRocJpegDecoder::rocPyJpegCreate(RocJpegBackend backend, int device_id) {
+    RocJpegHandle rocjpeg_handle = nullptr;
+    CHECK_ROCJPEG(rocJpegCreate(backend, device_id, &rocjpeg_handle));
+    return py::cast(rocjpeg_handle);
+}
+
+py::object PyRocJpegDecoder::rocPyJpegDestroy(RocJpegHandle handle) {
+    return py::cast(rocJpegDestroy(handle));
+}
+
+py::object PyRocJpegDecoder::rocPyJpegGetImageInfo(RocJpegHandle handle, RocJpegStreamHandle jpeg_stream_handle, uint8_t *num_components, RocJpegChromaSubsampling *subsampling, uint32_t *widths, uint32_t *heights) {
+    return py::cast(rocJpegGetImageInfo(handle, jpeg_stream_handle, num_components, subsampling, widths, heights));
+}
+
+py::object PyRocJpegDecoder::rocPyJpegDecode(RocJpegHandle handle, RocJpegStreamHandle jpeg_stream_handle, const RocJpegDecodeParams *decode_params, RocJpegImage *destination) {
+    return py::cast(rocJpegDecode(handle, jpeg_stream_handle, decode_params, destination));
+}
+
+py::object PyRocJpegDecoder::rocPyJpegDecodeBatched(RocJpegHandle handle, RocJpegStreamHandle *jpeg_stream_handles, int batch_size, const RocJpegDecodeParams *decode_params, RocJpegImage *destinations) {
+    return py::cast(rocJpegDecodeBatched(handle, jpeg_stream_handles, batch_size, decode_params, destinations));
+}
+
+std::tuple<std::string, std::vector<std::string>, bool, bool>
+PyRocJpegDecoder::PyGetFilePaths(std::string &input_path, std::vector<std::string> &file_paths, bool &is_dir, bool &is_file) {
+    is_dir = is_file = false;
+    if (!RocJpegUtils::GetFilePaths(input_path, file_paths, is_dir, is_file)) {
+        std::cerr << "ERROR: Failed to get input file paths!" << std::endl;
+    }
+    return std::make_tuple(input_path, file_paths, is_dir, is_file);
+}
+
+py::object PyRocJpegDecoder::PyInitHipDevice(int device_id) {
+    bool ret = true;
+    if (!(ret=RocJpegUtils::InitHipDevice(device_id))) {
+        std::cerr << "ERROR: Failed to initialize HIP!" << std::endl;
+    }
+    return py::cast(ret);
 }

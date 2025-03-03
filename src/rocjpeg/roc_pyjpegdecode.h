@@ -45,17 +45,31 @@ THE SOFTWARE.
 #include <chrono>
 
 #include "roc_pyjpeg.h"
-#include "rocjpeg_samples_utils.h"
 
 
 class PyRocJpegDecoder : public RocJpegUtils {
 
 public:
 
-    PyRocJpegDecoder();
-    ~PyRocJpegDecoder();
+    PyRocJpegDecoder(){};
+    ~PyRocJpegDecoder(){};
 
     void InitConfigStructure();
+
+    py::object rocPyJpegStreamCreate();
+    py::object rocPyJpegStreamParse(const unsigned char *data, size_t length, RocJpegStreamHandle jpeg_stream_handle);
+    py::object rocPyJpegStreamDestroy(RocJpegStreamHandle jpeg_stream_handle);
+    py::object rocPyJpegCreate(RocJpegBackend backend, int device_id);
+    py::object rocPyJpegDestroy(RocJpegHandle handle);
+    py::object rocPyJpegGetImageInfo(RocJpegHandle handle, RocJpegStreamHandle jpeg_stream_handle, uint8_t *num_components, RocJpegChromaSubsampling *subsampling, uint32_t *widths, uint32_t *heights);
+    py::object rocPyJpegDecode(RocJpegHandle handle, RocJpegStreamHandle jpeg_stream_handle, const RocJpegDecodeParams *decode_params, RocJpegImage *destination);
+    py::object rocPyJpegDecodeBatched(RocJpegHandle handle, RocJpegStreamHandle *jpeg_stream_handles, int batch_size, const RocJpegDecodeParams *decode_params, RocJpegImage *destinations);
+
+    std::tuple<std::string, std::vector<std::string>, bool, bool>
+    PyGetFilePaths(std::string &input_path, std::vector<std::string> &file_paths, bool &is_dir, bool &is_file);
+
+    py::object PyInitHipDevice(int device_id);
+
 };
 
 #endif // PY_ROC_JPEG_HEADER

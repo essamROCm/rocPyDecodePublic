@@ -43,7 +43,9 @@ THE SOFTWARE.
     namespace fs = std::experimental::filesystem;
 #endif
 #include <chrono>
+
 #include "rocjpeg.h"
+#include "rocjpeg_samples_utils.h"
 
 #include <pybind11/pybind11.h>	 
 #include <pybind11/functional.h>
@@ -55,32 +57,6 @@ THE SOFTWARE.
 
 namespace py = pybind11;
 
-// struct PyPacketData {
-//     bool      end_of_stream;
-//     int       pkt_flags;
-//     int64_t   frame_pts;
-//     int64_t   frame_size;
-//     int64_t   bitstream_size;
-//     uintptr_t frame_adrs;       // yuv frame address
-//     uintptr_t bitstream_adrs;
-//     uintptr_t frame_adrs_rgb;   // rgb frame address
-//     uintptr_t frame_adrs_resized; // new resized yuv frame
-//     std::vector<std::shared_ptr<BufferInterface>> ext_buf;
-//     PyPacketData(){
-//         ext_buf.push_back(std::make_shared<BufferInterface>()); //index[0]: always Y Tensor
-//         ext_buf.push_back(std::make_shared<BufferInterface>()); //index[1]: UV tensor in case of NV12, otherwise only U tensor when YUV444/P016 is supported
-//         ext_buf.push_back(std::make_shared<BufferInterface>()); //index[2]: not-used in case of NV12, otherwise V tensor when YUV444/P016 is supported
-//     }
-// };
-
-// struct ConfigInfo {
-//     std::string device_name;
-//     std::string gcn_arch_name;
-//     int         pci_bus_id;
-//     int         pci_domain_id;
-//     int         pci_device_id;
-// };
- 
 // defined in roc_pyvideodecoder.cpp
 void PyRocJpegDecoderInitializer(py::module& m);
  

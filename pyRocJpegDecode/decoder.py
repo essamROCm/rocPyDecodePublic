@@ -23,13 +23,19 @@ import rocpyjpegdecode.jpegTypes as jpegt
 
 
 class decoder(object):
-    def __init__(
-            self,
-            input_file_path,
-            output_file_path,
-            device_id = 0,
-            backend = 0,
-            output_format = 1,
-            crop_rect = None):
-        return
 
+    def __init__(self):
+        self.jpegdec = rocpyjpeg.PyRocJpegDecoder()
+
+    def PyGetFilePaths(self, input_path, file_paths, is_dir, is_file):
+        n_input_path, n_file_paths, n_is_dir, n_is_file = self.jpegdec.PyGetFilePaths(input_path, file_paths, is_dir, is_file)
+        return n_input_path, n_file_paths, n_is_dir, n_is_file
+
+    def PyInitHipDevice(self, device_id):
+        return self.jpegdec.PyInitHipDevice(device_id)
+
+    def rocPyJpegCreate(self, backend, device_id):
+        return self.jpegdec.rocPyJpegCreate(jpegt.RocJpegBackend(backend), device_id)
+
+    def rocPyJpegStreamCreate(self):
+        return self.jpegdec.rocPyJpegStreamCreate()

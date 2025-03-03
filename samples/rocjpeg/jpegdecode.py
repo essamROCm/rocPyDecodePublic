@@ -9,20 +9,27 @@ def JDecoder(
         input_file_path,
         output_file_path,
         device_id,
-        backend,
+        rocjpeg_backend,
         output_format,
         crop_rect):
 
-    # TODO: Remove this print when complete coding
-    print(f"\nReading images from disk, please wait!\n\
-Using GPU device 0: Radeon RX 7900 XT[gfx1100] on PCI bus 03:00.0\n\
-Input file name: {input_file_path}\n\
-Input image resolution: 3840x2160\n\
-Chroma subsampling: YUV 4:2:0\n\
-Decoding started, please wait! ...\n\
-Average processing time per image (ms): 16.6028\n\
-Average images per sec: 60.2309\n\
-Decoding completed!\n")
+    # JPEG decode instance
+    jpegdecode = jdec.decoder()
+
+    # parse input
+    file_paths = []
+    is_dir = False
+    is_file = False
+    n_input_path, n_file_paths, n_is_dir, n_is_file = jpegdecode.PyGetFilePaths(input_file_path, file_paths, is_dir, is_file)
+
+    # init HIP
+    if(jpegdecode.PyInitHipDevice(device_id)):
+        print("HIP Device Initialized Successfully..\n")
+
+    # init the stream & the codec
+    rocjpeg_handle = jpegdecode.rocPyJpegCreate(rocjpeg_backend, device_id)
+    rocjpeg_stream_handle = jpegdecode.rocPyJpegStreamCreate()
+
     return
 
 
@@ -81,7 +88,7 @@ if __name__ == "__main__":
     input_file_path = args.input
     output_file_path = args.output
     device_id = args.device
-    backend = args.backend
+    rocjpeg_backend = args.backend
     crop_rect = args.crop_rect
     output_format = args.output_format
 
@@ -89,7 +96,7 @@ if __name__ == "__main__":
         input_file_path,
         output_file_path,
         device_id,
-        backend,
+        rocjpeg_backend,
         output_format,
         crop_rect
         )
