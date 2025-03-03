@@ -19,13 +19,17 @@
 # THE SOFTWARE.
 
 import rocpyjpegdecode as rocpyjpeg
-import rocpyjpegdecode.jpegTypes as jpegt np
+import rocpyjpegdecode.jpegTypes as jpegt
 
 
 class decoder(object):
-    # def __init__(
-    #         self,
-    #         codec,
-    #         device_id = 0,
-    #         ):)
-    #     self.jpegdec = rocpyjpeg.PyRocVideoDecoder(device_id)
+    def __init__(
+            self,
+            input_file_path,
+            output_file_path,
+            device_id = 0,
+            backend = 0,
+            output_format = 1,
+            crop_rect = None):
+        return
+
