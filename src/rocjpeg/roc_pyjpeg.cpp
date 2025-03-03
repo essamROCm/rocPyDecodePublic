@@ -28,65 +28,57 @@ PYBIND11_MODULE(rocpyjpegdecode, m) {
  
     m.doc() = "Python bindings for the C++ portions of rocJPEG ..";
 
-    // // convert betweeen demuxer & decoder
-    // m.def("AVCodec2RocDecVideoCodec", &ConvertAVCodec2RocDecVideoCodec, "Convert AVCodecID to rocDecVideoCodec ID");
-    // m.def("AVCodecString2RocDecVideoCodec", &ConvertAVCodecString2RocDecVideoCodec, "Convert AVCodec string to rocDecVideoCodec ID");
-    
-    // m.def("GetRocPyDecPacket", [](int pts, int size, py::buffer buffer) {
-    //     std::shared_ptr<PyPacketData> packet = make_shared<PyPacketData>();
-    //     packet->frame_pts = static_cast<int64_t>(pts);
-    //     packet->bitstream_size = static_cast<int64_t>(size);
-    //     // process py::buffer object to an address ptr for bitstream
-    //     py::buffer_info buffer_info = buffer.request();
-    //     packet->bitstream_adrs = reinterpret_cast<uintptr_t>(buffer_info.ptr);
-    //     return packet;
-    // }, "Convert packet info from user to rocpydecode's PyPacketData");
-
-
-
     // ------
     // Types:
     // ------
     py::module types_m = m.def_submodule("jpegTypes");
-    types_m.doc() = "Datatypes and options used by rocJPEG";            
+    types_m.doc() = "Datatypes and options used by rocJPEG";
 
     // current version
     // Todo: to be changed to match version on CMakeLists with every future version update
     m.attr("__version__") = py::str("0.1.0");
 
-    // // rocDecVideoSurfaceFormat
-    // py::enum_<rocDecVideoSurfaceFormat>(types_m, "rocDecVideoSurfaceFormat")
-    //     .value("rocDecVideoSurfaceFormat_NV12",rocDecVideoSurfaceFormat_NV12)					
-    //     .value("rocDecVideoSurfaceFormat_P016",rocDecVideoSurfaceFormat_P016)					
-    //     .value("rocDecVideoSurfaceFormat_YUV444",rocDecVideoSurfaceFormat_YUV444)				
-    //     .value("rocDecVideoSurfaceFormat_YUV444_16Bit",rocDecVideoSurfaceFormat_YUV444_16Bit) 	
-	// 	.export_values(); 
+    // RocJpegChromaSubsampling
+    py::enum_<RocJpegChromaSubsampling>(types_m, "RocJpegChromaSubsampling")
+        .value("ROCJPEG_CSS_444",ROCJPEG_CSS_444)
+        .value("ROCJPEG_CSS_440",ROCJPEG_CSS_440)
+        .value("ROCJPEG_CSS_422",ROCJPEG_CSS_422)
+        .value("ROCJPEG_CSS_420",ROCJPEG_CSS_420)
+        .value("ROCJPEG_CSS_411",ROCJPEG_CSS_411)
+        .value("ROCJPEG_CSS_400",ROCJPEG_CSS_400)
+        .value("ROCJPEG_CSS_UNKNOWN",ROCJPEG_CSS_UNKNOWN)
+        .export_values();
                 
-    // py::enum_<RocdecVideoPacketFlags>(types_m,"RocdecVideoPacketFlags","Video Packet Flags")
-    //     .value("ROCDEC_PKT_ENDOFSTREAM",ROCDEC_PKT_ENDOFSTREAM)
-    //     .value("ROCDEC_PKT_TIMESTAMP",ROCDEC_PKT_TIMESTAMP)
-    //     .value("ROCDEC_PKT_DISCONTINUITY",ROCDEC_PKT_DISCONTINUITY)
-    //     .value("ROCDEC_PKT_ENDOFPICTURE",ROCDEC_PKT_ENDOFPICTURE)
-    //     .value("ROCDEC_PKT_NOTIFY_EOS",ROCDEC_PKT_NOTIFY_EOS)
-    //     .export_values(); 
+    py::enum_<RocJpegBackend>(types_m,"RocJpegBackend")
+        .value("ROCJPEG_BACKEND_HARDWARE",ROCJPEG_BACKEND_HARDWARE)
+        .value("ROCJPEG_BACKEND_HYBRID",ROCJPEG_BACKEND_HYBRID)
+        .export_values();
 
-    // py::enum_<rocDecVideoCodec>(types_m,"rocDecVideoCodec","Video Codec") 
-    //     .value("rocDecVideoCodec_AVC",rocDecVideoCodec_AVC)            
-    //     .value("rocDecVideoCodec_HEVC",rocDecVideoCodec_HEVC)          
-    //     .export_values(); 
-
-    // py::enum_<OutputFormatEnum>(types_m,"OutputFormatEnum","Types of images")
-    //     .value("native",native)
-    //     .value("bgr",bgr)
-    //     .value("bgr48",bgr48)
-    //     .value("rgb",rgb)
-    //     .value("rgb48",rgb48)
-    //     .value("bgra",bgra)
-    //     .value("bgra64",bgra64)
-    //     .value("rgba",rgba)
-    //     .value("rgba64",rgba64)
-    //    .export_values();
+    py::enum_<RocJpegOutputFormat>(types_m, "RocJpegOutputFormat")
+        .value("ROCJPEG_OUTPUT_NATIVE",ROCJPEG_OUTPUT_NATIVE)
+        .value("ROCJPEG_OUTPUT_YUV_PLANAR",ROCJPEG_OUTPUT_YUV_PLANAR)
+        .value("ROCJPEG_OUTPUT_Y",ROCJPEG_OUTPUT_Y)
+        .value("ROCJPEG_OUTPUT_RGB",ROCJPEG_OUTPUT_RGB)
+        .value("ROCJPEG_OUTPUT_RGB_PLANAR",ROCJPEG_OUTPUT_RGB_PLANAR)
+        .value("ROCJPEG_OUTPUT_FORMAT_MAX",ROCJPEG_OUTPUT_FORMAT_MAX)
+        .export_values();
  
+    py::enum_<RocJpegStatus>(types_m, "RocJpegStatus")
+        .value("ROCJPEG_STATUS_SUCCESS",ROCJPEG_STATUS_SUCCESS)
+        .value("ROCJPEG_STATUS_NOT_INITIALIZED",ROCJPEG_STATUS_NOT_INITIALIZED)
+        .value("ROCJPEG_STATUS_INVALID_PARAMETER",ROCJPEG_STATUS_INVALID_PARAMETER)
+        .value("ROCJPEG_STATUS_BAD_JPEG",ROCJPEG_STATUS_BAD_JPEG)
+        .value("ROCJPEG_STATUS_JPEG_NOT_SUPPORTED",ROCJPEG_STATUS_JPEG_NOT_SUPPORTED)
+        .value("ROCJPEG_STATUS_OUTOF_MEMORY",ROCJPEG_STATUS_OUTOF_MEMORY)
+        .value("ROCJPEG_STATUS_EXECUTION_FAILED",ROCJPEG_STATUS_EXECUTION_FAILED)
+        .value("ROCJPEG_STATUS_ARCH_MISMATCH",ROCJPEG_STATUS_ARCH_MISMATCH)
+        .value("ROCJPEG_STATUS_INTERNAL_ERROR",ROCJPEG_STATUS_INTERNAL_ERROR)
+        .value("ROCJPEG_STATUS_IMPLEMENTATION_NOT_SUPPORTED",ROCJPEG_STATUS_IMPLEMENTATION_NOT_SUPPORTED)
+        .value("ROCJPEG_STATUS_HW_JPEG_DECODER_NOT_SUPPORTED",ROCJPEG_STATUS_HW_JPEG_DECODER_NOT_SUPPORTED)
+        .value("ROCJPEG_STATUS_RUNTIME_ERROR",ROCJPEG_STATUS_RUNTIME_ERROR)
+        .value("ROCJPEG_STATUS_NOT_IMPLEMENTED",ROCJPEG_STATUS_NOT_IMPLEMENTED)
+        .export_values();
+
     // --------------------------------------
     // AMD Video Decoder 'PyRocVideoDecoder'
     // --------------------------------------
@@ -96,20 +88,6 @@ PYBIND11_MODULE(rocpyjpegdecode, m) {
     // Structures:
     // ----------------
 
-    // OutputSurfaceInfo
-    // py::class_<OutputSurfaceInfo>(m, "OutputSurfaceInfo")
-    //     .def(py::init<>())
-    //     .def_readwrite("output_width",&OutputSurfaceInfo::output_width)	            	            	  
-    //     .def_readwrite("output_height",&OutputSurfaceInfo::output_height)		            	          
-    //     .def_readwrite("output_pitch",&OutputSurfaceInfo::output_pitch)	     	            	                             
-    //     .def_readwrite("output_vstride",&OutputSurfaceInfo::output_vstride)	   	            	          
-    //     .def_readwrite("bytes_per_pixel",&OutputSurfaceInfo::bytes_per_pixel)		            	      
-    //     .def_readwrite("bit_depth",&OutputSurfaceInfo::bit_depth)	           	            	          
-    //     .def_readwrite("num_chroma_planes",&OutputSurfaceInfo::num_chroma_planes)	            	      
-    //     .def_readwrite("output_surface_size_in_bytes",&OutputSurfaceInfo::output_surface_size_in_bytes)   
-    //     .def_readwrite("surface_format",&OutputSurfaceInfo::surface_format)			            	      
-    //     .def_readwrite("mem_type",&OutputSurfaceInfo::mem_type);                                                  				
-  
     // // Rect
     // py::class_<Rect>(m, "Rect")
     //     .def(py::init<>())
@@ -123,20 +101,6 @@ PYBIND11_MODULE(rocpyjpegdecode, m) {
     //     .def(py::init<>())
     //     .def_readwrite("width",&Dim::w)
     //     .def_readwrite("height",&Dim::h);
-
-    // // PyPacketData
-    // py::class_<PyPacketData, shared_ptr<PyPacketData>>(m, "PyPacketData", py::module_local())
-    //     .def(py::init<>())
-    //     .def_readwrite("end_of_stream", &PyPacketData::end_of_stream)
-    //     .def_readwrite("pkt_flags",     &PyPacketData::pkt_flags)
-    //     .def_readwrite("frame_pts",     &PyPacketData::frame_pts)
-    //     .def_readwrite("frame_size",    &PyPacketData::frame_size)
-    //     .def_readwrite("frame_adrs",    &PyPacketData::frame_adrs)
-    //     .def_readwrite("bitstream_size",    &PyPacketData::bitstream_size)
-    //     .def_readwrite("bitstream_adrs",    &PyPacketData::bitstream_adrs)
-    //     .def_readwrite("frame_adrs_rgb", &PyPacketData::frame_adrs_rgb)
-    //     .def_readwrite("frame_adrs_resized", &PyPacketData::frame_adrs_resized)
-    //     .def_readwrite("ext_buf",        &PyPacketData::ext_buf)
 
     //     // DL Pack Tensor
     //     .def_property_readonly("shapeY", [](std::shared_ptr<PyPacketData>& self) {

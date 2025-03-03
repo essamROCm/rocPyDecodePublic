@@ -240,9 +240,10 @@ if(BUILD_ROCPYDECODE)
 
     # rocJPEG
     if(ROCJPEG_FOUND)
-        include_directories(${ROCJPEG_INCLUDE_DIR})    
+        include_directories(${ROCJPEG_INCLUDE_DIR}
+        ${ROCM_PATH}/share/rocjpeg/samples)
         file(GLOB pyfiles_jpeg pyRocJpegDecode/*.py pyRocJpegDecode/*.pyi)
-        file(GLOB include_jpeg src/rocjpeg/*.h)
+        file(GLOB include_jpeg src/rocjpeg/*.h ${ROCM_PATH}/share/rocjpeg/samples/*.h) # include the "rocjpeg_samples_utils.h"
         file(GLOB sources_jpeg src/rocjpeg/*.cpp)
     endif()
 

@@ -45,9 +45,10 @@ THE SOFTWARE.
 #include <chrono>
 
 #include "roc_pyjpeg.h"
+#include "rocjpeg_samples_utils.h"
 
 
-class PyRocJpegDecoder /*: public RocVideoDecoder*/ {
+class PyRocJpegDecoder : public RocJpegUtils {
 
 public:
 
