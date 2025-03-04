@@ -31,6 +31,8 @@ void PyRocJpegDecoderInitializer(py::module& m) {
         .def("PyInitHipDevice",&PyRocJpegDecoder::PyInitHipDevice)
         .def("rocPyJpegCreate",&PyRocJpegDecoder::rocPyJpegCreate)
         .def("rocPyJpegStreamCreate",&PyRocJpegDecoder::rocPyJpegStreamCreate)
+        .def("rocPyJpegDestroy",&PyRocJpegDecoder::rocPyJpegDestroy)
+        .def("rocPyJpegStreamDestroy",&PyRocJpegDecoder::rocPyJpegStreamDestroy)
         ;
 }
   
@@ -49,7 +51,8 @@ py::object PyRocJpegDecoder::rocPyJpegStreamParse(const unsigned char *data, siz
 }
 
 py::object PyRocJpegDecoder::rocPyJpegStreamDestroy(RocJpegStreamHandle jpeg_stream_handle) {
-    return py::cast(rocJpegStreamDestroy(jpeg_stream_handle));
+    CHECK_ROCJPEG(rocJpegStreamDestroy(jpeg_stream_handle));
+    return py::cast<py::none>(Py_None);
 }
 
 py::object PyRocJpegDecoder::rocPyJpegCreate(RocJpegBackend backend, int device_id) {
@@ -58,8 +61,9 @@ py::object PyRocJpegDecoder::rocPyJpegCreate(RocJpegBackend backend, int device_
     return py::cast(rocjpeg_handle);
 }
 
-py::object PyRocJpegDecoder::rocPyJpegDestroy(RocJpegHandle handle) {
-    return py::cast(rocJpegDestroy(handle));
+py::object PyRocJpegDecoder::rocPyJpegDestroy(RocJpegHandle rocjpeg_handle) {
+    CHECK_ROCJPEG(rocJpegDestroy(rocjpeg_handle));
+    return py::cast<py::none>(Py_None);
 }
 
 py::object PyRocJpegDecoder::rocPyJpegGetImageInfo(RocJpegHandle handle, RocJpegStreamHandle jpeg_stream_handle, uint8_t *num_components, RocJpegChromaSubsampling *subsampling, uint32_t *widths, uint32_t *heights) {

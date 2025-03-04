@@ -39,3 +39,9 @@ class decoder(object):
 
     def rocPyJpegStreamCreate(self):
         return self.jpegdec.rocPyJpegStreamCreate()
+
+    def rocPyJpegStreamDestroy(self, jpeg_stream_handle):
+        return self.jpegdec.rocPyJpegStreamDestroy(jpeg_stream_handle)
+
+    def rocPyJpegDestroy(self, rocjpeg_handle):
+        return self.jpegdec.rocPyJpegDestroy(rocjpeg_handle)

@@ -30,6 +30,13 @@ def JDecoder(
     rocjpeg_handle = jpegdecode.rocPyJpegCreate(rocjpeg_backend, device_id)
     rocjpeg_stream_handle = jpegdecode.rocPyJpegStreamCreate()
 
+    # code ..
+
+    # end
+    jpegdecode.rocPyJpegDestroy(rocjpeg_handle)
+    jpegdecode.rocPyJpegStreamDestroy(rocjpeg_stream_handle)
+    print("\nDecoding completed!\n")
+
     return
 
 
