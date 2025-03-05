@@ -33,6 +33,8 @@ void PyRocJpegDecoderInitializer(py::module& m) {
         .def("rocPyJpegStreamCreate",&PyRocJpegDecoder::rocPyJpegStreamCreate)
         .def("rocPyJpegDestroy",&PyRocJpegDecoder::rocPyJpegDestroy)
         .def("rocPyJpegStreamDestroy",&PyRocJpegDecoder::rocPyJpegStreamDestroy)
+        .def("rocPyJpegStreamParse",&PyRocJpegDecoder::rocPyJpegStreamParse)
+        .def("rocPyJpegGetImageInfo",&PyRocJpegDecoder::rocPyJpegGetImageInfo)
         ;
 }
   
@@ -46,8 +48,11 @@ py::object PyRocJpegDecoder::rocPyJpegStreamCreate() {
     return py::cast(rocjpeg_stream_handle);
 }
 
-py::object PyRocJpegDecoder::rocPyJpegStreamParse(const unsigned char *data, size_t length, RocJpegStreamHandle jpeg_stream_handle) {
-   return py::cast(rocJpegStreamParse(data, length, jpeg_stream_handle));
+py::object PyRocJpegDecoder::rocPyJpegStreamParse(py::array_t<uint8_t> file_data, size_t length, RocJpegStreamHandle jpeg_stream_handle) {
+    auto buf = file_data.request();  // Get buffer info
+    uint8_t* ptr = static_cast<uint8_t*>(buf.ptr);  // Raw pointer
+    RocJpegStatus status = rocJpegStreamParse(ptr, length, jpeg_stream_handle);
+    return py::cast(status);
 }
 
 py::object PyRocJpegDecoder::rocPyJpegStreamDestroy(RocJpegStreamHandle jpeg_stream_handle) {
@@ -66,8 +71,14 @@ py::object PyRocJpegDecoder::rocPyJpegDestroy(RocJpegHandle rocjpeg_handle) {
     return py::cast<py::none>(Py_None);
 }
 
-py::object PyRocJpegDecoder::rocPyJpegGetImageInfo(RocJpegHandle handle, RocJpegStreamHandle jpeg_stream_handle, uint8_t *num_components, RocJpegChromaSubsampling *subsampling, uint32_t *widths, uint32_t *heights) {
-    return py::cast(rocJpegGetImageInfo(handle, jpeg_stream_handle, num_components, subsampling, widths, heights));
+std::tuple<uint8_t,RocJpegChromaSubsampling,uint32_t,uint32_t>
+PyRocJpegDecoder::rocPyJpegGetImageInfo(RocJpegHandle rocjpeg_handle, RocJpegStreamHandle rocjpeg_stream_handle) {
+    uint8_t num_components=0;
+    RocJpegChromaSubsampling subsampling;
+    uint32_t widths=0;
+    uint32_t heights=0;
+    CHECK_ROCJPEG(rocJpegGetImageInfo(rocjpeg_handle, rocjpeg_stream_handle, &num_components, &subsampling, &widths, &heights));
+    return std::make_tuple(num_components, subsampling, widths, heights);
 }
 
 py::object PyRocJpegDecoder::rocPyJpegDecode(RocJpegHandle handle, RocJpegStreamHandle jpeg_stream_handle, const RocJpegDecodeParams *decode_params, RocJpegImage *destination) {

@@ -57,11 +57,18 @@ public:
     void InitConfigStructure();
 
     py::object rocPyJpegStreamCreate();
-    py::object rocPyJpegStreamParse(const unsigned char *data, size_t length, RocJpegStreamHandle jpeg_stream_handle);
+
+    py::object rocPyJpegStreamParse(py::array_t<uint8_t> file_data, size_t length, RocJpegStreamHandle jpeg_stream_handle);
+
     py::object rocPyJpegStreamDestroy(RocJpegStreamHandle jpeg_stream_handle);
+
     py::object rocPyJpegCreate(RocJpegBackend backend, int device_id);
+
     py::object rocPyJpegDestroy(RocJpegHandle handle);
-    py::object rocPyJpegGetImageInfo(RocJpegHandle handle, RocJpegStreamHandle jpeg_stream_handle, uint8_t *num_components, RocJpegChromaSubsampling *subsampling, uint32_t *widths, uint32_t *heights);
+
+    std::tuple<uint8_t,RocJpegChromaSubsampling,uint32_t,uint32_t>
+    rocPyJpegGetImageInfo(RocJpegHandle handle, RocJpegStreamHandle jpeg_stream_handle);
+
     py::object rocPyJpegDecode(RocJpegHandle handle, RocJpegStreamHandle jpeg_stream_handle, const RocJpegDecodeParams *decode_params, RocJpegImage *destination);
     py::object rocPyJpegDecodeBatched(RocJpegHandle handle, RocJpegStreamHandle *jpeg_stream_handles, int batch_size, const RocJpegDecodeParams *decode_params, RocJpegImage *destinations);
 

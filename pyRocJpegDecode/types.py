@@ -17,29 +17,86 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
- 
-# # rocDecVideoSurfaceFormat
-# from rocpyjpegdecode.JpegTypes import 
 
+# RocJpegChromaSubsampling
+from rocpyjpegdecode.jpegTypes import ROCJPEG_CSS_444
+from rocpyjpegdecode.jpegTypes import ROCJPEG_CSS_440
+from rocpyjpegdecode.jpegTypes import ROCJPEG_CSS_422
+from rocpyjpegdecode.jpegTypes import ROCJPEG_CSS_420
+from rocpyjpegdecode.jpegTypes import ROCJPEG_CSS_411
+from rocpyjpegdecode.jpegTypes import ROCJPEG_CSS_400
+from rocpyjpegdecode.jpegTypes import ROCJPEG_CSS_UNKNOWN
 
-# _known_types = {   
-#     native: ("native",native),
-#     bgr: ("bgr",bgr),
-#     bgr48: ("bgr48",bgr48),
-#     rgb: ("rgb",rgb),
-#     rgb48: ("rgb48",rgb48),
-#     bgra: ("bgra",bgra),
-#     bgra64: ("bgra64",bgra64),
-#     rgba: ("rgba",rgba),
-#     rgba64: ("rgba64",rgba64),
-#     }
+# RocJpegBackend
+from rocpyjpegdecode.jpegTypes import ROCJPEG_BACKEND_HARDWARE
+from rocpyjpegdecode.jpegTypes import ROCJPEG_BACKEND_HYBRID
 
+# RocJpegOutputFormat
+from rocpyjpegdecode.jpegTypes import ROCJPEG_OUTPUT_NATIVE
+from rocpyjpegdecode.jpegTypes import ROCJPEG_OUTPUT_YUV_PLANAR
+from rocpyjpegdecode.jpegTypes import ROCJPEG_OUTPUT_Y
+from rocpyjpegdecode.jpegTypes import ROCJPEG_OUTPUT_RGB
+from rocpyjpegdecode.jpegTypes import ROCJPEG_OUTPUT_RGB_PLANAR
+from rocpyjpegdecode.jpegTypes import ROCJPEG_OUTPUT_FORMAT_MAX
 
-# def data_type_function(dtype):
-#     if dtype in _known_types:
-#         ret = _known_types[dtype][0]
-#         return ret
-#     else:
-#         raise RuntimeError(
-#             str(dtype) +
-#             " does not correspond to a known type.")
+# RocJpegStatus
+from rocpyjpegdecode.jpegTypes import ROCJPEG_STATUS_SUCCESS
+from rocpyjpegdecode.jpegTypes import ROCJPEG_STATUS_NOT_INITIALIZED
+from rocpyjpegdecode.jpegTypes import ROCJPEG_STATUS_INVALID_PARAMETER
+from rocpyjpegdecode.jpegTypes import ROCJPEG_STATUS_BAD_JPEG
+from rocpyjpegdecode.jpegTypes import ROCJPEG_STATUS_JPEG_NOT_SUPPORTED
+from rocpyjpegdecode.jpegTypes import ROCJPEG_STATUS_OUTOF_MEMORY
+from rocpyjpegdecode.jpegTypes import ROCJPEG_STATUS_EXECUTION_FAILED
+from rocpyjpegdecode.jpegTypes import ROCJPEG_STATUS_ARCH_MISMATCH
+from rocpyjpegdecode.jpegTypes import ROCJPEG_STATUS_INTERNAL_ERROR
+from rocpyjpegdecode.jpegTypes import ROCJPEG_STATUS_IMPLEMENTATION_NOT_SUPPORTED
+from rocpyjpegdecode.jpegTypes import ROCJPEG_STATUS_HW_JPEG_DECODER_NOT_SUPPORTED
+from rocpyjpegdecode.jpegTypes import ROCJPEG_STATUS_RUNTIME_ERROR
+from rocpyjpegdecode.jpegTypes import ROCJPEG_STATUS_NOT_IMPLEMENTED
+
+_known_types = {
+	# RocJpegChromaSubsampling
+	ROCJPEG_CSS_400:("ROCJPEG_CSS_444",ROCJPEG_CSS_444),
+	ROCJPEG_CSS_411:("ROCJPEG_CSS_440",ROCJPEG_CSS_440),
+	ROCJPEG_CSS_420:("ROCJPEG_CSS_422",ROCJPEG_CSS_422),
+	ROCJPEG_CSS_422:("ROCJPEG_CSS_420",ROCJPEG_CSS_420),
+	ROCJPEG_CSS_440:("ROCJPEG_CSS_411",ROCJPEG_CSS_411),
+	ROCJPEG_CSS_444:("ROCJPEG_CSS_400",ROCJPEG_CSS_400),
+	ROCJPEG_CSS_UNKNOWN:("ROCJPEG_CSS_UNKNOWN",ROCJPEG_CSS_UNKNOWN),
+
+	# RocJpegBackend
+	ROCJPEG_BACKEND_HARDWARE:("ROCJPEG_BACKEND_HARDWARE",ROCJPEG_BACKEND_HARDWARE),
+	ROCJPEG_BACKEND_HYBRID:("ROCJPEG_BACKEND_HYBRID",ROCJPEG_BACKEND_HYBRID),
+
+	# RocJpegOutputFormat
+	ROCJPEG_OUTPUT_NATIVE:("ROCJPEG_OUTPUT_NATIVE",ROCJPEG_OUTPUT_NATIVE),
+	ROCJPEG_OUTPUT_YUV_PLANAR:("ROCJPEG_OUTPUT_YUV_PLANAR",ROCJPEG_OUTPUT_YUV_PLANAR),
+	ROCJPEG_OUTPUT_Y:("ROCJPEG_OUTPUT_Y",ROCJPEG_OUTPUT_Y),
+	ROCJPEG_OUTPUT_RGB:("ROCJPEG_OUTPUT_RGB",ROCJPEG_OUTPUT_RGB),
+	ROCJPEG_OUTPUT_RGB_PLANAR:("ROCJPEG_OUTPUT_RGB_PLANAR",ROCJPEG_OUTPUT_RGB_PLANAR),
+	ROCJPEG_OUTPUT_FORMAT_MAX:("ROCJPEG_OUTPUT_FORMAT_MAX",ROCJPEG_OUTPUT_FORMAT_MAX),
+
+	# RocJpegStatus
+	ROCJPEG_STATUS_SUCCESS:("ROCJPEG_STATUS_SUCCESS",ROCJPEG_STATUS_SUCCESS),
+	ROCJPEG_STATUS_NOT_INITIALIZED:("ROCJPEG_STATUS_NOT_INITIALIZED",ROCJPEG_STATUS_NOT_INITIALIZED),
+	ROCJPEG_STATUS_INVALID_PARAMETER:("ROCJPEG_STATUS_INVALID_PARAMETER",ROCJPEG_STATUS_INVALID_PARAMETER),
+	ROCJPEG_STATUS_BAD_JPEG:("ROCJPEG_STATUS_BAD_JPEG",ROCJPEG_STATUS_BAD_JPEG),
+	ROCJPEG_STATUS_JPEG_NOT_SUPPORTED:("ROCJPEG_STATUS_JPEG_NOT_SUPPORTED",ROCJPEG_STATUS_JPEG_NOT_SUPPORTED),
+	ROCJPEG_STATUS_OUTOF_MEMORY:("ROCJPEG_STATUS_OUTOF_MEMORY",ROCJPEG_STATUS_OUTOF_MEMORY),
+	ROCJPEG_STATUS_EXECUTION_FAILED:("ROCJPEG_STATUS_EXECUTION_FAILED",ROCJPEG_STATUS_EXECUTION_FAILED),
+	ROCJPEG_STATUS_ARCH_MISMATCH:("ROCJPEG_STATUS_ARCH_MISMATCH",ROCJPEG_STATUS_ARCH_MISMATCH),
+	ROCJPEG_STATUS_INTERNAL_ERROR:("ROCJPEG_STATUS_INTERNAL_ERROR",ROCJPEG_STATUS_INTERNAL_ERROR),
+	ROCJPEG_STATUS_IMPLEMENTATION_NOT_SUPPORTED:("ROCJPEG_STATUS_IMPLEMENTATION_NOT_SUPPORTED",ROCJPEG_STATUS_IMPLEMENTATION_NOT_SUPPORTED),
+	ROCJPEG_STATUS_HW_JPEG_DECODER_NOT_SUPPORTED:("ROCJPEG_STATUS_HW_JPEG_DECODER_NOT_SUPPORTED",ROCJPEG_STATUS_HW_JPEG_DECODER_NOT_SUPPORTED),
+	ROCJPEG_STATUS_RUNTIME_ERROR:("ROCJPEG_STATUS_RUNTIME_ERROR",ROCJPEG_STATUS_RUNTIME_ERROR),
+	ROCJPEG_STATUS_NOT_IMPLEMENTED:("ROCJPEG_STATUS_NOT_IMPLEMENTED",ROCJPEG_STATUS_NOT_IMPLEMENTED),
+}
+
+def data_type_function(dtype):
+    if dtype in _known_types:
+        ret = _known_types[dtype][0]
+        return ret
+    else:
+        raise RuntimeError(
+            str(dtype) +
+            " does not correspond to a known type.")

@@ -20,7 +20,7 @@
 
 import rocpyjpegdecode as rocpyjpeg
 import rocpyjpegdecode.jpegTypes as jpegt
-
+import numpy as np
 
 class decoder(object):
 
@@ -45,3 +45,15 @@ class decoder(object):
 
     def rocPyJpegDestroy(self, rocjpeg_handle):
         return self.jpegdec.rocPyJpegDestroy(rocjpeg_handle)
+
+    def rocPyJpegStreamParse(self, file_data, length, jpeg_stream_handle):
+        file_array = np.frombuffer(file_data, dtype=np.uint8)
+        return self.jpegdec.rocPyJpegStreamParse(file_array, length, jpeg_stream_handle)
+
+    def rocPyJpegGetImageInfo(self, rocjpeg_handle, rocjpeg_stream_handle):
+        num_components, subsampling, widths, heights = self.jpegdec.rocPyJpegGetImageInfo(rocjpeg_handle, rocjpeg_stream_handle)
+        return num_components, subsampling, widths, heights
+
+    def rocPyJpegDecodeParams(self):
+        d_struct = rocpyjpeg.RocJpegDecodeParams()
+        return d_struct

@@ -57,6 +57,27 @@ THE SOFTWARE.
 
 namespace py = pybind11;
 
+// Define CropRectangle struct
+struct CropRectangle {
+    int16_t left;
+    int16_t top;
+    int16_t right;
+    int16_t bottom;
+};
+
+// Define TargetDimension struct
+struct TargetDimension {
+    uint32_t width;
+    uint32_t height;
+};
+
+// Define Main Struct RocJpegDecodeParams
+struct RocJpegDecodeParams_ {
+    RocJpegOutputFormat output_format;
+    CropRectangle crop_rectangle;
+    TargetDimension target_dimension;
+};
+
 // defined in roc_pyvideodecoder.cpp
 void PyRocJpegDecoderInitializer(py::module& m);
  

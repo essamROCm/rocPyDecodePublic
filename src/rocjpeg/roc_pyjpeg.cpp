@@ -48,12 +48,14 @@ PYBIND11_MODULE(rocpyjpegdecode, m) {
         .value("ROCJPEG_CSS_400",ROCJPEG_CSS_400)
         .value("ROCJPEG_CSS_UNKNOWN",ROCJPEG_CSS_UNKNOWN)
         .export_values();
-                
+
+    // RocJpegBackend
     py::enum_<RocJpegBackend>(types_m,"RocJpegBackend")
         .value("ROCJPEG_BACKEND_HARDWARE",ROCJPEG_BACKEND_HARDWARE)
         .value("ROCJPEG_BACKEND_HYBRID",ROCJPEG_BACKEND_HYBRID)
         .export_values();
 
+    // RocJpegOutputFormat
     py::enum_<RocJpegOutputFormat>(types_m, "RocJpegOutputFormat")
         .value("ROCJPEG_OUTPUT_NATIVE",ROCJPEG_OUTPUT_NATIVE)
         .value("ROCJPEG_OUTPUT_YUV_PLANAR",ROCJPEG_OUTPUT_YUV_PLANAR)
@@ -62,7 +64,8 @@ PYBIND11_MODULE(rocpyjpegdecode, m) {
         .value("ROCJPEG_OUTPUT_RGB_PLANAR",ROCJPEG_OUTPUT_RGB_PLANAR)
         .value("ROCJPEG_OUTPUT_FORMAT_MAX",ROCJPEG_OUTPUT_FORMAT_MAX)
         .export_values();
- 
+
+    // RocJpegStatus
     py::enum_<RocJpegStatus>(types_m, "RocJpegStatus")
         .value("ROCJPEG_STATUS_SUCCESS",ROCJPEG_STATUS_SUCCESS)
         .value("ROCJPEG_STATUS_NOT_INITIALIZED",ROCJPEG_STATUS_NOT_INITIALIZED)
@@ -88,19 +91,26 @@ PYBIND11_MODULE(rocpyjpegdecode, m) {
     // Structures:
     // ----------------
 
-    // // Rect
-    // py::class_<Rect>(m, "Rect")
-    //     .def(py::init<>())
-    //     .def_readwrite("left",&Rect::left)
-    //     .def_readwrite("top",&Rect::top)
-    //     .def_readwrite("right",&Rect::right)
-    //     .def_readwrite("bottom",&Rect::bottom);
+    // CropRectangle Struct Binding
+    py::class_<CropRectangle>(m, "CropRectangle")
+        .def(py::init<>())
+        .def_readwrite("left", &CropRectangle::left)
+        .def_readwrite("top", &CropRectangle::top)
+        .def_readwrite("right", &CropRectangle::right)
+        .def_readwrite("bottom", &CropRectangle::bottom);
 
-    // // Dim
-    // py::class_<Dim>(m, "Dim")
-    //     .def(py::init<>())
-    //     .def_readwrite("width",&Dim::w)
-    //     .def_readwrite("height",&Dim::h);
+    // TargetDimension Struct Binding
+    py::class_<TargetDimension>(m, "TargetDimension")
+        .def(py::init<>())
+        .def_readwrite("width", &TargetDimension::width)
+        .def_readwrite("height", &TargetDimension::height);
+
+    // RocJpegDecodeParams Struct Binding
+    py::class_<RocJpegDecodeParams_>(m, "RocJpegDecodeParams")
+        .def(py::init<>())
+        .def_readwrite("output_format", &RocJpegDecodeParams_::output_format)
+        .def_readwrite("crop_rectangle", &RocJpegDecodeParams_::crop_rectangle)
+        .def_readwrite("target_dimension", &RocJpegDecodeParams_::target_dimension);
 
     //     // DL Pack Tensor
     //     .def_property_readonly("shapeY", [](std::shared_ptr<PyPacketData>& self) {

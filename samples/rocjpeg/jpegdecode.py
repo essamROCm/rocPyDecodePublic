@@ -1,8 +1,29 @@
 import pyRocJpegDecode.decoder as jdec
+import pyRocJpegDecode.types as jpegt
 import datetime
 import sys
 import argparse
 import os.path
+
+
+def read_image(file_path):
+    # Check if the file exists
+    if not os.path.exists(file_path):
+        print(f"ERROR: Cannot open image: {file_path}", file=sys.stderr)
+        return None, 0
+    try:
+        # Open file in binary mode
+        with open(file_path, "rb") as input_file:
+            # Get file size
+            input_file.seek(0, os.SEEK_END)
+            file_size = input_file.tell()
+            input_file.seek(0)
+            # Read file content
+            file_data = input_file.read(file_size)
+        return file_data, file_size
+    except Exception as e:
+        print(f"ERROR: Cannot read from file: {file_path}\n{e}", file=sys.stderr)
+        return None, 0
 
 
 def JDecoder(
@@ -30,7 +51,44 @@ def JDecoder(
     rocjpeg_handle = jpegdecode.rocPyJpegCreate(rocjpeg_backend, device_id)
     rocjpeg_stream_handle = jpegdecode.rocPyJpegStreamCreate()
 
-    # code ..
+    # loop to decode images
+
+    num_bad_jpegs = 0
+    num_components = 0
+    subsampling = jpegt.ROCJPEG_CSS_UNKNOWN
+    widths = 0
+    heights = 0
+    decode_params = jpegdecode.rocPyJpegDecodeParams()
+
+    for file_path in n_file_paths:
+        image_count = 0
+        base_file_name = os.path.basename(file_path)
+        print(base_file_name)
+
+        file_data, file_size = read_image(file_path)
+
+        if file_data is None:
+            print(f"Unable to read from {file_path}")
+            exit
+
+        print(f"Input file name: {file_path}")
+
+        rocjpeg_status = jpegdecode.rocPyJpegStreamParse(file_data, file_size, rocjpeg_stream_handle)
+
+        #print(f"rocjpeg_status: {rocjpeg_status}")
+        if (rocjpeg_status != jpegt.ROCJPEG_STATUS_SUCCESS):
+            if (is_dir):
+                num_bad_jpegs += 1
+                continue
+            else:
+                print(f"ERROR: Failed to parse the input jpeg stream with {rocjpeg_status}")
+                exit
+
+        num_components, subsampling, widths, heights = jpegdecode.rocPyJpegGetImageInfo(rocjpeg_handle, rocjpeg_stream_handle)
+
+# if (roi_width > 0 && roi_height > 0 && roi_width <= widths[0] && roi_height <= heights[0]) {
+# is_roi_valid = true;
+# }
 
     # end
     jpegdecode.rocPyJpegDestroy(rocjpeg_handle)
