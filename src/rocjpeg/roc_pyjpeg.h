@@ -78,13 +78,6 @@ struct RocJpegDecodeParams_ {
     TargetDimension target_dimension;
 };
 
-// Re-Define the RocJpegImage struct
-// because pitch is a fixed-size array which is not directly assignable
-struct RocJpegImage_ {
-    std::array<uint8_t*, ROCJPEG_MAX_COMPONENT> channel;  // Use std::array for easier exposure
-    std::array<uint32_t, ROCJPEG_MAX_COMPONENT> pitch;    // Use std::array instead of raw C array
-};
-
 // defined in roc_pyvideodecoder.cpp
 void PyRocJpegDecoderInitializer(py::module& m);
  

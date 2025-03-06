@@ -55,9 +55,10 @@ PyRocJpegDecoder::PyRocJpegDecoder() {
     memset(&m_output_image.channel, 0, ROCJPEG_MAX_COMPONENT * sizeof(uint8_t*));
     memset(&m_output_image.pitch, 0, ROCJPEG_MAX_COMPONENT * sizeof(uint32_t));
 
-    memset(m_widths, 0, ROCJPEG_MAX_COMPONENT * sizeof(uint32_t));
-    memset(m_heights, 0, ROCJPEG_MAX_COMPONENT * sizeof(uint32_t));
-    memset(m_channel_sizes, 0, ROCJPEG_MAX_COMPONENT * sizeof(uint32_t));
+    memset(&m_widths, 0, ROCJPEG_MAX_COMPONENT * sizeof(uint32_t));
+    memset(&m_heights, 0, ROCJPEG_MAX_COMPONENT * sizeof(uint32_t));
+    memset(&m_channel_sizes, 0, ROCJPEG_MAX_COMPONENT * sizeof(uint32_t));
+    memset(&m_prior_channel_sizes, 0, ROCJPEG_MAX_COMPONENT * sizeof(uint32_t));
 }
 
 PyRocJpegDecoder::~PyRocJpegDecoder() {

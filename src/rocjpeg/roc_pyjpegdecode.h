@@ -88,14 +88,12 @@ public:
 
     py::object rocPyAllocHipDeviceMemory(int num_channels);
 
-private:
-
-    uint32_t m_widths[ROCJPEG_MAX_COMPONENT] = {0};
-    uint32_t m_heights[ROCJPEG_MAX_COMPONENT] = {0};
-    uint32_t m_channel_sizes[ROCJPEG_MAX_COMPONENT] = {0};
-    uint32_t m_prior_channel_sizes[ROCJPEG_MAX_COMPONENT] = {0};
-    RocJpegDecodeParams m_decode_params = {};
-    RocJpegImage m_output_image = {};
+    uint32_t m_widths[ROCJPEG_MAX_COMPONENT];
+    uint32_t m_heights[ROCJPEG_MAX_COMPONENT];
+    uint32_t m_channel_sizes[ROCJPEG_MAX_COMPONENT];
+    uint32_t m_prior_channel_sizes[ROCJPEG_MAX_COMPONENT];
+    RocJpegDecodeParams m_decode_params;
+    RocJpegImage m_output_image;
 };
 
 #endif // PY_ROC_JPEG_HEADER
