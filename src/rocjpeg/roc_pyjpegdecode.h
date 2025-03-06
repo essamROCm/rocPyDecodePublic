@@ -56,6 +56,8 @@ public:
 
     void InitConfigStructure();
 
+    // rocJPEG API
+
     py::object rocPyJpegStreamCreate();
 
     py::object rocPyJpegStreamParse(py::array_t<uint8_t> file_data, size_t length, RocJpegStreamHandle jpeg_stream_handle);
@@ -72,10 +74,14 @@ public:
     py::object rocPyJpegDecode(RocJpegHandle handle, RocJpegStreamHandle jpeg_stream_handle, const RocJpegDecodeParams *decode_params, RocJpegImage *destination);
     py::object rocPyJpegDecodeBatched(RocJpegHandle handle, RocJpegStreamHandle *jpeg_stream_handles, int batch_size, const RocJpegDecodeParams *decode_params, RocJpegImage *destinations);
 
+    // Utils API
+
     std::tuple<std::string, std::vector<std::string>, bool, bool>
     PyGetFilePaths(std::string &input_path, std::vector<std::string> &file_paths, bool &is_dir, bool &is_file);
 
     py::object PyInitHipDevice(int device_id);
+
+    std::string PyGetChromaSubsamplingStr(RocJpegChromaSubsampling subsampling);
 
 };
 

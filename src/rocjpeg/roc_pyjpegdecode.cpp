@@ -35,6 +35,7 @@ void PyRocJpegDecoderInitializer(py::module& m) {
         .def("rocPyJpegStreamDestroy",&PyRocJpegDecoder::rocPyJpegStreamDestroy)
         .def("rocPyJpegStreamParse",&PyRocJpegDecoder::rocPyJpegStreamParse)
         .def("rocPyJpegGetImageInfo",&PyRocJpegDecoder::rocPyJpegGetImageInfo)
+        .def("PyGetChromaSubsamplingStr",&PyRocJpegDecoder::PyGetChromaSubsamplingStr)
         ;
 }
   
@@ -75,10 +76,10 @@ std::tuple<uint8_t,RocJpegChromaSubsampling,uint32_t,uint32_t>
 PyRocJpegDecoder::rocPyJpegGetImageInfo(RocJpegHandle rocjpeg_handle, RocJpegStreamHandle rocjpeg_stream_handle) {
     uint8_t num_components=0;
     RocJpegChromaSubsampling subsampling;
-    uint32_t widths=0;
-    uint32_t heights=0;
-    CHECK_ROCJPEG(rocJpegGetImageInfo(rocjpeg_handle, rocjpeg_stream_handle, &num_components, &subsampling, &widths, &heights));
-    return std::make_tuple(num_components, subsampling, widths, heights);
+    uint32_t widths[ROCJPEG_MAX_COMPONENT] = {};
+    uint32_t heights[ROCJPEG_MAX_COMPONENT] = {};
+    CHECK_ROCJPEG(rocJpegGetImageInfo(rocjpeg_handle, rocjpeg_stream_handle, &num_components, &subsampling, widths, heights));
+    return std::make_tuple(num_components, subsampling, widths[0], heights[0]);
 }
 
 py::object PyRocJpegDecoder::rocPyJpegDecode(RocJpegHandle handle, RocJpegStreamHandle jpeg_stream_handle, const RocJpegDecodeParams *decode_params, RocJpegImage *destination) {
@@ -104,4 +105,37 @@ py::object PyRocJpegDecoder::PyInitHipDevice(int device_id) {
         std::cerr << "ERROR: Failed to initialize HIP!" << std::endl;
     }
     return py::cast(ret);
+}
+
+std::string
+PyRocJpegDecoder::PyGetChromaSubsamplingStr(RocJpegChromaSubsampling subsampling) {
+    std::string chroma_sub_sampling;
+    switch (subsampling) {
+        case ROCJPEG_CSS_444:
+            chroma_sub_sampling = "YUV 4:4:4";
+            break;
+        case ROCJPEG_CSS_440:
+            chroma_sub_sampling = "YUV 4:4:0";
+            break;
+        case ROCJPEG_CSS_422:
+            chroma_sub_sampling = "YUV 4:2:2";
+            break;
+        case ROCJPEG_CSS_420:
+            chroma_sub_sampling = "YUV 4:2:0";
+            break;
+        case ROCJPEG_CSS_411:
+            chroma_sub_sampling = "YUV 4:1:1";
+            break;
+        case ROCJPEG_CSS_400:
+            chroma_sub_sampling = "YUV 4:0:0";
+            break;
+        case ROCJPEG_CSS_UNKNOWN:
+            chroma_sub_sampling = "UNKNOWN";
+            break;
+        default:
+            chroma_sub_sampling = "";
+            break;
+    }
+    std::cout << "Chroma String: " << chroma_sub_sampling << std::endl;
+    return chroma_sub_sampling.c_str();
 }

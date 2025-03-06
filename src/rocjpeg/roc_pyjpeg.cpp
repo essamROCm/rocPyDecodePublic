@@ -37,6 +37,7 @@ PYBIND11_MODULE(rocpyjpegdecode, m) {
     // current version
     // Todo: to be changed to match version on CMakeLists with every future version update
     m.attr("__version__") = py::str("0.1.0");
+    types_m.attr("ROCJPEG_MAX_COMPONENT") = ROCJPEG_MAX_COMPONENT;
 
     // RocJpegChromaSubsampling
     py::enum_<RocJpegChromaSubsampling>(types_m, "RocJpegChromaSubsampling")
@@ -111,6 +112,16 @@ PYBIND11_MODULE(rocpyjpegdecode, m) {
         .def_readwrite("output_format", &RocJpegDecodeParams_::output_format)
         .def_readwrite("crop_rectangle", &RocJpegDecodeParams_::crop_rectangle)
         .def_readwrite("target_dimension", &RocJpegDecodeParams_::target_dimension);
+
+    py::class_<RocJpegImage_>(m, "RocJpegImage")
+        .def(py::init<>())
+        .def_readwrite("pitch", &RocJpegImage_::pitch) // Expose pitch as a list
+        .def("get_channel", [](RocJpegImage_ &img, int index) {
+            if (index < 0 || index >= ROCJPEG_MAX_COMPONENT) {
+                throw std::out_of_range("Index out of bounds");
+            }
+            return py::array_t<uint8_t>({img.pitch[index]}, {1}, img.channel[index]);// Return NumPy array
+        }, py::arg("index"), "Get channel as a NumPy array");
 
     //     // DL Pack Tensor
     //     .def_property_readonly("shapeY", [](std::shared_ptr<PyPacketData>& self) {

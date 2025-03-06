@@ -22,17 +22,11 @@ import rocpyjpegdecode as rocpyjpeg
 import rocpyjpegdecode.jpegTypes as jpegt
 import numpy as np
 
+
 class decoder(object):
 
     def __init__(self):
         self.jpegdec = rocpyjpeg.PyRocJpegDecoder()
-
-    def PyGetFilePaths(self, input_path, file_paths, is_dir, is_file):
-        n_input_path, n_file_paths, n_is_dir, n_is_file = self.jpegdec.PyGetFilePaths(input_path, file_paths, is_dir, is_file)
-        return n_input_path, n_file_paths, n_is_dir, n_is_file
-
-    def PyInitHipDevice(self, device_id):
-        return self.jpegdec.PyInitHipDevice(device_id)
 
     def rocPyJpegCreate(self, backend, device_id):
         return self.jpegdec.rocPyJpegCreate(jpegt.RocJpegBackend(backend), device_id)
@@ -56,4 +50,22 @@ class decoder(object):
 
     def rocPyJpegDecodeParams(self):
         d_struct = rocpyjpeg.RocJpegDecodeParams()
+        d_struct.output_format = jpegt.ROCJPEG_OUTPUT_NATIVE
+        d_struct.crop_rectangle.left = 0
+        d_struct.crop_rectangle.top = 0
+        d_struct.crop_rectangle.right = 0
+        d_struct.crop_rectangle.bottom = 0
+        d_struct.target_dimension.width = 0
+        d_struct.target_dimension.height = 0
         return d_struct
+
+    def PyGetFilePaths(self, input_path, file_paths, is_dir, is_file):
+        n_input_path, n_file_paths, n_is_dir, n_is_file = self.jpegdec.PyGetFilePaths(input_path, file_paths, is_dir, is_file)
+        return n_input_path, n_file_paths, n_is_dir, n_is_file
+
+    def PyInitHipDevice(self, device_id):
+        return self.jpegdec.PyInitHipDevice(device_id)
+
+    def PyGetChromaSubsamplingStr(self, subsampling):
+        chroma_string = self.jpegdec.PyGetChromaSubsamplingStr(subsampling)
+        return chroma_string

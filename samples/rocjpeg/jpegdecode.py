@@ -4,6 +4,7 @@ import datetime
 import sys
 import argparse
 import os.path
+import ctypes
 
 
 def read_image(file_path):
@@ -43,6 +44,37 @@ def JDecoder(
     is_file = False
     n_input_path, n_file_paths, n_is_dir, n_is_file = jpegdecode.PyGetFilePaths(input_file_path, file_paths, is_dir, is_file)
 
+    # init decode_params
+    decode_params = jpegdecode.rocPyJpegDecodeParams()
+
+    # format [1:native, 2:yuv_planar, 3:y, 4:rgb, 5:rgb_planar]
+    if(output_format is not None):
+        if(output_format == 2):
+            decode_params.output_format = jpegt.ROCJPEG_OUTPUT_YUV_PLANAR
+        else:
+            if (output_format == 3):
+                decode_params.output_format = jpegt.ROCJPEG_OUTPUT_Y
+            else:
+                if (output_format == 4):
+                    decode_params.output_format = jpegt.ROCJPEG_OUTPUT_RGB
+                else:
+                    if (output_format == 5):
+                        decode_params.output_format = jpegt.ROCJPEG_OUTPUT_RGB_PLANAR
+
+    # crop
+    if(crop_rect is not None):
+        decode_params.crop_rectangle.left = crop_rect[0]
+        decode_params.crop_rectangle.top = crop_rect[1]
+        decode_params.crop_rectangle.right = crop_rect[2]
+        decode_params.crop_rectangle.bottom = crop_rect[3]
+
+    # roi
+    is_roi_valid = False
+    roi_width = 0
+    roi_height = 0
+    roi_width = decode_params.crop_rectangle.right - decode_params.crop_rectangle.left
+    roi_height = decode_params.crop_rectangle.bottom - decode_params.crop_rectangle.top
+
     # init HIP
     if(jpegdecode.PyInitHipDevice(device_id)):
         print("HIP Device Initialized Successfully..\n")
@@ -53,12 +85,16 @@ def JDecoder(
 
     # loop to decode images
 
+    num_jpegs_with_411_subsampling = 0
+    num_jpegs_with_unknown_subsampling = 0
+    num_jpegs_with_unsupported_resolution = 0
     num_bad_jpegs = 0
     num_components = 0
+    chroma_sub_sampling = str("")
     subsampling = jpegt.ROCJPEG_CSS_UNKNOWN
-    widths = 0
-    heights = 0
-    decode_params = jpegdecode.rocPyJpegDecodeParams()
+    # Create ctypes arrays of uint32_t
+    widths = (ctypes.c_uint32 * jpegt.ROCJPEG_MAX_COMPONENT)()
+    heights = (ctypes.c_uint32 * jpegt.ROCJPEG_MAX_COMPONENT)()
 
     for file_path in n_file_paths:
         image_count = 0
@@ -84,11 +120,35 @@ def JDecoder(
                 print(f"ERROR: Failed to parse the input jpeg stream with {rocjpeg_status}")
                 exit
 
+        # Get image info
         num_components, subsampling, widths, heights = jpegdecode.rocPyJpegGetImageInfo(rocjpeg_handle, rocjpeg_stream_handle)
 
-# if (roi_width > 0 && roi_height > 0 && roi_width <= widths[0] && roi_height <= heights[0]) {
-# is_roi_valid = true;
-# }
+        # roi?
+        if(roi_width > 0 and roi_height > 0 and roi_width <= widths and roi_height <= heights):
+            is_roi_valid = True
+
+        chroma_sub_sampling = jpegdecode.PyGetChromaSubsamplingStr(subsampling)
+        print(f"Input image resolution: {widths}x{heights}")
+        print(f"Chroma subsampling: {chroma_sub_sampling}")
+
+        if(widths < 64 or heights < 64):
+            print("The image resolution is not supported by VCN Hardware")
+            if (is_dir):
+                num_jpegs_with_unsupported_resolution += 1
+                continue
+            else:
+                exit
+
+        if (subsampling == jpegt.ROCJPEG_CSS_411 or subsampling == jpegt.ROCJPEG_CSS_UNKNOWN):
+            print("The chroma sub-sampling is not supported by VCN Hardware")
+            if (is_dir):
+                if (subsampling == jpegt.ROCJPEG_CSS_411):
+                    num_jpegs_with_411_subsampling += 1
+                if (subsampling == jpegt.ROCJPEG_CSS_UNKNOWN):
+                    num_jpegs_with_unknown_subsampling += 1
+                continue
+            else:
+                exit
 
     # end
     jpegdecode.rocPyJpegDestroy(rocjpeg_handle)
