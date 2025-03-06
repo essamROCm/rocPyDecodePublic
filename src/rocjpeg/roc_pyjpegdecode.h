@@ -51,10 +51,8 @@ class PyRocJpegDecoder : public RocJpegUtils {
 
 public:
 
-    PyRocJpegDecoder(){};
-    ~PyRocJpegDecoder(){};
-
-    void InitConfigStructure();
+    PyRocJpegDecoder();
+    ~PyRocJpegDecoder();
 
     // rocJPEG API
 
@@ -71,7 +69,7 @@ public:
     std::tuple<uint8_t,RocJpegChromaSubsampling,uint32_t,uint32_t>
     rocPyJpegGetImageInfo(RocJpegHandle handle, RocJpegStreamHandle jpeg_stream_handle);
 
-    py::object rocPyJpegDecode(RocJpegHandle handle, RocJpegStreamHandle jpeg_stream_handle, const RocJpegDecodeParams *decode_params, RocJpegImage *destination);
+    py::object rocPyJpegDecode(RocJpegHandle rocjpeg_handle, RocJpegStreamHandle rocjpeg_stream_handle);
     py::object rocPyJpegDecodeBatched(RocJpegHandle handle, RocJpegStreamHandle *jpeg_stream_handles, int batch_size, const RocJpegDecodeParams *decode_params, RocJpegImage *destinations);
 
     // Utils API
@@ -83,6 +81,21 @@ public:
 
     std::string PyGetChromaSubsamplingStr(RocJpegChromaSubsampling subsampling);
 
+    std::tuple<int, int>
+    PyInitDecodeParams(int output_format, int left, int top, int right, int bottom);
+
+    py::int_ PyGetChannelPitchAndSizes(RocJpegChromaSubsampling subsampling);
+
+    py::object rocPyAllocHipDeviceMemory(int num_channels);
+
+private:
+
+    uint32_t m_widths[ROCJPEG_MAX_COMPONENT] = {0};
+    uint32_t m_heights[ROCJPEG_MAX_COMPONENT] = {0};
+    uint32_t m_channel_sizes[ROCJPEG_MAX_COMPONENT] = {0};
+    uint32_t m_prior_channel_sizes[ROCJPEG_MAX_COMPONENT] = {0};
+    RocJpegDecodeParams m_decode_params = {};
+    RocJpegImage m_output_image = {};
 };
 
 #endif // PY_ROC_JPEG_HEADER

@@ -48,16 +48,13 @@ class decoder(object):
         num_components, subsampling, widths, heights = self.jpegdec.rocPyJpegGetImageInfo(rocjpeg_handle, rocjpeg_stream_handle)
         return num_components, subsampling, widths, heights
 
-    def rocPyJpegDecodeParams(self):
-        d_struct = rocpyjpeg.RocJpegDecodeParams()
-        d_struct.output_format = jpegt.ROCJPEG_OUTPUT_NATIVE
-        d_struct.crop_rectangle.left = 0
-        d_struct.crop_rectangle.top = 0
-        d_struct.crop_rectangle.right = 0
-        d_struct.crop_rectangle.bottom = 0
-        d_struct.target_dimension.width = 0
-        d_struct.target_dimension.height = 0
-        return d_struct
+    def PyInitDecodeParams(self, output_format, crop_rect):
+        crp_rct = [0,0,0,0]
+        if(crop_rect is not None):
+            crp_rct = crop_rect
+        out_fmt = jpegt.ROCJPEG_OUTPUT_NATIVE
+        roi_width, roi_height = self.jpegdec.PyInitDecodeParams(out_fmt, crp_rct[0],crp_rct[1],crp_rct[2],crp_rct[3])
+        return roi_width, roi_height
 
     def PyGetFilePaths(self, input_path, file_paths, is_dir, is_file):
         n_input_path, n_file_paths, n_is_dir, n_is_file = self.jpegdec.PyGetFilePaths(input_path, file_paths, is_dir, is_file)
@@ -69,3 +66,12 @@ class decoder(object):
     def PyGetChromaSubsamplingStr(self, subsampling):
         chroma_string = self.jpegdec.PyGetChromaSubsamplingStr(subsampling)
         return chroma_string
+
+    def PyGetChannelPitchAndSizes(self, subsampling):
+        return self.jpegdec.PyGetChannelPitchAndSizes(subsampling)
+
+    def rocPyAllocHipDeviceMemory(self, num_channels):
+        return self.jpegdec.rocPyAllocHipDeviceMemory(num_channels)
+
+    def rocPyJpegDecode(self, rocjpeg_handle, rocjpeg_stream_handle):
+        return self.jpegdec.rocPyJpegDecode(rocjpeg_handle, rocjpeg_stream_handle)

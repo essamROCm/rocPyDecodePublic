@@ -44,36 +44,9 @@ def JDecoder(
     is_file = False
     n_input_path, n_file_paths, n_is_dir, n_is_file = jpegdecode.PyGetFilePaths(input_file_path, file_paths, is_dir, is_file)
 
-    # init decode_params
-    decode_params = jpegdecode.rocPyJpegDecodeParams()
-
-    # format [1:native, 2:yuv_planar, 3:y, 4:rgb, 5:rgb_planar]
-    if(output_format is not None):
-        if(output_format == 2):
-            decode_params.output_format = jpegt.ROCJPEG_OUTPUT_YUV_PLANAR
-        else:
-            if (output_format == 3):
-                decode_params.output_format = jpegt.ROCJPEG_OUTPUT_Y
-            else:
-                if (output_format == 4):
-                    decode_params.output_format = jpegt.ROCJPEG_OUTPUT_RGB
-                else:
-                    if (output_format == 5):
-                        decode_params.output_format = jpegt.ROCJPEG_OUTPUT_RGB_PLANAR
-
-    # crop
-    if(crop_rect is not None):
-        decode_params.crop_rectangle.left = crop_rect[0]
-        decode_params.crop_rectangle.top = crop_rect[1]
-        decode_params.crop_rectangle.right = crop_rect[2]
-        decode_params.crop_rectangle.bottom = crop_rect[3]
-
-    # roi
+    # init decode params
     is_roi_valid = False
-    roi_width = 0
-    roi_height = 0
-    roi_width = decode_params.crop_rectangle.right - decode_params.crop_rectangle.left
-    roi_height = decode_params.crop_rectangle.bottom - decode_params.crop_rectangle.top
+    roi_width, roi_height = jpegdecode.PyInitDecodeParams(output_format, crop_rect)
 
     # init HIP
     if(jpegdecode.PyInitHipDevice(device_id)):
@@ -126,6 +99,7 @@ def JDecoder(
         # roi?
         if(roi_width > 0 and roi_height > 0 and roi_width <= widths and roi_height <= heights):
             is_roi_valid = True
+            print(f"Cropped image resolution: {roi_width}x{roi_height}")
 
         chroma_sub_sampling = jpegdecode.PyGetChromaSubsamplingStr(subsampling)
         print(f"Input image resolution: {widths}x{heights}")
@@ -149,6 +123,22 @@ def JDecoder(
                 continue
             else:
                 exit
+
+        num_channels = jpegdecode.PyGetChannelPitchAndSizes(subsampling)
+        if(num_channels <= 0):
+            print(f"ERROR: Failed to get the channel pitch and sizes {num_channels}")
+            exit
+
+        # allocate memory for each channel and reuse them if the sizes remain unchanged for a new image.
+        jpegdecode.rocPyAllocHipDeviceMemory(num_channels)
+
+        # std::cout << "Decoding started, please wait! ... " << std::endl;
+        # auto start_time = std::chrono::high_resolution_clock::now();
+        jpegdecode.rocPyJpegDecode(rocjpeg_handle, rocjpeg_stream_handle)
+        # auto end_time = std::chrono::high_resolution_clock::now();
+        # double time_per_image_in_milli_sec = std::chrono::duration<double, std::milli>(end_time - start_time).count();
+        # double image_size_in_mpixels = (static_cast<double>(widths[0]) * static_cast<double>(heights[0]) / 1000000);
+        image_count += 1
 
     # end
     jpegdecode.rocPyJpegDestroy(rocjpeg_handle)
