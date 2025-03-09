@@ -79,14 +79,25 @@ public:
 
     py::object PyInitHipDevice(int device_id);
 
-    std::string PyGetChromaSubsamplingStr(RocJpegChromaSubsampling subsampling);
+    std::string
+    PyGetChromaSubsamplingStr(RocJpegChromaSubsampling subsampling);
 
     std::tuple<int, int>
     PyInitDecodeParams(int output_format, int left, int top, int right, int bottom);
 
+    std::string
+    PyGetOutputFileExt(std::string &base_file_name, uint32_t image_width, uint32_t image_height, RocJpegChromaSubsampling subsampling, std::string &image_save_path);
+
+    py::object
+    PySaveImage(std::string image_save_path, uint32_t img_width, uint32_t img_height, RocJpegChromaSubsampling subsampling);
+
     py::int_ PyGetChannelPitchAndSizes(RocJpegChromaSubsampling subsampling);
 
     py::object rocPyAllocHipDeviceMemory(int num_channels);
+    py::object rocPyFreeHipDeviceMemory(int num_channels);
+
+    // TODO: remove in final version of the PR; DEBUG helper
+    void jpeg_print_variables();
 
     uint32_t m_widths[ROCJPEG_MAX_COMPONENT];
     uint32_t m_heights[ROCJPEG_MAX_COMPONENT];

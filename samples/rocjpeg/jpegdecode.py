@@ -5,7 +5,7 @@ import sys
 import argparse
 import os.path
 import ctypes
-
+import time
 
 def read_image(file_path):
     # Check if the file exists
@@ -57,7 +57,7 @@ def JDecoder(
     rocjpeg_stream_handle = jpegdecode.rocPyJpegStreamCreate()
 
     # loop to decode images
-
+    save_images = False if(output_file_path is None) else True
     num_jpegs_with_411_subsampling = 0
     num_jpegs_with_unknown_subsampling = 0
     num_jpegs_with_unsupported_resolution = 0
@@ -132,13 +132,62 @@ def JDecoder(
         # allocate memory for each channel and reuse them if the sizes remain unchanged for a new image.
         jpegdecode.rocPyAllocHipDeviceMemory(num_channels)
 
-        # std::cout << "Decoding started, please wait! ... " << std::endl;
-        # auto start_time = std::chrono::high_resolution_clock::now();
-        jpegdecode.rocPyJpegDecode(rocjpeg_handle, rocjpeg_stream_handle)
-        # auto end_time = std::chrono::high_resolution_clock::now();
-        # double time_per_image_in_milli_sec = std::chrono::duration<double, std::milli>(end_time - start_time).count();
-        # double image_size_in_mpixels = (static_cast<double>(widths[0]) * static_cast<double>(heights[0]) / 1000000);
-        image_count += 1
+        print("Decoding started, please wait! ... ")
+        start_time = time.time() # Start timing
+        jpegdecode.rocPyJpegDecode(rocjpeg_handle, rocjpeg_stream_handle) # Call the JPEG decode
+        end_time = time.time() # End timing
+        time_per_image_in_milli_sec = (end_time - start_time) * 1000 # Compute time per image in milliseconds
+        image_size_in_mpixels = (widths * heights) / 1_000_000 # Compute image size in megapixels
+        image_count += 1 # Increment image count
+
+        if (save_images):
+            image_save_path = output_file_path
+            # if ROI is present, need to pass roi_width and roi_height
+            width = roi_width if(is_roi_valid) else widths[0]
+            height = roi_height if(is_roi_valid) else heights[0]
+            if (is_dir):
+                image_save_path = jpegdecode.PyGetOutputFileExt(base_file_name, width, height, subsampling, output_file_path)
+            jpegdecode.PySaveImage(image_save_path, width, height, subsampling)
+
+        print(f"Average processing time per image (ms): {time_per_image_in_milli_sec:.2f}")
+        if(time_per_image_in_milli_sec > float(0)):
+            print(f"Average images per sec: {1000 / time_per_image_in_milli_sec:.2f}")
+
+        if (is_dir):
+            total_images += image_count
+            time_per_image_all += time_per_image_in_milli_sec;
+            mpixels_all += image_size_in_mpixels
+
+        # Free allocated MEM
+        jpegdecode.rocPyFreeHipDeviceMemory(num_channels)
+
+        if (is_dir):
+            time_per_image_all /= total_images  # Compute average time per image
+            images_per_sec = 1000 / time_per_image_all  # Compute images per second
+            mpixels_per_sec = mpixels_all * images_per_sec / total_images  # Compute megapixels per second
+            print(f"Total decoded images: {total_images}")
+
+            # Check if any images were skipped due to errors or unsupported formats
+            total_skipped_images = (num_bad_jpegs + num_jpegs_with_411_subsampling +
+                                    num_jpegs_with_unknown_subsampling + num_jpegs_with_unsupported_resolution)
+
+            if (total_skipped_images):
+                print(f"Total skipped images: {total_skipped_images}", end="")
+                if num_bad_jpegs:
+                    print(f", total images that cannot be parsed: {num_bad_jpegs}", end="")
+                if num_jpegs_with_411_subsampling:
+                    print(f", total images with YUV 4:1:1 chroma subsampling: {num_jpegs_with_411_subsampling}", end="")
+                if num_jpegs_with_unknown_subsampling:
+                    print(f", total images with unknown chroma subsampling: {num_jpegs_with_unknown_subsampling}", end="")
+                if num_jpegs_with_unsupported_resolution:
+                    print(f", total images with unsupported resolution: {num_jpegs_with_unsupported_resolution}", end="")
+                print()  # Newline
+
+            # Print performance statistics only if there are processed images
+            if total_images:
+                print(f"Average processing time per image (ms): {time_per_image_all:.2f}")
+                print(f"Average decoded images per sec (Images/Sec): {images_per_sec:.2f}")
+                print(f"Average decoded images size (Mpixels/Sec): {mpixels_per_sec:.2f}")
 
     # end
     jpegdecode.rocPyJpegDestroy(rocjpeg_handle)

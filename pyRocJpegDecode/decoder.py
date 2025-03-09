@@ -73,5 +73,18 @@ class decoder(object):
     def rocPyAllocHipDeviceMemory(self, num_channels):
         return self.jpegdec.rocPyAllocHipDeviceMemory(num_channels)
 
+    def rocPyFreeHipDeviceMemory(self, num_channels):
+        return self.jpegdec.rocPyFreeHipDeviceMemory(num_channels)
+
     def rocPyJpegDecode(self, rocjpeg_handle, rocjpeg_stream_handle):
         return self.jpegdec.rocPyJpegDecode(rocjpeg_handle, rocjpeg_stream_handle)
+
+    def PyGetOutputFileExt(self, base_file_name, image_width, image_height, subsampling, output_file_name):
+        return self.jpegdec.PyGetOutputFileExt(base_file_name, image_width, image_height, subsampling, output_file_name)
+
+    def PySaveImage(self, image_save_path, width, height, subsampling):
+        return self.jpegdec.PySaveImage(image_save_path, width, height, subsampling)
+
+    # TO DO: remove in final version of the PR; DEBUG helper
+    def jpeg_print_variables(self):
+        return self.jpegdec.jpeg_print_variables()

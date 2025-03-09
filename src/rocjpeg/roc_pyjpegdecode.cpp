@@ -40,6 +40,10 @@ void PyRocJpegDecoderInitializer(py::module& m) {
         .def("PyGetChannelPitchAndSizes",&PyRocJpegDecoder::PyGetChannelPitchAndSizes)
         .def("rocPyAllocHipDeviceMemory",&PyRocJpegDecoder::rocPyAllocHipDeviceMemory)
         .def("rocPyJpegDecode",&PyRocJpegDecoder::rocPyJpegDecode)
+        .def("rocPyFreeHipDeviceMemory",&PyRocJpegDecoder::rocPyFreeHipDeviceMemory)
+        .def("jpeg_print_variables",&PyRocJpegDecoder::jpeg_print_variables)
+        .def("PyGetOutputFileExt",&PyRocJpegDecoder::PyGetOutputFileExt)
+        .def("PySaveImage",&PyRocJpegDecoder::PySaveImage)
         ;
 }
 
@@ -139,6 +143,33 @@ py::object PyRocJpegDecoder::rocPyAllocHipDeviceMemory(int num_channels) {
             CHECK_HIP(hipMalloc(&m_output_image.channel[i], m_channel_sizes[i]));
         }
     }
+    for (int i = 0; i < ROCJPEG_MAX_COMPONENT; i++) {
+        m_prior_channel_sizes[i] = m_channel_sizes[i];
+    }
+    return py::cast<py::none>(Py_None);
+}
+
+py::object PyRocJpegDecoder::rocPyFreeHipDeviceMemory(int num_channels) {
+    // Free the allocated memory for each channel
+    for (int i = 0; i < num_channels; i++) {
+        if (m_output_image.channel[i] != nullptr) {
+            CHECK_HIP(hipFree((void *)m_output_image.channel[i]));
+            m_output_image.channel[i] = nullptr;
+        }
+    }
+    return py::cast<py::none>(Py_None);
+}
+
+std::string
+PyRocJpegDecoder::PyGetOutputFileExt(std::string &base_file_name, uint32_t image_width, uint32_t image_height, RocJpegChromaSubsampling subsampling, std::string &image_save_path) {
+    std::string file_name_for_saving = image_save_path;
+    GetOutputFileExt(m_decode_params.output_format, base_file_name, image_width, image_height, subsampling, file_name_for_saving);
+    return file_name_for_saving.c_str();
+}
+
+py::object
+PyRocJpegDecoder::PySaveImage(std::string image_save_path, uint32_t img_width, uint32_t img_height, RocJpegChromaSubsampling subsampling) {
+    SaveImage(image_save_path, &m_output_image, img_width, img_height, subsampling, m_decode_params.output_format);
     return py::cast<py::none>(Py_None);
 }
 
@@ -216,4 +247,43 @@ PyRocJpegDecoder::PyInitDecodeParams(int output_format, int left, int top, int r
     roi_height = m_decode_params.crop_rectangle.bottom - m_decode_params.crop_rectangle.top;
 
     return std::make_tuple(roi_width, roi_height);
+}
+
+// TODO: remove in final version of the PR; DEBUG helper
+void PyRocJpegDecoder::jpeg_print_variables() {
+    // Print m_decode_params
+    std::cout << "\n=== m_decode_params ===" << std::endl;
+    std::cout << "Output Format: " << static_cast<int>(m_decode_params.output_format) << std::endl;
+    std::cout << "Crop Rectangle: Left=" << m_decode_params.crop_rectangle.left
+              << ", Top=" << m_decode_params.crop_rectangle.top
+              << ", Right=" << m_decode_params.crop_rectangle.right
+              << ", Bottom=" << m_decode_params.crop_rectangle.bottom << std::endl;
+    std::cout << "Target Dimension: Width=" << m_decode_params.target_dimension.width
+              << ", Height=" << m_decode_params.target_dimension.height << std::endl;
+    // Print m_widths
+    std::cout << "\n=== m_widths ===" << std::endl;
+    for (int i = 0; i < ROCJPEG_MAX_COMPONENT; i++) {
+        std::cout << "Width[" << i << "]: " << m_widths[i] << std::endl;
+    }
+    // Print m_heights
+    std::cout << "\n=== m_heights ===" << std::endl;
+    for (int i = 0; i < ROCJPEG_MAX_COMPONENT; i++) {
+        std::cout << "Height[" << i << "]: " << m_heights[i] << std::endl;
+    }
+    // Print m_channel_sizes
+    std::cout << "\n=== m_channel_sizes ===" << std::endl;
+    for (int i = 0; i < ROCJPEG_MAX_COMPONENT; i++) {
+        std::cout << "Channel Size[" << i << "]: " << m_channel_sizes[i] << std::endl;
+    }
+    // Print m_prior_channel_sizes
+    std::cout << "\n=== m_prior_channel_sizes ===" << std::endl;
+    for (int i = 0; i < ROCJPEG_MAX_COMPONENT; i++) {
+        std::cout << "Prior Channel Size[" << i << "]: " << m_prior_channel_sizes[i] << std::endl;
+    }
+    // Print m_output_image
+    std::cout << "\n=== m_output_image ===" << std::endl;
+    for (int i = 0; i < ROCJPEG_MAX_COMPONENT; i++) {
+        std::cout << "Channel[" << i << "] Address: " << static_cast<void*>(m_output_image.channel[i]) << std::endl;
+        std::cout << "Pitch[" << i << "]: " << m_output_image.pitch[i] << std::endl;
+    }
 }
