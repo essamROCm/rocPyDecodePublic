@@ -58,9 +58,6 @@ PyRocJpegDecoder::PyRocJpegDecoder() {
 
     memset(&m_output_image.channel, 0, ROCJPEG_MAX_COMPONENT * sizeof(uint8_t*));
     memset(&m_output_image.pitch, 0, ROCJPEG_MAX_COMPONENT * sizeof(uint32_t));
-
-    memset(&m_widths, 0, ROCJPEG_MAX_COMPONENT * sizeof(uint32_t));
-    memset(&m_heights, 0, ROCJPEG_MAX_COMPONENT * sizeof(uint32_t));
     memset(&m_channel_sizes, 0, ROCJPEG_MAX_COMPONENT * sizeof(uint32_t));
     memset(&m_prior_channel_sizes, 0, ROCJPEG_MAX_COMPONENT * sizeof(uint32_t));
 }
@@ -98,12 +95,12 @@ py::object PyRocJpegDecoder::rocPyJpegDestroy(RocJpegHandle rocjpeg_handle) {
     return py::cast<py::none>(Py_None);
 }
 
-std::tuple<uint8_t,RocJpegChromaSubsampling,uint32_t,uint32_t>
+std::tuple<uint8_t, RocJpegChromaSubsampling, std::array<uint32_t, ROCJPEG_MAX_COMPONENT>, std::array<uint32_t, ROCJPEG_MAX_COMPONENT>>
 PyRocJpegDecoder::rocPyJpegGetImageInfo(RocJpegHandle rocjpeg_handle, RocJpegStreamHandle rocjpeg_stream_handle) {
     uint8_t num_components=0;
     RocJpegChromaSubsampling subsampling;
-    CHECK_ROCJPEG(rocJpegGetImageInfo(rocjpeg_handle, rocjpeg_stream_handle, &num_components, &subsampling, m_widths, m_heights));
-    return std::make_tuple(num_components, subsampling, m_widths[0], m_heights[0]);
+    CHECK_ROCJPEG(rocJpegGetImageInfo(rocjpeg_handle, rocjpeg_stream_handle, &num_components, &subsampling, m_widths.data(), m_heights.data()));
+    return std::make_tuple(num_components, subsampling, m_widths, m_heights);
 }
 
 py::object PyRocJpegDecoder::rocPyJpegDecode(RocJpegHandle rocjpeg_handle, RocJpegStreamHandle rocjpeg_stream_handle) {
@@ -208,7 +205,7 @@ PyRocJpegDecoder::PyGetChromaSubsamplingStr(RocJpegChromaSubsampling subsampling
 
 py::int_ PyRocJpegDecoder::PyGetChannelPitchAndSizes(RocJpegChromaSubsampling subsampling) {
     uint32_t num_channels=0;
-    bool ret = GetChannelPitchAndSizes(m_decode_params, subsampling, m_widths, m_heights, num_channels, m_output_image, m_channel_sizes);
+    bool ret = GetChannelPitchAndSizes(m_decode_params, subsampling, m_widths.data(), m_heights.data(), num_channels, m_output_image, m_channel_sizes);
     if(ret != EXIT_SUCCESS)
         num_channels = 0;
     return py::int_(static_cast<int>(num_channels));

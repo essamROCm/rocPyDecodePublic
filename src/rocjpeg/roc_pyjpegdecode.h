@@ -66,7 +66,7 @@ public:
 
     py::object rocPyJpegDestroy(RocJpegHandle handle);
 
-    std::tuple<uint8_t,RocJpegChromaSubsampling,uint32_t,uint32_t>
+    std::tuple<uint8_t, RocJpegChromaSubsampling, std::array<uint32_t, ROCJPEG_MAX_COMPONENT>, std::array<uint32_t, ROCJPEG_MAX_COMPONENT>>
     rocPyJpegGetImageInfo(RocJpegHandle handle, RocJpegStreamHandle jpeg_stream_handle);
 
     py::object rocPyJpegDecode(RocJpegHandle rocjpeg_handle, RocJpegStreamHandle rocjpeg_stream_handle);
@@ -99,12 +99,13 @@ public:
     // TODO: remove in final version of the PR; DEBUG helper
     void jpeg_print_variables();
 
-    uint32_t m_widths[ROCJPEG_MAX_COMPONENT];
-    uint32_t m_heights[ROCJPEG_MAX_COMPONENT];
-    uint32_t m_channel_sizes[ROCJPEG_MAX_COMPONENT];
-    uint32_t m_prior_channel_sizes[ROCJPEG_MAX_COMPONENT];
-    RocJpegDecodeParams m_decode_params;
-    RocJpegImage m_output_image;
+    // Internal
+    std::array<uint32_t, ROCJPEG_MAX_COMPONENT> m_widths = {};
+    std::array<uint32_t, ROCJPEG_MAX_COMPONENT> m_heights = {};
+    uint32_t m_channel_sizes[ROCJPEG_MAX_COMPONENT] = {};
+    uint32_t m_prior_channel_sizes[ROCJPEG_MAX_COMPONENT] = {};
+    RocJpegDecodeParams m_decode_params = {};
+    RocJpegImage m_output_image = {nullptr};
 };
 
 #endif // PY_ROC_JPEG_HEADER

@@ -65,9 +65,6 @@ def JDecoder(
     num_components = 0
     chroma_sub_sampling = str("")
     subsampling = jpegt.ROCJPEG_CSS_UNKNOWN
-    # Create ctypes arrays of uint32_t
-    widths = (ctypes.c_uint32 * jpegt.ROCJPEG_MAX_COMPONENT)()
-    heights = (ctypes.c_uint32 * jpegt.ROCJPEG_MAX_COMPONENT)()
 
     for file_path in n_file_paths:
         image_count = 0
@@ -80,7 +77,7 @@ def JDecoder(
             print(f"Unable to read from {file_path}")
             exit
 
-        print(f"Input file name: {file_path}")
+        print(f"Input file name, size: {file_path}, {file_size}")
 
         rocjpeg_status = jpegdecode.rocPyJpegStreamParse(file_data, file_size, rocjpeg_stream_handle)
 
@@ -97,15 +94,15 @@ def JDecoder(
         num_components, subsampling, widths, heights = jpegdecode.rocPyJpegGetImageInfo(rocjpeg_handle, rocjpeg_stream_handle)
 
         # roi?
-        if(roi_width > 0 and roi_height > 0 and roi_width <= widths and roi_height <= heights):
+        if(roi_width > 0 and roi_height > 0 and roi_width <= widths[0] and roi_height <= heights[0]):
             is_roi_valid = True
             print(f"Cropped image resolution: {roi_width}x{roi_height}")
 
         chroma_sub_sampling = jpegdecode.PyGetChromaSubsamplingStr(subsampling)
-        print(f"Input image resolution: {widths}x{heights}")
+        print(f"Input image resolution: {widths[0]}x{heights[0]}")
         print(f"Chroma subsampling: {chroma_sub_sampling}")
 
-        if(widths < 64 or heights < 64):
+        if(widths[0] < 64 or heights[0] < 64):
             print("The image resolution is not supported by VCN Hardware")
             if (is_dir):
                 num_jpegs_with_unsupported_resolution += 1
@@ -137,7 +134,7 @@ def JDecoder(
         jpegdecode.rocPyJpegDecode(rocjpeg_handle, rocjpeg_stream_handle) # Call the JPEG decode
         end_time = time.time() # End timing
         time_per_image_in_milli_sec = (end_time - start_time) * 1000 # Compute time per image in milliseconds
-        image_size_in_mpixels = (widths * heights) / 1_000_000 # Compute image size in megapixels
+        image_size_in_mpixels = (widths[0] * heights[0]) / 1_000_000 # Compute image size in megapixels
         image_count += 1 # Increment image count
 
         if (save_images):
