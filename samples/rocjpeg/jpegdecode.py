@@ -6,6 +6,13 @@ import argparse
 import os.path
 import ctypes
 import time
+from hip import hip
+
+
+# check HIP errors
+def check_hip(status, msg="HIP error"):
+    if isinstance(status, hip.hipError_t) and status != hip.hipError_t.hipSuccess:
+        raise RuntimeError(msg)
 
 def read_image(file_path):
     # Check if the file exists
@@ -26,7 +33,6 @@ def read_image(file_path):
         print(f"ERROR: Cannot read from file: {file_path}\n{e}", file=sys.stderr)
         return None, 0
 
-
 def JDecoder(
         input_file_path,
         output_file_path,
@@ -34,6 +40,17 @@ def JDecoder(
         rocjpeg_backend,
         output_format,
         crop_rect):
+
+    # Create an instance of RocJpegDecodeParams
+    decode_params = jdec.PyRocJpegDecodeParams()
+    # initialize its fields
+    decode_params.output_format = jpegt.ROCJPEG_OUTPUT_NATIVE
+    decode_params.crop_rectangle.left = 0
+    decode_params.crop_rectangle.top = 0
+    decode_params.crop_rectangle.right = 0
+    decode_params.crop_rectangle.bottom = 0
+    decode_params.target_dimension.width = 0
+    decode_params.target_dimension.height = 0
 
     # JPEG decode instance
     jpegdecode = jdec.decoder()
@@ -46,11 +63,12 @@ def JDecoder(
 
     # init decode params
     is_roi_valid = False
-    roi_width, roi_height = jpegdecode.PyInitDecodeParams(output_format, crop_rect)
+    roi_width, roi_height = jpegdecode.rocPyInitDecodeParams(decode_params, output_format, crop_rect)
 
     # init HIP
     if(jpegdecode.PyInitHipDevice(device_id)):
         print("HIP Device Initialized Successfully..\n")
+    hip.hipSetDevice(device_id)
 
     # init the stream & the codec
     rocjpeg_handle = jpegdecode.rocPyJpegCreate(rocjpeg_backend, device_id)
@@ -65,6 +83,13 @@ def JDecoder(
     num_components = 0
     chroma_sub_sampling = str("")
     subsampling = jpegt.ROCJPEG_CSS_UNKNOWN
+    channel_sizes = [0] * jpegt.ROCJPEG_MAX_COMPONENT
+    prior_channel_sizes = [0] * jpegt.ROCJPEG_MAX_COMPONENT
+
+    # image descriptor
+    output_image = jdec.PyRocJpegImage()
+    print("First channel address:", hex(output_image.channel[0]))
+    print("First channel pitch:", output_image.pitch[0])
 
     for file_path in n_file_paths:
         image_count = 0
@@ -121,21 +146,38 @@ def JDecoder(
             else:
                 exit
 
-        num_channels = jpegdecode.PyGetChannelPitchAndSizes(subsampling)
+        num_channels, channel_sizes = jpegdecode.PyGetChannelPitchAndSizes(decode_params, subsampling, widths, heights, output_image)
         if(num_channels <= 0):
             print(f"ERROR: Failed to get the channel pitch and sizes {num_channels}")
             exit
+        print(f"channel_sizes: {channel_sizes}")
 
         # allocate memory for each channel and reuse them if the sizes remain unchanged for a new image.
-        jpegdecode.rocPyAllocHipDeviceMemory(num_channels)
+        # output_image = jpegdecode.rocPyAllocHipDeviceMemory(num_channels, channel_sizes, prior_channel_sizes, output_image)
+
+        # Allocate for each channel
+        for i in range(num_channels):
+            if prior_channel_sizes[i] != channel_sizes[i]:
+                # Free existing allocation if sizes differ
+                if output_image.channel[i] is not None:
+                    status = hip.hipFree(output_image.channel[i])
+                    check_hip(status, f"hipFree failed at channel {i}")
+                    output_image.channel[i] = None
+                # Allocate new memory for channel with the new size
+                status, ptr = hip.hipMalloc(channel_sizes[i])
+                check_hip(status, f"hipMalloc failed at channel {i} for size {channel_sizes[i]} bytes")
+                output_image.channel[i] = ptr
 
         print("Decoding started, please wait! ... ")
         start_time = time.time() # Start timing
-        jpegdecode.rocPyJpegDecode(rocjpeg_handle, rocjpeg_stream_handle) # Call the JPEG decode
+        output_image = jpegdecode.rocPyJpegDecode(decode_params, rocjpeg_handle, rocjpeg_stream_handle, output_image) # Call the JPEG decode
         end_time = time.time() # End timing
         time_per_image_in_milli_sec = (end_time - start_time) * 1000 # Compute time per image in milliseconds
         image_size_in_mpixels = (widths[0] * heights[0]) / 1_000_000 # Compute image size in megapixels
         image_count += 1 # Increment image count
+
+        for i in range(jpegt.ROCJPEG_MAX_COMPONENT):
+            prior_channel_sizes[i] = channel_sizes[i]
 
         if (save_images):
             image_save_path = output_file_path
@@ -143,8 +185,8 @@ def JDecoder(
             width = roi_width if(is_roi_valid) else widths[0]
             height = roi_height if(is_roi_valid) else heights[0]
             if (is_dir):
-                image_save_path = jpegdecode.PyGetOutputFileExt(base_file_name, width, height, subsampling, output_file_path)
-            jpegdecode.PySaveImage(image_save_path, width, height, subsampling)
+                image_save_path = jpegdecode.PyGetOutputFileExt(decode_params, base_file_name, width, height, subsampling, output_file_path)
+            jpegdecode.PySaveImage(decode_params, image_save_path, width, height, subsampling, output_image)
 
         print(f"Average processing time per image (ms): {time_per_image_in_milli_sec:.2f}")
         if(time_per_image_in_milli_sec > float(0)):
@@ -156,7 +198,12 @@ def JDecoder(
             mpixels_all += image_size_in_mpixels
 
         # Free allocated MEM
-        jpegdecode.rocPyFreeHipDeviceMemory(num_channels)
+        # output_image = jpegdecode.rocPyFreeHipDeviceMemory(num_channels, output_image)
+        for i in range(num_channels):
+            if output_image.channel[i] is not None:
+                status = hip.hipFree(output_image.channel[i])
+                check_hip(status, f"hipFree failed at channel {i}")
+                output_image.channel[i] = None
 
         if (is_dir):
             time_per_image_all /= total_images  # Compute average time per image

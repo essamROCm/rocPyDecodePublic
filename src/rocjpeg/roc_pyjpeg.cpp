@@ -107,9 +107,14 @@ PYBIND11_MODULE(rocpyjpegdecode, m) {
         .def_readwrite("height", &TargetDimension::height);
 
     // RocJpegDecodeParams Struct Binding
-    py::class_<RocJpegDecodeParams_>(m, "RocJpegDecodeParams")
+    py::class_<PyRocJpegDecodeParams>(m, "RocJpegDecodeParams")
         .def(py::init<>())
-        .def_readwrite("output_format", &RocJpegDecodeParams_::output_format)
-        .def_readwrite("crop_rectangle", &RocJpegDecodeParams_::crop_rectangle)
-        .def_readwrite("target_dimension", &RocJpegDecodeParams_::target_dimension);
+        .def_readwrite("output_format", &PyRocJpegDecodeParams::output_format)
+        .def_readwrite("crop_rectangle", &PyRocJpegDecodeParams::crop_rectangle)
+        .def_readwrite("target_dimension", &PyRocJpegDecodeParams::target_dimension);
+
+    py::class_<PyRocJpegImage>(m, "RocJpegImage")
+        .def(py::init<>())
+        .def_readwrite("channel", &PyRocJpegImage::channel)  // Expose as list of addresses
+        .def_readwrite("pitch", &PyRocJpegImage::pitch);    // Expose as list of integers
 }

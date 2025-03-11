@@ -72,10 +72,40 @@ struct TargetDimension {
 };
 
 // Re-Define Main Struct RocJpegDecodeParams to contain the 2 split structures
-struct RocJpegDecodeParams_ {
+typedef struct {
     RocJpegOutputFormat output_format;
     CropRectangle crop_rectangle;
     TargetDimension target_dimension;
+} PyRocJpegDecodeParams;
+
+// Python-friendly wrapper
+struct PyRocJpegImage {
+    std::array<uintptr_t, ROCJPEG_MAX_COMPONENT> channel;  // uintptr_t to hold addresses safely
+    std::array<uint32_t, ROCJPEG_MAX_COMPONENT> pitch;
+
+    // Constructor
+    PyRocJpegImage() {
+        channel.fill(0);
+        pitch.fill(0);
+    }
+
+    // Convert to C-style RocJpegImage
+    RocJpegImage to_c_struct() const {
+        RocJpegImage img;
+        for (size_t i = 0; i < ROCJPEG_MAX_COMPONENT; ++i) {
+            img.channel[i] = reinterpret_cast<uint8_t*>(channel[i]);
+            img.pitch[i] = pitch[i];
+        }
+        return img;
+    }
+
+    // Load from RocJpegImage
+    void from_c_struct(const RocJpegImage& img) {
+        for (size_t i = 0; i < ROCJPEG_MAX_COMPONENT; ++i) {
+            channel[i] = reinterpret_cast<uintptr_t>(img.channel[i]);
+            pitch[i] = img.pitch[i];
+        }
+    }
 };
 
 // defined in roc_pyvideodecoder.cpp

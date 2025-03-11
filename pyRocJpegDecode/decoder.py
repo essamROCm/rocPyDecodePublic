@@ -23,6 +23,12 @@ import rocpyjpegdecode.jpegTypes as jpegt
 import numpy as np
 
 
+def PyRocJpegDecodeParams():
+    return rocpyjpeg.RocJpegDecodeParams()
+
+def PyRocJpegImage():
+    return rocpyjpeg.RocJpegImage()
+
 class decoder(object):
 
     def __init__(self):
@@ -48,12 +54,12 @@ class decoder(object):
         num_components, subsampling, widths, heights = self.jpegdec.rocPyJpegGetImageInfo(rocjpeg_handle, rocjpeg_stream_handle)
         return num_components, subsampling, widths, heights
 
-    def PyInitDecodeParams(self, output_format, crop_rect):
+    def rocPyInitDecodeParams(self, decode_params, output_format, crop_rect):
         crp_rct = [0,0,0,0]
         if(crop_rect is not None):
             crp_rct = crop_rect
         out_fmt = jpegt.ROCJPEG_OUTPUT_NATIVE
-        roi_width, roi_height = self.jpegdec.PyInitDecodeParams(out_fmt, crp_rct[0],crp_rct[1],crp_rct[2],crp_rct[3])
+        roi_width, roi_height = self.jpegdec.rocPyInitDecodeParams(decode_params, out_fmt, crp_rct[0],crp_rct[1],crp_rct[2],crp_rct[3])
         return roi_width, roi_height
 
     def PyGetFilePaths(self, input_path, file_paths, is_dir, is_file):
@@ -67,24 +73,20 @@ class decoder(object):
         chroma_string = self.jpegdec.PyGetChromaSubsamplingStr(subsampling)
         return chroma_string
 
-    def PyGetChannelPitchAndSizes(self, subsampling):
-        return self.jpegdec.PyGetChannelPitchAndSizes(subsampling)
+    def PyGetChannelPitchAndSizes(self, decode_params, subsampling, widths, heights, output_image):
+        return self.jpegdec.PyGetChannelPitchAndSizes(decode_params, subsampling, widths, heights, output_image)
 
-    def rocPyAllocHipDeviceMemory(self, num_channels):
-        return self.jpegdec.rocPyAllocHipDeviceMemory(num_channels)
+    def rocPyAllocHipDeviceMemory(self, num_channels, channel_sizes, prior_channel_sizes, output_image):
+        return self.jpegdec.rocPyAllocHipDeviceMemory(num_channels, channel_sizes, prior_channel_sizes, output_image)
 
-    def rocPyFreeHipDeviceMemory(self, num_channels):
-        return self.jpegdec.rocPyFreeHipDeviceMemory(num_channels)
+    def rocPyFreeHipDeviceMemory(self, num_channels, output_image):
+        return self.jpegdec.rocPyFreeHipDeviceMemory(num_channels, output_image)
 
-    def rocPyJpegDecode(self, rocjpeg_handle, rocjpeg_stream_handle):
-        return self.jpegdec.rocPyJpegDecode(rocjpeg_handle, rocjpeg_stream_handle)
+    def rocPyJpegDecode(self, decode_params, rocjpeg_handle, rocjpeg_stream_handle, output_image):
+        return self.jpegdec.rocPyJpegDecode(decode_params, rocjpeg_handle, rocjpeg_stream_handle, output_image)
 
-    def PyGetOutputFileExt(self, base_file_name, image_width, image_height, subsampling, output_file_name):
-        return self.jpegdec.PyGetOutputFileExt(base_file_name, image_width, image_height, subsampling, output_file_name)
+    def PyGetOutputFileExt(self, decode_params, base_file_name, image_width, image_height, subsampling, output_file_name):
+        return self.jpegdec.PyGetOutputFileExt(decode_params, base_file_name, image_width, image_height, subsampling, output_file_name)
 
-    def PySaveImage(self, image_save_path, width, height, subsampling):
-        return self.jpegdec.PySaveImage(image_save_path, width, height, subsampling)
-
-    # TO DO: remove in final version of the PR; DEBUG helper
-    def jpeg_print_variables(self):
-        return self.jpegdec.jpeg_print_variables()
+    def PySaveImage(self, decode_params, image_save_path, width, height, subsampling, output_image):
+        return self.jpegdec.PySaveImage(decode_params, image_save_path, width, height, subsampling, output_image)
