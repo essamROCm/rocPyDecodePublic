@@ -29,6 +29,7 @@ def PyRocJpegDecodeParams():
 def PyRocJpegImage():
     return rocpyjpeg.RocJpegImage()
 
+# rocPyJpeg Decoder Class
 class decoder(object):
 
     def __init__(self):
@@ -62,20 +63,6 @@ class decoder(object):
         roi_width, roi_height = self.jpegdec.rocPyInitDecodeParams(decode_params, out_fmt, crp_rct[0],crp_rct[1],crp_rct[2],crp_rct[3])
         return roi_width, roi_height
 
-    def PyGetFilePaths(self, input_path, file_paths, is_dir, is_file):
-        n_input_path, n_file_paths, n_is_dir, n_is_file = self.jpegdec.PyGetFilePaths(input_path, file_paths, is_dir, is_file)
-        return n_input_path, n_file_paths, n_is_dir, n_is_file
-
-    def PyInitHipDevice(self, device_id):
-        return self.jpegdec.PyInitHipDevice(device_id)
-
-    def PyGetChromaSubsamplingStr(self, subsampling):
-        chroma_string = self.jpegdec.PyGetChromaSubsamplingStr(subsampling)
-        return chroma_string
-
-    def PyGetChannelPitchAndSizes(self, decode_params, subsampling, widths, heights, output_image):
-        return self.jpegdec.PyGetChannelPitchAndSizes(decode_params, subsampling, widths, heights, output_image)
-
     def rocPyAllocHipDeviceMemory(self, num_channels, channel_sizes, prior_channel_sizes, output_image):
         return self.jpegdec.rocPyAllocHipDeviceMemory(num_channels, channel_sizes, prior_channel_sizes, output_image)
 
@@ -84,9 +71,3 @@ class decoder(object):
 
     def rocPyJpegDecode(self, decode_params, rocjpeg_handle, rocjpeg_stream_handle, output_image):
         return self.jpegdec.rocPyJpegDecode(decode_params, rocjpeg_handle, rocjpeg_stream_handle, output_image)
-
-    def PyGetOutputFileExt(self, decode_params, base_file_name, image_width, image_height, subsampling, output_file_name):
-        return self.jpegdec.PyGetOutputFileExt(decode_params, base_file_name, image_width, image_height, subsampling, output_file_name)
-
-    def PySaveImage(self, decode_params, image_save_path, width, height, subsampling, output_image):
-        return self.jpegdec.PySaveImage(decode_params, image_save_path, width, height, subsampling, output_image)

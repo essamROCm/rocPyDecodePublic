@@ -83,14 +83,19 @@ PYBIND11_MODULE(rocpyjpegdecode, m) {
         .value("ROCJPEG_STATUS_NOT_IMPLEMENTED",ROCJPEG_STATUS_NOT_IMPLEMENTED)
         .export_values();
 
-    // --------------------------------------
-    // AMD Video Decoder 'PyRocVideoDecoder'
-    // --------------------------------------
+    // -----------------------------------
+    // AMD JPEG Decoder 'PyRocJpegDecoder'
+    // -----------------------------------
     PyRocJpegDecoderInitializer(m);
- 
-    // ----------------
+
+    // -------------------------------
+    // AMD JPEG Utils 'PyRocJpegUtils'
+    // -------------------------------
+    PyRocJpegUtilsInitializer(m);
+
+    // -----------
     // Structures:
-    // ----------------
+    // -----------
 
     // CropRectangle Struct Binding
     py::class_<CropRectangle>(m, "CropRectangle")

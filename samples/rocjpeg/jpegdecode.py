@@ -1,4 +1,5 @@
 import pyRocJpegDecode.decoder as jdec
+import pyRocJpegDecode.utils as jutils
 import pyRocJpegDecode.types as jpegt
 import datetime
 import sys
@@ -6,6 +7,7 @@ import argparse
 import os.path
 import ctypes
 import time
+
 from hip import hip
 
 
@@ -52,22 +54,21 @@ def JDecoder(
     decode_params.target_dimension.width = 0
     decode_params.target_dimension.height = 0
 
-    # JPEG decode instance
+    # JPEG decode & utils instance
     jpegdecode = jdec.decoder()
+    jpegutils = jutils.utils()
 
     # parse input
     file_paths = []
     is_dir = False
     is_file = False
-    n_input_path, n_file_paths, n_is_dir, n_is_file = jpegdecode.PyGetFilePaths(input_file_path, file_paths, is_dir, is_file)
+    n_input_path, n_file_paths, n_is_dir, n_is_file = jpegutils.PyGetFilePaths(input_file_path, file_paths, is_dir, is_file)
 
     # init decode params
     is_roi_valid = False
     roi_width, roi_height = jpegdecode.rocPyInitDecodeParams(decode_params, output_format, crop_rect)
 
     # init HIP
-    if(jpegdecode.PyInitHipDevice(device_id)):
-        print("HIP Device Initialized Successfully..\n")
     hip.hipSetDevice(device_id)
 
     # init the stream & the codec
@@ -123,7 +124,7 @@ def JDecoder(
             is_roi_valid = True
             print(f"Cropped image resolution: {roi_width}x{roi_height}")
 
-        chroma_sub_sampling = jpegdecode.PyGetChromaSubsamplingStr(subsampling)
+        chroma_sub_sampling = jpegutils.PyGetChromaSubsamplingStr(subsampling)
         print(f"Input image resolution: {widths[0]}x{heights[0]}")
         print(f"Chroma subsampling: {chroma_sub_sampling}")
 
@@ -146,7 +147,7 @@ def JDecoder(
             else:
                 exit
 
-        num_channels, channel_sizes = jpegdecode.PyGetChannelPitchAndSizes(decode_params, subsampling, widths, heights, output_image)
+        num_channels, channel_sizes = jpegutils.PyGetChannelPitchAndSizes(decode_params, subsampling, widths, heights, output_image)
         if(num_channels <= 0):
             print(f"ERROR: Failed to get the channel pitch and sizes {num_channels}")
             exit
@@ -185,8 +186,8 @@ def JDecoder(
             width = roi_width if(is_roi_valid) else widths[0]
             height = roi_height if(is_roi_valid) else heights[0]
             if (is_dir):
-                image_save_path = jpegdecode.PyGetOutputFileExt(decode_params, base_file_name, width, height, subsampling, output_file_path)
-            jpegdecode.PySaveImage(decode_params, image_save_path, width, height, subsampling, output_image)
+                image_save_path = jpegutils.PyGetOutputFileExt(decode_params, base_file_name, width, height, subsampling, output_file_path)
+            jpegutils.PySaveImage(decode_params, image_save_path, width, height, subsampling, output_image)
 
         print(f"Average processing time per image (ms): {time_per_image_in_milli_sec:.2f}")
         if(time_per_image_in_milli_sec > float(0)):
@@ -199,6 +200,7 @@ def JDecoder(
 
         # Free allocated MEM
         # output_image = jpegdecode.rocPyFreeHipDeviceMemory(num_channels, output_image)
+        print(f"Free allocated MEM, channels count: {num_channels}..\n")
         for i in range(num_channels):
             if output_image.channel[i] is not None:
                 status = hip.hipFree(output_image.channel[i])
