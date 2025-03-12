@@ -71,3 +71,6 @@ class decoder(object):
 
     def rocPyJpegDecode(self, decode_params, rocjpeg_handle, rocjpeg_stream_handle, output_image):
         return self.jpegdec.rocPyJpegDecode(decode_params, rocjpeg_handle, rocjpeg_stream_handle, output_image)
+
+    def PyInitHipDevice(self, device_id):
+        return self.jpegdec.PyInitHipDevice(device_id)

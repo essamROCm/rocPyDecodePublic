@@ -68,6 +68,7 @@ public:
     rocPyInitDecodeParams(PyRocJpegDecodeParams &m_decode_params, int output_format, int left, int top, int right, int bottom);
     PyRocJpegImage rocPyAllocHipDeviceMemory(int num_channels, std::array<uint32_t, ROCJPEG_MAX_COMPONENT> &channel_sizes, std::array<uint32_t, ROCJPEG_MAX_COMPONENT> &prior_channel_sizes, PyRocJpegImage& py_img);
     PyRocJpegImage rocPyFreeHipDeviceMemory(int num_channels, PyRocJpegImage& py_img);
+    py::object PyInitHipDevice(int device_id);
 };
 
 class PyRocJpegUtils : public RocJpegUtils {
@@ -84,7 +85,7 @@ public:
     PyGetOutputFileExt(PyRocJpegDecodeParams &m_decode_params, std::string &base_file_name, uint32_t image_width, uint32_t image_height, RocJpegChromaSubsampling subsampling, std::string &image_save_path);
     py::object
     PySaveImage(PyRocJpegDecodeParams &m_decode_params, std::string image_save_path, uint32_t img_width, uint32_t img_height, RocJpegChromaSubsampling subsampling, PyRocJpegImage& py_img);
-    std::tuple<int, std::array<uint32_t, ROCJPEG_MAX_COMPONENT>>
+    std::tuple<int, std::array<uint32_t, ROCJPEG_MAX_COMPONENT>, PyRocJpegImage>
     PyGetChannelPitchAndSizes(PyRocJpegDecodeParams &m_decode_params, RocJpegChromaSubsampling subsampling, 
                                 std::array<uint32_t, ROCJPEG_MAX_COMPONENT> &widths, std::array<uint32_t, ROCJPEG_MAX_COMPONENT> &heights, PyRocJpegImage& py_img);
     std::string PyGetChromaSubsamplingStr(RocJpegChromaSubsampling subsampling);

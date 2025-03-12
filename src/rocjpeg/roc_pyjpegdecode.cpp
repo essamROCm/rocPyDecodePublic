@@ -34,9 +34,10 @@ void PyRocJpegDecoderInitializer(py::module& m) {
         .def("rocPyJpegStreamDestroy",&PyRocJpegDecoder::rocPyJpegStreamDestroy)
         .def("rocPyJpegStreamParse",&PyRocJpegDecoder::rocPyJpegStreamParse)
         .def("rocPyJpegGetImageInfo",&PyRocJpegDecoder::rocPyJpegGetImageInfo)
+        .def("PyInitHipDevice",&PyRocJpegDecoder::PyInitHipDevice)
         .def("rocPyAllocHipDeviceMemory",&PyRocJpegDecoder::rocPyAllocHipDeviceMemory)
-        .def("rocPyJpegDecode",&PyRocJpegDecoder::rocPyJpegDecode)
         .def("rocPyFreeHipDeviceMemory",&PyRocJpegDecoder::rocPyFreeHipDeviceMemory)
+        .def("rocPyJpegDecode",&PyRocJpegDecoder::rocPyJpegDecode)
         .def("rocPyInitDecodeParams",&PyRocJpegDecoder::rocPyInitDecodeParams);
 }
 
@@ -138,6 +139,14 @@ PyRocJpegImage PyRocJpegDecoder::rocPyFreeHipDeviceMemory(int num_channels, PyRo
     return py_img;
 }
 
+py::object PyRocJpegDecoder::PyInitHipDevice(int device_id) {
+    bool ret = true;
+    if (!(ret=InitHipDevice(device_id))) {
+        std::cerr << "ERROR: Failed to initialize HIP!" << std::endl;
+    }
+    return py::cast(ret);
+}
+
 std::tuple<int, int>
 PyRocJpegDecoder::rocPyInitDecodeParams(PyRocJpegDecodeParams &m_decode_params, int output_format, int left, int top, int right, int bottom) {
     // format [1:native, 2:yuv_planar, 3:y, 4:rgb, 5:rgb_planar]
@@ -197,7 +206,7 @@ PyRocJpegUtils::PyGetFilePaths(std::string &input_path, std::vector<std::string>
     return std::make_tuple(input_path, file_paths, is_dir, is_file);
 }
 
-std::tuple<int, std::array<uint32_t, ROCJPEG_MAX_COMPONENT>>
+std::tuple<int, std::array<uint32_t, ROCJPEG_MAX_COMPONENT>, PyRocJpegImage>
 PyRocJpegUtils::PyGetChannelPitchAndSizes(PyRocJpegDecodeParams &m_decode_params, RocJpegChromaSubsampling subsampling,
                             std::array<uint32_t, ROCJPEG_MAX_COMPONENT> &widths, std::array<uint32_t, ROCJPEG_MAX_COMPONENT> &heights, PyRocJpegImage& py_img) {
     RocJpegImage output_image = py_img.to_c_struct();
@@ -208,7 +217,8 @@ PyRocJpegUtils::PyGetChannelPitchAndSizes(PyRocJpegDecodeParams &m_decode_params
     bool ret = GetChannelPitchAndSizes(decode_params, subsampling, widths.data(), heights.data(), num_channels, output_image, reinterpret_cast<uint32_t *>(&channel_sizes));
     if(ret != EXIT_SUCCESS)
         num_channels = 0;
-    return std::make_tuple(num_channels, channel_sizes);
+    py_img.from_c_struct(output_image);
+    return std::make_tuple(num_channels, channel_sizes, py_img);
 }
 
 std::string
