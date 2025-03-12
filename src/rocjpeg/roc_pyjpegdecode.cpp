@@ -95,11 +95,11 @@ PyRocJpegDecoder::rocPyJpegGetImageInfo(RocJpegHandle rocjpeg_handle, RocJpegStr
 }
 
 PyRocJpegImage PyRocJpegDecoder::rocPyJpegDecode(PyRocJpegDecodeParams &m_decode_params, RocJpegHandle rocjpeg_handle, RocJpegStreamHandle rocjpeg_stream_handle, PyRocJpegImage& py_img) {
-    RocJpegImage m_output_image = py_img.to_c_struct();
+    RocJpegImage output_image = py_img.to_c_struct();
     RocJpegDecodeParams decode_params;
     memcpy(&decode_params, &m_decode_params, sizeof(RocJpegDecodeParams));
-    CHECK_ROCJPEG(rocJpegDecode(rocjpeg_handle, rocjpeg_stream_handle, &decode_params, &m_output_image));
-    py_img.from_c_struct(m_output_image);
+    CHECK_ROCJPEG(rocJpegDecode(rocjpeg_handle, rocjpeg_stream_handle, &decode_params, &output_image));
+    py_img.from_c_struct(output_image);
     return py_img;
 }
 
@@ -110,31 +110,31 @@ py::object PyRocJpegDecoder::rocPyJpegDecodeBatched(RocJpegHandle handle, RocJpe
 }
 
 PyRocJpegImage PyRocJpegDecoder::rocPyAllocHipDeviceMemory(int num_channels, std::array<uint32_t, ROCJPEG_MAX_COMPONENT> &channel_sizes, std::array<uint32_t, ROCJPEG_MAX_COMPONENT> &prior_channel_sizes, PyRocJpegImage& py_img) {
-    RocJpegImage m_output_image = py_img.to_c_struct();
+    RocJpegImage output_image = py_img.to_c_struct();
     // allocate memory for each channel and reuse them if the sizes remain unchanged for a new image.
     for (int i = 0; i < num_channels; i++) {
         if (prior_channel_sizes[i] != channel_sizes[i]) {
-            if (m_output_image.channel[i] != nullptr) {
-                CHECK_HIP(hipFree((void *)m_output_image.channel[i]));
-                m_output_image.channel[i] = nullptr;
+            if (output_image.channel[i] != nullptr) {
+                CHECK_HIP(hipFree((void *)output_image.channel[i]));
+                output_image.channel[i] = nullptr;
             }
-            CHECK_HIP(hipMalloc(&m_output_image.channel[i], channel_sizes[i]));
+            CHECK_HIP(hipMalloc(&output_image.channel[i], channel_sizes[i]));
         }
     }
-    py_img.from_c_struct(m_output_image);
+    py_img.from_c_struct(output_image);
     return py_img;
 }
 
 PyRocJpegImage PyRocJpegDecoder::rocPyFreeHipDeviceMemory(int num_channels, PyRocJpegImage& py_img) {
-    RocJpegImage m_output_image = py_img.to_c_struct();
+    RocJpegImage output_image = py_img.to_c_struct();
     // Free the allocated memory for each channel
     for (int i = 0; i < num_channels; i++) {
-        if (m_output_image.channel[i] != nullptr) {
-            CHECK_HIP(hipFree((void *)m_output_image.channel[i]));
-            m_output_image.channel[i] = nullptr;
+        if (output_image.channel[i] != nullptr) {
+            CHECK_HIP(hipFree((void *)output_image.channel[i]));
+            output_image.channel[i] = nullptr;
         }
     }
-    py_img.from_c_struct(m_output_image);
+    py_img.from_c_struct(output_image);
     return py_img;
 }
 
@@ -158,18 +158,15 @@ PyRocJpegDecoder::rocPyInitDecodeParams(PyRocJpegDecodeParams &m_decode_params, 
             m_decode_params.output_format = ROCJPEG_OUTPUT_NATIVE;
             break;
     }
-
     // crop
     m_decode_params.crop_rectangle.left = left;
     m_decode_params.crop_rectangle.top = top;
     m_decode_params.crop_rectangle.right = right;
     m_decode_params.crop_rectangle.bottom = bottom;
-
     // roi
     int roi_width = 0, roi_height = 0;
     roi_width = m_decode_params.crop_rectangle.right - m_decode_params.crop_rectangle.left;
     roi_height = m_decode_params.crop_rectangle.bottom - m_decode_params.crop_rectangle.top;
-
     return std::make_tuple(roi_width, roi_height);
 }
 
@@ -186,8 +183,8 @@ PyRocJpegUtils::PyGetOutputFileExt(PyRocJpegDecodeParams &m_decode_params, std::
 
 py::object
 PyRocJpegUtils::PySaveImage(PyRocJpegDecodeParams &m_decode_params, std::string image_save_path, uint32_t img_width, uint32_t img_height, RocJpegChromaSubsampling subsampling, PyRocJpegImage& py_img) {
-    RocJpegImage m_output_image = py_img.to_c_struct();
-    SaveImage(image_save_path, &m_output_image, img_width, img_height, subsampling, m_decode_params.output_format);
+    RocJpegImage output_image = py_img.to_c_struct();
+    SaveImage(image_save_path, &output_image, img_width, img_height, subsampling, m_decode_params.output_format);
     return py::cast<py::none>(Py_None);
 }
 
@@ -203,12 +200,12 @@ PyRocJpegUtils::PyGetFilePaths(std::string &input_path, std::vector<std::string>
 std::tuple<int, std::array<uint32_t, ROCJPEG_MAX_COMPONENT>>
 PyRocJpegUtils::PyGetChannelPitchAndSizes(PyRocJpegDecodeParams &m_decode_params, RocJpegChromaSubsampling subsampling,
                             std::array<uint32_t, ROCJPEG_MAX_COMPONENT> &widths, std::array<uint32_t, ROCJPEG_MAX_COMPONENT> &heights, PyRocJpegImage& py_img) {
-    RocJpegImage m_output_image = py_img.to_c_struct();
+    RocJpegImage output_image = py_img.to_c_struct();
     std::array<uint32_t, ROCJPEG_MAX_COMPONENT> channel_sizes = {};
     uint32_t num_channels=0;
     RocJpegDecodeParams decode_params;
     memcpy(&decode_params, &m_decode_params, sizeof(RocJpegDecodeParams));
-    bool ret = GetChannelPitchAndSizes(decode_params, subsampling, widths.data(), heights.data(), num_channels, m_output_image, reinterpret_cast<uint32_t *>(&channel_sizes));
+    bool ret = GetChannelPitchAndSizes(decode_params, subsampling, widths.data(), heights.data(), num_channels, output_image, reinterpret_cast<uint32_t *>(&channel_sizes));
     if(ret != EXIT_SUCCESS)
         num_channels = 0;
     return std::make_tuple(num_channels, channel_sizes);
