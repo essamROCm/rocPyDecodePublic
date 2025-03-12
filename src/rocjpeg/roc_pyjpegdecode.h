@@ -65,8 +65,6 @@ public:
     std::tuple<PyRocJpegImage, PyRocJpegDecodeParams>
     rocPyJpegDecode(PyRocJpegDecodeParams &in_decode_params, RocJpegHandle rocjpeg_handle, RocJpegStreamHandle rocjpeg_stream_handle, PyRocJpegImage& py_img);
     py::object rocPyJpegDecodeBatched(RocJpegHandle handle, RocJpegStreamHandle *jpeg_stream_handles, int batch_size, const PyRocJpegDecodeParams *in_decode_params, RocJpegImage *destinations);
-    std::tuple<int, int, PyRocJpegDecodeParams>
-    rocPyInitDecodeParams(PyRocJpegDecodeParams &in_decode_params, int output_format, int left, int top, int right, int bottom);
     PyRocJpegImage rocPyAllocHipDeviceMemory(int num_channels, std::array<uint32_t, ROCJPEG_MAX_COMPONENT> &channel_sizes, std::array<uint32_t, ROCJPEG_MAX_COMPONENT> &prior_channel_sizes, PyRocJpegImage& py_img);
     PyRocJpegImage rocPyFreeHipDeviceMemory(int num_channels, PyRocJpegImage& py_img);
     py::object PyInitHipDevice(int device_id);
@@ -80,6 +78,8 @@ public:
     ~PyRocJpegUtils() {};
 
     // rocJPEG Utils APIs
+    std::tuple<int, int, PyRocJpegDecodeParams>
+    PyInitDecodeParams(PyRocJpegDecodeParams &in_decode_params, int output_format, int left, int top, int right, int bottom);
     std::tuple<std::string, std::vector<std::string>, bool, bool>
     PyGetFilePaths(std::string &input_path, std::vector<std::string> &file_paths, bool &is_dir, bool &is_file);
     std::string

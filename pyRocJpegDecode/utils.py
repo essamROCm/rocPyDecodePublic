@@ -27,6 +27,13 @@ class utils(object):
     def __init__(self):
         self.jpegutils = rocpyjpeg.PyRocJpegUtils()
 
+    def PyInitDecodeParams(self, decode_params, output_format, crop_rect):
+        crp_rct = [0,0,0,0]
+        if(crop_rect is not None):
+            crp_rct = crop_rect
+        roi_width, roi_height, decode_params = self.jpegutils.PyInitDecodeParams(decode_params, output_format, crp_rct[0],crp_rct[1],crp_rct[2],crp_rct[3])
+        return roi_width, roi_height, decode_params
+
     def PyGetFilePaths(self, input_path, file_paths, is_dir, is_file):
         n_input_path, n_file_paths, n_is_dir, n_is_file = self.jpegutils.PyGetFilePaths(input_path, file_paths, is_dir, is_file)
         return n_input_path, n_file_paths, n_is_dir, n_is_file

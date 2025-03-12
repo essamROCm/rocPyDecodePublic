@@ -66,7 +66,7 @@ def JDecoder(
 
     # init decode params
     is_roi_valid = False
-    roi_width, roi_height, decode_params = jpegdecode.rocPyInitDecodeParams(decode_params, output_format, crop_rect)
+    roi_width, roi_height, decode_params = jpegutils.PyInitDecodeParams(decode_params, output_format, crop_rect)
 
     # init HIP
     # if(jpegdecode.PyInitHipDevice(device_id)):

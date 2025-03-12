@@ -37,14 +37,14 @@ void PyRocJpegDecoderInitializer(py::module& m) {
         .def("PyInitHipDevice",&PyRocJpegDecoder::PyInitHipDevice)
         .def("rocPyAllocHipDeviceMemory",&PyRocJpegDecoder::rocPyAllocHipDeviceMemory)
         .def("rocPyFreeHipDeviceMemory",&PyRocJpegDecoder::rocPyFreeHipDeviceMemory)
-        .def("rocPyJpegDecode",&PyRocJpegDecoder::rocPyJpegDecode)
-        .def("rocPyInitDecodeParams",&PyRocJpegDecoder::rocPyInitDecodeParams);
+        .def("rocPyJpegDecode",&PyRocJpegDecoder::rocPyJpegDecode);
 }
 
 void PyRocJpegUtilsInitializer(py::module& m) {
     py::class_<PyRocJpegUtils> (m, "PyRocJpegUtils")
         .def(py::init<>())
         // Utils
+        .def("PyInitDecodeParams",&PyRocJpegUtils::PyInitDecodeParams)
         .def("PyGetOutputFileExt",&PyRocJpegUtils::PyGetOutputFileExt)
         .def("PySaveImage",&PyRocJpegUtils::PySaveImage)
         .def("PyGetFilePaths",&PyRocJpegUtils::PyGetFilePaths)
@@ -149,8 +149,12 @@ py::object PyRocJpegDecoder::PyInitHipDevice(int device_id) {
     return py::cast(ret);
 }
 
+//
+// Utils
+//
+
 std::tuple<int, int, PyRocJpegDecodeParams>
-PyRocJpegDecoder::rocPyInitDecodeParams(PyRocJpegDecodeParams &in_decode_params, int output_format, int left, int top, int right, int bottom) {
+PyRocJpegUtils::PyInitDecodeParams(PyRocJpegDecodeParams &in_decode_params, int output_format, int left, int top, int right, int bottom) {
     // format [1:native, 2:yuv_planar, 3:y, 4:rgb, 5:rgb_planar]
     switch(output_format) {
         case 2:
@@ -180,10 +184,6 @@ PyRocJpegDecoder::rocPyInitDecodeParams(PyRocJpegDecodeParams &in_decode_params,
     roi_height = in_decode_params.crop_rectangle.bottom - in_decode_params.crop_rectangle.top;
     return std::make_tuple(roi_width, roi_height, in_decode_params);
 }
-
-//
-// Utils
-//
 
 std::string
 PyRocJpegUtils::PyGetOutputFileExt(PyRocJpegDecodeParams &in_decode_params, std::string &base_file_name, uint32_t image_width, uint32_t image_height, RocJpegChromaSubsampling subsampling, std::string &image_save_path) {
