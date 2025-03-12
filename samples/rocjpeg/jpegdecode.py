@@ -8,7 +8,7 @@ import os.path
 import ctypes
 import time
 
-# from hip import hip
+from hip import hip
 
 
 # check HIP errors
@@ -66,12 +66,12 @@ def JDecoder(
 
     # init decode params
     is_roi_valid = False
-    roi_width, roi_height = jpegdecode.rocPyInitDecodeParams(decode_params, output_format, crop_rect)
+    roi_width, roi_height, decode_params = jpegdecode.rocPyInitDecodeParams(decode_params, output_format, crop_rect)
 
     # init HIP
-    if(jpegdecode.PyInitHipDevice(device_id)):
-        print("HIP Device Initialized Successfully..\n")
-    # hip.hipSetDevice(device_id)
+    # if(jpegdecode.PyInitHipDevice(device_id)):
+    #     print("HIP Device Initialized Successfully..\n")
+    hip.hipSetDevice(device_id)
 
     # init the stream & the codec
     rocjpeg_handle = jpegdecode.rocPyJpegCreate(rocjpeg_backend, device_id)
@@ -156,23 +156,23 @@ def JDecoder(
         print(f"channel_sizes: {channel_sizes}")
 
         # allocate memory for each channel and reuse them if the sizes remain unchanged for a new image.
-        output_image = jpegdecode.rocPyAllocHipDeviceMemory(num_channels, channel_sizes, prior_channel_sizes, output_image)
-        # # Allocate for each channel
-        # for i in range(num_channels):
-        #     if prior_channel_sizes[i] != channel_sizes[i]:
-        #         # Free existing allocation if sizes differ
-        #         if output_image.channel[i] is not None:
-        #             status = hip.hipFree(output_image.channel[i])
-        #             check_hip(status, f"hipFree failed at channel {i}")
-        #             output_image.channel[i] = None
-        #         # Allocate new memory for channel with the new size
-        #         status, ptr = hip.hipMalloc(channel_sizes[i])
-        #         check_hip(status, f"hipMalloc failed at channel {i} for size {channel_sizes[i]} bytes")
-        #         output_image.channel[i] = ptr
+        # output_image = jpegdecode.rocPyAllocHipDeviceMemory(num_channels, channel_sizes, prior_channel_sizes, output_image)
+        # Allocate for each channel
+        for i in range(num_channels):
+            if prior_channel_sizes[i] != channel_sizes[i]:
+                # Free existing allocation if sizes differ
+                if output_image.channel[i] is not None:
+                    status = hip.hipFree(output_image.channel[i])
+                    check_hip(status, f"hipFree failed at channel {i}")
+                    output_image.channel[i] = None
+                # Allocate new memory for channel with the new size
+                status, ptr = hip.hipMalloc(channel_sizes[i])
+                check_hip(status, f"hipMalloc failed at channel {i} for size {channel_sizes[i]} bytes")
+                output_image.channel[i] = ptr
 
         print("Decoding started, please wait! ... ")
         start_time = time.time() # Start timing
-        output_image = jpegdecode.rocPyJpegDecode(decode_params, rocjpeg_handle, rocjpeg_stream_handle, output_image) # Call the JPEG decode
+        output_image, decode_params = jpegdecode.rocPyJpegDecode(decode_params, rocjpeg_handle, rocjpeg_stream_handle, output_image) # Call the JPEG decode
         end_time = time.time() # End timing
         time_per_image_in_milli_sec = (end_time - start_time) * 1000 # Compute time per image in milliseconds
         image_size_in_mpixels = (widths[0] * heights[0]) / 1_000_000 # Compute image size in megapixels
@@ -200,13 +200,13 @@ def JDecoder(
             mpixels_all += image_size_in_mpixels
 
         # Free allocated MEM
-        output_image = jpegdecode.rocPyFreeHipDeviceMemory(num_channels, output_image)
-        # print(f"Free allocated MEM, channels count: {num_channels}..\n")
-        # for i in range(num_channels):
-        #     if output_image.channel[i] is not None:
-        #         status = hip.hipFree(output_image.channel[i])
-        #         check_hip(status, f"hipFree failed at channel {i}")
-        #         output_image.channel[i] = None
+        # output_image = jpegdecode.rocPyFreeHipDeviceMemory(num_channels, output_image)
+        print(f"Free allocated MEM, channels count: {num_channels}..\n")
+        for i in range(num_channels):
+            if output_image.channel[i] is not None:
+                status = hip.hipFree(output_image.channel[i])
+                check_hip(status, f"hipFree failed at channel {i}")
+                output_image.channel[i] = None
 
         if (is_dir):
             time_per_image_all /= total_images  # Compute average time per image

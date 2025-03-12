@@ -60,8 +60,8 @@ class decoder(object):
         if(crop_rect is not None):
             crp_rct = crop_rect
         out_fmt = jpegt.ROCJPEG_OUTPUT_NATIVE
-        roi_width, roi_height = self.jpegdec.rocPyInitDecodeParams(decode_params, out_fmt, crp_rct[0],crp_rct[1],crp_rct[2],crp_rct[3])
-        return roi_width, roi_height
+        roi_width, roi_height, decode_params = self.jpegdec.rocPyInitDecodeParams(decode_params, out_fmt, crp_rct[0],crp_rct[1],crp_rct[2],crp_rct[3])
+        return roi_width, roi_height, decode_params
 
     def rocPyAllocHipDeviceMemory(self, num_channels, channel_sizes, prior_channel_sizes, output_image):
         return self.jpegdec.rocPyAllocHipDeviceMemory(num_channels, channel_sizes, prior_channel_sizes, output_image)
