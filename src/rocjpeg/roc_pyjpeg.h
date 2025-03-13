@@ -78,32 +78,9 @@ typedef struct {
     TargetDimension target_dimension;
 } PyRocJpegDecodeParams;
 
-// Re-define RocJpegImage with Python-friendly wrapper
-// Python does not have direct pointer manipulation
 struct PyRocJpegImage {
-    std::array<uintptr_t, ROCJPEG_MAX_COMPONENT> channel;  // uintptr_t to hold addresses safely
+    std::array<uint8_t*, ROCJPEG_MAX_COMPONENT> channel;
     std::array<uint32_t, ROCJPEG_MAX_COMPONENT> pitch;
-    // Constructor
-    PyRocJpegImage() {
-        channel.fill(0);
-        pitch.fill(0);
-    }
-    // Convert to C-style RocJpegImage
-    RocJpegImage to_c_struct() const {
-        RocJpegImage img;
-        for (size_t i = 0; i < ROCJPEG_MAX_COMPONENT; ++i) {
-            img.channel[i] = reinterpret_cast<uint8_t*>(channel[i]);
-            img.pitch[i] = pitch[i];
-        }
-        return img;
-    }
-    // Load from RocJpegImage
-    void from_c_struct(const RocJpegImage& img) {
-        for (size_t i = 0; i < ROCJPEG_MAX_COMPONENT; ++i) {
-            channel[i] = reinterpret_cast<uintptr_t>(img.channel[i]);
-            pitch[i] = img.pitch[i];
-        }
-    }
 };
 
 // defined in roc_pyjpegdecoder.cpp

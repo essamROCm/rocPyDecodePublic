@@ -118,8 +118,36 @@ PYBIND11_MODULE(rocpyjpegdecode, m) {
         .def_readwrite("crop_rectangle", &PyRocJpegDecodeParams::crop_rectangle)
         .def_readwrite("target_dimension", &PyRocJpegDecodeParams::target_dimension);
 
-    py::class_<PyRocJpegImage>(m, "RocJpegImage")
+    py::class_<PyRocJpegImage>(m, "PyRocJpegImage")
         .def(py::init<>())
-        .def_readwrite("channel", &PyRocJpegImage::channel)  // Expose as list of addresses
-        .def_readwrite("pitch", &PyRocJpegImage::pitch);    // Expose as list of integers
+        .def_property("pitch",
+            [](const PyRocJpegImage& img) {
+                // Getter for pitch as vector
+                return std::vector<uint32_t>(img.pitch.begin(), img.pitch.end());
+            },
+            [](PyRocJpegImage& img, const std::vector<uint32_t>& pitches) {
+                // Setter for pitch
+                if (pitches.size() != ROCJPEG_MAX_COMPONENT)
+                    throw std::runtime_error("Invalid pitch size");
+                std::copy(pitches.begin(), pitches.end(), img.pitch.begin());
+            },
+            "Pitch (stride) of each channel"
+        )
+        .def_property("channel",
+            [](const PyRocJpegImage& img) {
+                // Getter: return channel pointers as integers (uintptr_t)
+                std::vector<uintptr_t> channels;
+                for (auto ptr : img.channel)
+                    channels.push_back(reinterpret_cast<uintptr_t>(ptr));
+                return channels;
+            },
+            [](PyRocJpegImage& img, const std::vector<uintptr_t>& channels) {
+                // Setter: set channel pointers from integers
+                if (channels.size() != ROCJPEG_MAX_COMPONENT)
+                    throw std::runtime_error("Invalid channel size");
+                for (size_t i = 0; i < ROCJPEG_MAX_COMPONENT; ++i)
+                    img.channel[i] = reinterpret_cast<uint8_t*>(channels[i]);
+            },
+            "Channel pointers as integer addresses"
+        );
 }

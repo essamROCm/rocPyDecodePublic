@@ -62,15 +62,23 @@ public:
     py::object rocPyJpegDestroy(RocJpegHandle handle);
     std::tuple<uint8_t, RocJpegChromaSubsampling, std::array<uint32_t, ROCJPEG_MAX_COMPONENT>, std::array<uint32_t, ROCJPEG_MAX_COMPONENT>>
     rocPyJpegGetImageInfo(RocJpegHandle handle, RocJpegStreamHandle jpeg_stream_handle);
-    std::tuple<PyRocJpegImage, PyRocJpegDecodeParams>
-    rocPyJpegDecode(PyRocJpegDecodeParams &in_decode_params, RocJpegHandle rocjpeg_handle, RocJpegStreamHandle rocjpeg_stream_handle, PyRocJpegImage& py_img);
-    py::object rocPyJpegDecodeBatched(RocJpegHandle handle, RocJpegStreamHandle *jpeg_stream_handles, int batch_size, const PyRocJpegDecodeParams *in_decode_params, RocJpegImage *destinations);
-    PyRocJpegImage rocPyAllocHipDeviceMemory(int num_channels, std::array<uint32_t, ROCJPEG_MAX_COMPONENT> &channel_sizes, std::array<uint32_t, ROCJPEG_MAX_COMPONENT> &prior_channel_sizes, PyRocJpegImage& py_img);
-    PyRocJpegImage rocPyFreeHipDeviceMemory(int num_channels, PyRocJpegImage& py_img);
-    py::object PyInitHipDevice(int device_id);
+    py::object rocPyJpegDecode(PyRocJpegDecodeParams &in_decode_params, RocJpegHandle rocjpeg_handle, RocJpegStreamHandle rocjpeg_stream_handle, void *image);
+    py::object rocPyJpegDecodeBatched(RocJpegHandle handle, RocJpegStreamHandle *jpeg_stream_handles, int batch_size, PyRocJpegDecodeParams& in_decode_params, RocJpegImage *destinations);
+
+    RocJpegDecodeParams get_decode_param(PyRocJpegDecodeParams& in){
+        RocJpegDecodeParams out;
+        out.output_format = in.output_format;
+        out.crop_rectangle.left = in.crop_rectangle.left;
+        out.crop_rectangle.top = in.crop_rectangle.top;
+        out.crop_rectangle.right = in.crop_rectangle.right;
+        out.crop_rectangle.bottom = in.crop_rectangle.bottom;
+        out.target_dimension.width = in.target_dimension.width;
+        out.target_dimension.height = in.target_dimension.height;
+        return out;
+    }
 };
 
-class PyRocJpegUtils : public RocJpegUtils {
+class PyRocJpegUtils : public PyRocJpegDecoder {
 
 public:
 
@@ -78,18 +86,18 @@ public:
     ~PyRocJpegUtils() {};
 
     // rocJPEG Utils APIs
-    std::tuple<int, int, PyRocJpegDecodeParams>
-    PyInitDecodeParams(PyRocJpegDecodeParams &in_decode_params, int output_format, int left, int top, int right, int bottom);
     std::tuple<std::string, std::vector<std::string>, bool, bool>
     PyGetFilePaths(std::string &input_path, std::vector<std::string> &file_paths, bool &is_dir, bool &is_file);
     std::string
     PyGetOutputFileExt(PyRocJpegDecodeParams &in_decode_params, std::string &base_file_name, uint32_t image_width, uint32_t image_height, RocJpegChromaSubsampling subsampling, std::string &image_save_path);
     py::object
-    PySaveImage(PyRocJpegDecodeParams &in_decode_params, std::string image_save_path, uint32_t img_width, uint32_t img_height, RocJpegChromaSubsampling subsampling, PyRocJpegImage& py_img);
-    std::tuple<int, std::array<uint32_t, ROCJPEG_MAX_COMPONENT>, PyRocJpegImage>
-    PyGetChannelPitchAndSizes(PyRocJpegDecodeParams &in_decode_params, RocJpegChromaSubsampling subsampling, 
-                                std::array<uint32_t, ROCJPEG_MAX_COMPONENT> &widths, std::array<uint32_t, ROCJPEG_MAX_COMPONENT> &heights, PyRocJpegImage& py_img);
+    PySaveImage(PyRocJpegDecodeParams &in_decode_params, std::string image_save_path, uint32_t img_width, uint32_t img_height, RocJpegChromaSubsampling subsampling, void *image);
+    std::tuple<int, std::array<uint32_t, ROCJPEG_MAX_COMPONENT>>
+    PyGetChannelPitchAndSizes(PyRocJpegDecodeParams &in_decode_params, RocJpegChromaSubsampling subsampling, std::array<uint32_t, ROCJPEG_MAX_COMPONENT> &widths, std::array<uint32_t, ROCJPEG_MAX_COMPONENT> &heights, void *image);
     std::string PyGetChromaSubsamplingStr(RocJpegChromaSubsampling subsampling);
+    std::tuple<RocJpegStatus,uintptr_t> PyAllocHipDeviceMemory(uint32_t &channel_size);
+    py::object PyFreeHipDeviceMemory(uintptr_t output_image_channel);
+    py::object PyInitHipDevice(int device_id);
 };
 
 #endif // PY_ROC_JPEG_HEADER

@@ -21,13 +21,20 @@
 import rocpyjpegdecode as rocpyjpeg
 import rocpyjpegdecode.jpegTypes as jpegt
 import numpy as np
+import ctypes
 
+
+class PyRocJpegImage(ctypes.Structure):
+    _fields_ = [
+        ('channel', ctypes.c_uint64 * jpegt.ROCJPEG_MAX_COMPONENT),
+        ('pitch', ctypes.c_uint32 * jpegt.ROCJPEG_MAX_COMPONENT),
+    ]
 
 def PyRocJpegDecodeParams():
     return rocpyjpeg.RocJpegDecodeParams()
 
-def PyRocJpegImage():
-    return rocpyjpeg.RocJpegImage()
+# def PyRocJpegImage():
+#     return rocpyjpeg.RocJpegImage()
 
 # rocPyJpeg Decoder Class
 class decoder(object):
@@ -55,14 +62,7 @@ class decoder(object):
         num_components, subsampling, widths, heights = self.jpegdec.rocPyJpegGetImageInfo(rocjpeg_handle, rocjpeg_stream_handle)
         return num_components, subsampling, widths, heights
 
-    def rocPyAllocHipDeviceMemory(self, num_channels, channel_sizes, prior_channel_sizes, output_image):
-        return self.jpegdec.rocPyAllocHipDeviceMemory(num_channels, channel_sizes, prior_channel_sizes, output_image)
-
-    def rocPyFreeHipDeviceMemory(self, num_channels, output_image):
-        return self.jpegdec.rocPyFreeHipDeviceMemory(num_channels, output_image)
-
     def rocPyJpegDecode(self, decode_params, rocjpeg_handle, rocjpeg_stream_handle, output_image):
-        return self.jpegdec.rocPyJpegDecode(decode_params, rocjpeg_handle, rocjpeg_stream_handle, output_image)
-
-    def PyInitHipDevice(self, device_id):
-        return self.jpegdec.PyInitHipDevice(device_id)
+        ctypes.pythonapi.PyCapsule_New.restype = ctypes.py_object
+        capsule = ctypes.pythonapi.PyCapsule_New(ctypes.byref(output_image), b'RocJpegImage', None)
+        return self.jpegdec.rocPyJpegDecode(decode_params, rocjpeg_handle, rocjpeg_stream_handle, capsule)
