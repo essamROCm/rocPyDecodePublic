@@ -30,8 +30,6 @@ void PyRocJpegDecoderInitializer(py::module& m) {
         // rocPyJPEG APIs
         .def("rocPyJpegCreate",&PyRocJpegDecoder::rocPyJpegCreate)
         .def("rocPyJpegStreamCreate",&PyRocJpegDecoder::rocPyJpegStreamCreate)
-        .def("rocPyJpegDestroy",&PyRocJpegDecoder::rocPyJpegDestroy)
-        .def("rocPyJpegStreamDestroy",&PyRocJpegDecoder::rocPyJpegStreamDestroy)
         .def("rocPyJpegStreamParse",&PyRocJpegDecoder::rocPyJpegStreamParse)
         .def("rocPyJpegGetImageInfo",&PyRocJpegDecoder::rocPyJpegGetImageInfo)
         .def("rocPyJpegDecode",&PyRocJpegDecoder::rocPyJpegDecode);
@@ -55,56 +53,100 @@ void PyRocJpegUtilsInitializer(py::module& m) {
 // rocPyJPEG APIs
 //
 
-py::object PyRocJpegDecoder::rocPyJpegStreamCreate() {
+py::capsule PyRocJpegDecoder::rocPyJpegStreamCreate() {
     RocJpegStreamHandle rocjpeg_stream_handle = nullptr;
     CHECK_ROCJPEG(rocJpegStreamCreate(&rocjpeg_stream_handle));
-    return py::cast(rocjpeg_stream_handle);
+
+    // Wrap handle in capsule with destructor
+    return py::capsule(
+        rocjpeg_stream_handle,                  // Raw pointer
+        "RocJpegStreamHandle",                  // Capsule name for type checking
+        (void (*)(void *))( [](void *ptr) {     // Destructor with explicit cast
+            rocJpegStreamDestroy(static_cast<RocJpegStreamHandle>(ptr));
+        })
+    );
 }
 
-py::object PyRocJpegDecoder::rocPyJpegStreamParse(py::array_t<uint8_t> file_data, size_t length, RocJpegStreamHandle jpeg_stream_handle) {
+py::object PyRocJpegDecoder::rocPyJpegStreamParse(py::array_t<uint8_t> file_data, size_t length, py::capsule stream_handle) {
     auto buf = file_data.request();
     uint8_t* ptr = static_cast<uint8_t*>(buf.ptr);
+    RocJpegStreamHandle jpeg_stream_handle = stream_handle.get_pointer();
     RocJpegStatus status = rocJpegStreamParse(ptr, length, jpeg_stream_handle);
     return py::cast(status);
 }
 
-py::object PyRocJpegDecoder::rocPyJpegStreamDestroy(RocJpegStreamHandle jpeg_stream_handle) {
-    CHECK_ROCJPEG(rocJpegStreamDestroy(jpeg_stream_handle));
-    return py::cast<py::none>(Py_None);
-}
+py::capsule PyRocJpegDecoder::rocPyJpegCreate(RocJpegBackend backend, int device_id) {
+    RocJpegHandle decode_handle = nullptr;
+    CHECK_ROCJPEG(rocJpegCreate(backend, device_id, &decode_handle));
 
-py::object PyRocJpegDecoder::rocPyJpegCreate(RocJpegBackend backend, int device_id) {
-    RocJpegHandle rocjpeg_handle = nullptr;
-    CHECK_ROCJPEG(rocJpegCreate(backend, device_id, &rocjpeg_handle));
-    return py::cast(rocjpeg_handle);
-}
-
-py::object PyRocJpegDecoder::rocPyJpegDestroy(RocJpegHandle rocjpeg_handle) {
-    CHECK_ROCJPEG(rocJpegDestroy(rocjpeg_handle));
-    return py::cast<py::none>(Py_None);
+    // Wrap RocJpegHandle as capsule with destructor
+    return py::capsule(
+        decode_handle,                         // Raw C pointer
+        "RocJpegHandle",                        // Capsule name (for type-checking in other functions)
+        (void (*)(void *))( [](void *ptr) {     // Explicit destructor cast
+            rocJpegDestroy(static_cast<RocJpegHandle>(ptr));  // Call cleanup when capsule is destroyed
+        })
+    );
 }
 
 std::tuple<uint8_t, RocJpegChromaSubsampling, std::array<uint32_t, ROCJPEG_MAX_COMPONENT>, std::array<uint32_t, ROCJPEG_MAX_COMPONENT>>
-PyRocJpegDecoder::rocPyJpegGetImageInfo(RocJpegHandle rocjpeg_handle, RocJpegStreamHandle rocjpeg_stream_handle) {
+PyRocJpegDecoder::rocPyJpegGetImageInfo(py::capsule decode_handle, py::capsule stream_handle) {
     uint8_t num_components=0;
     RocJpegChromaSubsampling subsampling;
     std::array<uint32_t, ROCJPEG_MAX_COMPONENT> m_widths = {};
     std::array<uint32_t, ROCJPEG_MAX_COMPONENT> m_heights = {};
-    CHECK_ROCJPEG(rocJpegGetImageInfo(rocjpeg_handle, rocjpeg_stream_handle, &num_components, &subsampling, m_widths.data(), m_heights.data()));
+    RocJpegStreamHandle jpeg_stream_handle = stream_handle.get_pointer();
+    RocJpegHandle jpeg_decode_handle = decode_handle.get_pointer();
+    CHECK_ROCJPEG(rocJpegGetImageInfo(jpeg_decode_handle, jpeg_stream_handle, &num_components, &subsampling, m_widths.data(), m_heights.data()));
     return std::make_tuple(num_components, subsampling, m_widths, m_heights);
 }
 
-py::object PyRocJpegDecoder::rocPyJpegDecode(PyRocJpegDecodeParams &in_decode_params, RocJpegHandle rocjpeg_handle, RocJpegStreamHandle rocjpeg_stream_handle, void *image_ptr) {
+py::object PyRocJpegDecoder::rocPyJpegDecode(PyRocJpegDecodeParams &in_decode_params, py::capsule decode_handle, py::capsule stream_handle, void *image_ptr) {
     RocJpegImage* output_image = static_cast<RocJpegImage*>(image_ptr);
     RocJpegDecodeParams decode_params = get_decode_param(in_decode_params);
-    RocJpegStatus status = rocJpegDecode(rocjpeg_handle, rocjpeg_stream_handle, &decode_params, output_image);
+    RocJpegStreamHandle jpeg_stream_handle = stream_handle.get_pointer();
+    RocJpegHandle jpeg_decode_handle = decode_handle.get_pointer();
+    RocJpegStatus status = rocJpegDecode(jpeg_decode_handle, jpeg_stream_handle, &decode_params, output_image);
     CHECK_ROCJPEG(status);
     return py::cast(status);
 }
 
-py::object PyRocJpegDecoder::rocPyJpegDecodeBatched(RocJpegHandle handle, RocJpegStreamHandle *jpeg_stream_handles, int batch_size, PyRocJpegDecodeParams& in_decode_params, RocJpegImage *destinations) {
+py::object PyRocJpegDecoder::rocPyJpegDecodeBatched(
+    py::capsule decode_handle_capsule,
+    py::list stream_capsules,
+    int batch_size,
+    PyRocJpegDecodeParams& in_decode_params,
+    py::capsule destinations_capsule
+) {
+    auto* decode_handle = static_cast<RocJpegHandle>(decode_handle_capsule.get_pointer());
+
+    // Extract stream handles
+    std::vector<RocJpegStreamHandle> stream_handles;
+    for (auto item : stream_capsules) {
+        py::capsule stream_capsule = py::cast<py::capsule>(item);
+        if (std::string(stream_capsule.name()) != "RocJpegStreamHandle") {
+            throw std::runtime_error("Invalid stream handle in list");
+        }
+        auto* stream_handle = static_cast<RocJpegStreamHandle>(stream_capsule.get_pointer());
+        stream_handles.push_back(stream_handle);
+    }
+
+    if (stream_handles.size() != static_cast<size_t>(batch_size)) {
+        throw std::runtime_error("Batch size does not match number of stream handles provided");
+    }
+
+    auto* destinations = static_cast<RocJpegImage*>(destinations_capsule.get_pointer());
+
     RocJpegDecodeParams decode_params = get_decode_param(in_decode_params);
-    return py::cast(rocJpegDecodeBatched(handle, jpeg_stream_handles, batch_size, &decode_params, destinations));
+
+    // Call C API for batched decoding
+    return py::cast(rocJpegDecodeBatched(
+        decode_handle,
+        stream_handles.data(),
+        batch_size,
+        &decode_params,
+        destinations
+    ));
 }
 
 //

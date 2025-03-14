@@ -55,15 +55,13 @@ public:
     ~PyRocJpegDecoder() {};
 
     // rocJPEG API
-    py::object rocPyJpegStreamCreate();
-    py::object rocPyJpegStreamParse(py::array_t<uint8_t> file_data, size_t length, RocJpegStreamHandle jpeg_stream_handle);
-    py::object rocPyJpegStreamDestroy(RocJpegStreamHandle jpeg_stream_handle);
-    py::object rocPyJpegCreate(RocJpegBackend backend, int device_id);
-    py::object rocPyJpegDestroy(RocJpegHandle handle);
+    py::capsule rocPyJpegStreamCreate();
+    py::object rocPyJpegStreamParse(py::array_t<uint8_t> file_data, size_t length, py::capsule stream_handle);
+    py::capsule rocPyJpegCreate(RocJpegBackend backend, int device_id);
     std::tuple<uint8_t, RocJpegChromaSubsampling, std::array<uint32_t, ROCJPEG_MAX_COMPONENT>, std::array<uint32_t, ROCJPEG_MAX_COMPONENT>>
-    rocPyJpegGetImageInfo(RocJpegHandle handle, RocJpegStreamHandle jpeg_stream_handle);
-    py::object rocPyJpegDecode(PyRocJpegDecodeParams &in_decode_params, RocJpegHandle rocjpeg_handle, RocJpegStreamHandle rocjpeg_stream_handle, void *image);
-    py::object rocPyJpegDecodeBatched(RocJpegHandle handle, RocJpegStreamHandle *jpeg_stream_handles, int batch_size, PyRocJpegDecodeParams& in_decode_params, RocJpegImage *destinations);
+    rocPyJpegGetImageInfo(py::capsule decode_handle, py::capsule stream_handle);
+    py::object rocPyJpegDecode(PyRocJpegDecodeParams &in_decode_params, py::capsule decode_handle, py::capsule stream_handle, void *image);
+    py::object rocPyJpegDecodeBatched(py::capsule decode_handle_capsule, py::list stream_capsules, int batch_size, PyRocJpegDecodeParams& in_decode_params, py::capsule destinations_capsule);
 
     RocJpegDecodeParams get_decode_param(PyRocJpegDecodeParams& in){
         RocJpegDecodeParams out;

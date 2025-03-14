@@ -33,9 +33,6 @@ class PyRocJpegImage(ctypes.Structure):
 def PyRocJpegDecodeParams():
     return rocpyjpeg.RocJpegDecodeParams()
 
-# def PyRocJpegImage():
-#     return rocpyjpeg.RocJpegImage()
-
 # rocPyJpeg Decoder Class
 class decoder(object):
 

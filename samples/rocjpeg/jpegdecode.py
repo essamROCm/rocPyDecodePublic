@@ -171,7 +171,9 @@ def JDecoder(
 
         print("Decoding started, please wait! ... ")
         start_time = datetime.datetime.now()
+
         rocjpeg_status = jpegdecode.rocPyJpegDecode(decode_params, decode_handle, stream_handle, output_image) # Call the JPEG decode
+
         end_time = datetime.datetime.now()
         time_per_image_in_milli_sec = (end_time - start_time).total_seconds() * 1000 # Compute time per image in milliseconds
         image_size_in_mpixels = (widths[0] * heights[0]) / 1_000_000 # Compute image size in megapixels
@@ -233,10 +235,7 @@ def JDecoder(
                 print(f"Average decoded images size (Mpixels/Sec): {mpixels_per_sec:.2f}")
 
     # end
-    jpegdecode.rocPyJpegDestroy(decode_handle)
-    jpegdecode.rocPyJpegStreamDestroy(stream_handle)
     print("\nDecoding completed!\n")
-
     return
 
 
