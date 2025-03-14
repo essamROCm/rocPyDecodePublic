@@ -62,8 +62,8 @@ py::object PyRocJpegDecoder::rocPyJpegStreamCreate() {
 }
 
 py::object PyRocJpegDecoder::rocPyJpegStreamParse(py::array_t<uint8_t> file_data, size_t length, RocJpegStreamHandle jpeg_stream_handle) {
-    auto buf = file_data.request();  // Get buffer info
-    uint8_t* ptr = static_cast<uint8_t*>(buf.ptr);  // Raw pointer
+    auto buf = file_data.request();
+    uint8_t* ptr = static_cast<uint8_t*>(buf.ptr);
     RocJpegStatus status = rocJpegStreamParse(ptr, length, jpeg_stream_handle);
     return py::cast(status);
 }
@@ -98,6 +98,7 @@ py::object PyRocJpegDecoder::rocPyJpegDecode(PyRocJpegDecodeParams &in_decode_pa
     RocJpegImage* output_image = static_cast<RocJpegImage*>(image_ptr);
     RocJpegDecodeParams decode_params = get_decode_param(in_decode_params);
     RocJpegStatus status = rocJpegDecode(rocjpeg_handle, rocjpeg_stream_handle, &decode_params, output_image);
+    CHECK_ROCJPEG(status);
     return py::cast(status);
 }
 
@@ -134,9 +135,8 @@ PyRocJpegUtils::PyGetFilePaths(std::string &input_path, std::vector<std::string>
 }
 
 std::tuple<int, std::array<uint32_t, ROCJPEG_MAX_COMPONENT>>
-PyRocJpegUtils::PyGetChannelPitchAndSizes(PyRocJpegDecodeParams &in_decode_params, RocJpegChromaSubsampling subsampling,
-                            std::array<uint32_t, ROCJPEG_MAX_COMPONENT> &widths, std::array<uint32_t, ROCJPEG_MAX_COMPONENT> &heights, void *image_ptr) {
-
+PyRocJpegUtils::PyGetChannelPitchAndSizes(PyRocJpegDecodeParams &in_decode_params, RocJpegChromaSubsampling subsampling, std::array<uint32_t, ROCJPEG_MAX_COMPONENT> &widths,
+                    std::array<uint32_t, ROCJPEG_MAX_COMPONENT> &heights, void *image_ptr) {
     RocJpegImage* output_image = static_cast<RocJpegImage*>(image_ptr);
     std::array<uint32_t, ROCJPEG_MAX_COMPONENT> channel_sizes = {};
     uint32_t num_channels=0;
@@ -188,18 +188,16 @@ py::object PyRocJpegUtils::PyInitHipDevice(int device_id) {
     return py::cast(ret);
 }
 
-std::tuple<RocJpegStatus,uintptr_t>
+std::tuple<RocJpegStatus,uint8_t*>
 PyRocJpegUtils::PyAllocHipDeviceMemory(uint32_t &channel_size) {
     // allocate device memory
     uint8_t *output_image_channel = nullptr;
     RocJpegStatus status = static_cast<RocJpegStatus>(hipMalloc((void **)&output_image_channel, channel_size));
-    uintptr_t output_ptr = reinterpret_cast<uintptr_t>(output_image_channel);
-    return std::make_tuple(status, output_ptr);
+    return std::make_tuple(status, output_image_channel);
 }
 
-py::object PyRocJpegUtils::PyFreeHipDeviceMemory(uintptr_t output_image_channel) {
+py::object PyRocJpegUtils::PyFreeHipDeviceMemory(uint8_t* output_image_channel) {
     // Free the allocated memory
-    uint8_t *chn_adrs = reinterpret_cast<uint8_t*>(output_image_channel);
-    RocJpegStatus status = static_cast<RocJpegStatus>(hipFree((void *)chn_adrs));
+    RocJpegStatus status = static_cast<RocJpegStatus>(hipFree((void *)output_image_channel));
     return py::cast(status);
 }

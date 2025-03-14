@@ -6,7 +6,6 @@ import sys
 import argparse
 import os.path
 import ctypes
-import time
 
 
 def get_format(out_fmt):
@@ -81,8 +80,8 @@ def JDecoder(
         print("HIP Device Initialized Successfully..\n")
 
     # init the stream & the codec
-    rocjpeg_handle = jpegdecode.rocPyJpegCreate(rocjpeg_backend, device_id)
-    rocjpeg_stream_handle = jpegdecode.rocPyJpegStreamCreate()
+    decode_handle = jpegdecode.rocPyJpegCreate(rocjpeg_backend, device_id)
+    stream_handle = jpegdecode.rocPyJpegStreamCreate()
 
     # vars-init
     save_images = False if(output_file_path is None) else True
@@ -102,10 +101,6 @@ def JDecoder(
     for i in range(jpegt.ROCJPEG_MAX_COMPONENT):
         output_image.channel[i] = 0
         output_image.pitch[i] = 0
-    # Print to verify
-    for i in range(jpegt.ROCJPEG_MAX_COMPONENT):
-        print(f"Channel[{i}] Address: {hex(output_image.channel[i])}")
-        print(f"Channel Pitch[{i}]: {output_image.pitch[i]}")
 
     # -------------------------------------------
     # loop to decode images
@@ -113,7 +108,6 @@ def JDecoder(
     for file_path in n_file_paths:
         image_count = 0
         base_file_name = os.path.basename(file_path)
-        print(base_file_name)
 
         file_data, file_size = read_image(file_path)
 
@@ -123,7 +117,8 @@ def JDecoder(
 
         print(f"Input file name, size: {file_path}, {file_size}")
 
-        rocjpeg_status = jpegdecode.rocPyJpegStreamParse(file_data, file_size, rocjpeg_stream_handle)
+        rocjpeg_status = jpegdecode.rocPyJpegStreamParse(file_data, file_size, stream_handle)
+
         if (rocjpeg_status != jpegt.ROCJPEG_STATUS_SUCCESS):
             if (is_dir):
                 num_bad_jpegs += 1
@@ -133,7 +128,7 @@ def JDecoder(
                 exit
 
         # Get image info
-        num_components, subsampling, widths, heights = jpegdecode.rocPyJpegGetImageInfo(rocjpeg_handle, rocjpeg_stream_handle)
+        num_components, subsampling, widths, heights = jpegdecode.rocPyJpegGetImageInfo(decode_handle, stream_handle)
 
         chroma_sub_sampling = jpegutils.PyGetChromaSubsamplingStr(subsampling)
         print(f"Input image resolution: {widths[0]}x{heights[0]}")
@@ -159,6 +154,7 @@ def JDecoder(
                 exit
 
         num_channels, channel_sizes = jpegutils.PyGetChannelPitchAndSizes(decode_params, subsampling, widths, heights, output_image)
+
         if(num_channels <= 0):
             print(f"ERROR: Failed to get the channel pitch and sizes {num_channels}")
             exit
@@ -167,21 +163,17 @@ def JDecoder(
         # allocate memory for each channel and reuse them if the sizes remain unchanged for a new image.
         for i in range(num_channels):
             if prior_channel_sizes[i] != channel_sizes[i]:
-                if output_image.channel[i] is not 0:
-                    status = jpegutils.PyFreeHipDeviceMemory(output_image.channel[i])
+                if output_image.channel[i] != 0:
+                    rocjpeg_status = jpegutils.PyFreeHipDeviceMemory(output_image.channel[i])
                     output_image.channel[i] = 0
-                status, ptr = jpegutils.PyAllocHipDeviceMemory(channel_sizes[i])
+                rocjpeg_status, ptr = jpegutils.PyAllocHipDeviceMemory(channel_sizes[i])
                 output_image.channel[i] = ptr
-                print(f"---ptr: {ptr} ---STATUS: {status} -- SIZE: {channel_sizes[i]} --output_image.channel[i] = {output_image.channel[i]}")
 
         print("Decoding started, please wait! ... ")
-        start_time = time.time() # Start timing
-        print(f"num_channels: {num_channels}")
-        print(f"---ptr0: {hex(output_image.channel[0])}")
-        print(f"---ptr1: {hex(output_image.channel[1])}")
-        status = jpegdecode.rocPyJpegDecode(decode_params, rocjpeg_handle, rocjpeg_stream_handle, output_image) # Call the JPEG decode
-        end_time = time.time() # End timing
-        time_per_image_in_milli_sec = (end_time - start_time) * 1000 # Compute time per image in milliseconds
+        start_time = datetime.datetime.now()
+        rocjpeg_status = jpegdecode.rocPyJpegDecode(decode_params, decode_handle, stream_handle, output_image) # Call the JPEG decode
+        end_time = datetime.datetime.now()
+        time_per_image_in_milli_sec = (end_time - start_time).total_seconds() * 1000 # Compute time per image in milliseconds
         image_size_in_mpixels = (widths[0] * heights[0]) / 1_000_000 # Compute image size in megapixels
         image_count += 1 # Increment image count
 
@@ -207,14 +199,10 @@ def JDecoder(
             mpixels_all += image_size_in_mpixels
 
         # Free allocated MEM
-        print(f"num_channels: {num_channels}")
-        print(f"---ptr0 free: {hex(output_image.channel[0])}")
-        print(f"---ptr1 free: {hex(output_image.channel[1])}")
-
-        print(f"Free allocated MEM, channels count: {num_channels}..\n")
         for i in range(num_channels):
             if output_image.channel[i] is not None:
-                status = jpegutils.PyFreeHipDeviceMemory(output_image.channel[i])
+                rocjpeg_status = jpegutils.PyFreeHipDeviceMemory(output_image.channel[i])
+        print(f"Successfully freed allocated MEM, channels count: {num_channels}\n")
 
         if (is_dir):
             time_per_image_all /= total_images  # Compute average time per image
@@ -238,15 +226,15 @@ def JDecoder(
                     print(f", total images with unsupported resolution: {num_jpegs_with_unsupported_resolution}", end="")
                 print()  # Newline
 
-            # Print performance statistics only if there are processed images
+            # Performance statistics if there are processed images
             if total_images:
                 print(f"Average processing time per image (ms): {time_per_image_all:.2f}")
                 print(f"Average decoded images per sec (Images/Sec): {images_per_sec:.2f}")
                 print(f"Average decoded images size (Mpixels/Sec): {mpixels_per_sec:.2f}")
 
     # end
-    jpegdecode.rocPyJpegDestroy(rocjpeg_handle)
-    jpegdecode.rocPyJpegStreamDestroy(rocjpeg_stream_handle)
+    jpegdecode.rocPyJpegDestroy(decode_handle)
+    jpegdecode.rocPyJpegStreamDestroy(stream_handle)
     print("\nDecoding completed!\n")
 
     return

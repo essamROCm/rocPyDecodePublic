@@ -95,8 +95,8 @@ public:
     std::tuple<int, std::array<uint32_t, ROCJPEG_MAX_COMPONENT>>
     PyGetChannelPitchAndSizes(PyRocJpegDecodeParams &in_decode_params, RocJpegChromaSubsampling subsampling, std::array<uint32_t, ROCJPEG_MAX_COMPONENT> &widths, std::array<uint32_t, ROCJPEG_MAX_COMPONENT> &heights, void *image);
     std::string PyGetChromaSubsamplingStr(RocJpegChromaSubsampling subsampling);
-    std::tuple<RocJpegStatus,uintptr_t> PyAllocHipDeviceMemory(uint32_t &channel_size);
-    py::object PyFreeHipDeviceMemory(uintptr_t output_image_channel);
+    std::tuple<RocJpegStatus,uint8_t*> PyAllocHipDeviceMemory(uint32_t &channel_size);
+    py::object PyFreeHipDeviceMemory(uint8_t* output_image_channel);
     py::object PyInitHipDevice(int device_id);
 };
 
