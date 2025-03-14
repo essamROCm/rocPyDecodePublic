@@ -230,16 +230,18 @@ py::object PyRocJpegUtils::PyInitHipDevice(int device_id) {
     return py::cast(ret);
 }
 
-std::tuple<RocJpegStatus,uint8_t*>
+std::tuple<RocJpegStatus,uintptr_t>
 PyRocJpegUtils::PyAllocHipDeviceMemory(uint32_t &channel_size) {
     // allocate device memory
     uint8_t *output_image_channel = nullptr;
     RocJpegStatus status = static_cast<RocJpegStatus>(hipMalloc((void **)&output_image_channel, channel_size));
-    return std::make_tuple(status, output_image_channel);
+    uintptr_t output_ptr = reinterpret_cast<uintptr_t>(output_image_channel);
+    return std::make_tuple(status, output_ptr);
 }
 
-py::object PyRocJpegUtils::PyFreeHipDeviceMemory(uint8_t* output_image_channel) {
+py::object PyRocJpegUtils::PyFreeHipDeviceMemory(uintptr_t output_image_channel) {
     // Free the allocated memory
-    RocJpegStatus status = static_cast<RocJpegStatus>(hipFree((void *)output_image_channel));
+    uint8_t *chn_adrs = reinterpret_cast<uint8_t*>(output_image_channel);
+    RocJpegStatus status = static_cast<RocJpegStatus>(hipFree((void *)chn_adrs));
     return py::cast(status);
 }

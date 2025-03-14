@@ -169,6 +169,14 @@ def JDecoder(
                 rocjpeg_status, ptr = jpegutils.PyAllocHipDeviceMemory(channel_sizes[i])
                 output_image.channel[i] = ptr
 
+        # debug code:
+        # print("Pitch values:")
+        # for i, p in enumerate(output_image.pitch):
+        #     print(f"  Channel {i} pitch: {p}")
+        # print("Channel addresses:")
+        # for i, ch in enumerate(output_image.channel):
+        #     print(f"  Channel {i} address: {hex(ch)}")  # Print addresses in hex format
+
         print("Decoding started, please wait! ... ")
         start_time = datetime.datetime.now()
 
@@ -190,6 +198,7 @@ def JDecoder(
             if (is_dir):
                 image_save_path = jpegutils.PyGetOutputFileExt(decode_params, base_file_name, width, height, subsampling, output_file_path)
             jpegutils.PySaveImage(decode_params, image_save_path, width, height, subsampling, output_image)
+            print(f"output file name: {image_save_path}, width x height: {width} x {height}")
 
         print(f"Average processing time per image (ms): {time_per_image_in_milli_sec:.2f}")
         if(time_per_image_in_milli_sec > float(0)):
