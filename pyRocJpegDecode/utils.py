@@ -56,3 +56,6 @@ class utils(object):
 
     def PyFreeHipDeviceMemory(self, output_image_channel):
         return self.jpegutils.PyFreeHipDeviceMemory(output_image_channel)
+
+    def test(self):
+        return self.jpegutils.test()

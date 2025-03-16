@@ -96,6 +96,7 @@ public:
     std::tuple<RocJpegStatus,uintptr_t> PyAllocHipDeviceMemory(uint32_t &channel_size);
     py::object PyFreeHipDeviceMemory(uintptr_t output_image_channel);
     py::object PyInitHipDevice(int device_id);
+    int test();
 };
 
 #endif // PY_ROC_JPEG_HEADER
