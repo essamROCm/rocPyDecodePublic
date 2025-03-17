@@ -87,6 +87,9 @@ def JDecoder(
     num_jpegs_with_unsupported_resolution = 0
     num_bad_jpegs = 0
     num_components = 0
+    total_images = 0
+    time_per_image_all = 0
+    mpixels_all = 0
     chroma_sub_sampling = str("")
     subsampling = jpegt.ROCJPEG_CSS_UNKNOWN
     channel_sizes = [0] * jpegt.ROCJPEG_MAX_COMPONENT
@@ -165,14 +168,6 @@ def JDecoder(
                     output_image.channel[i] = 0
                 rocjpeg_status, ptr = jpegutils.PyAllocHipDeviceMemory(channel_sizes[i])
                 output_image.channel[i] = ptr
-
-        # debug code:
-        # print("Pitch values:")
-        # for i, p in enumerate(output_image.pitch):
-        #     print(f"  Channel {i} pitch: {p}")
-        # print("Channel addresses:")
-        # for i, ch in enumerate(output_image.channel):
-        #     print(f"  Channel {i} address: {hex(ch)}")  # Print addresses in hex format
 
         print("Decoding started, please wait! ... ")
         start_time = datetime.datetime.now()
