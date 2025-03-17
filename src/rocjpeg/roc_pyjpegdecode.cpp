@@ -61,12 +61,13 @@ py::capsule PyRocJpegDecoder::rocPyJpegStreamCreate() {
 
     // Wrap handle in capsule with destructor
     return py::capsule(
-        rocjpeg_stream_handle,                  // Raw pointer
-        "RocJpegStreamHandle",                  // Capsule name for type checking
-        (void (*)(void *))( [](void *ptr) {     // Destructor with explicit cast
-            rocJpegStreamDestroy(static_cast<RocJpegStreamHandle>(ptr));
-        })
-    );
+            rocjpeg_stream_handle,
+            "RocJpegStreamHandle",
+            [](PyObject *capsule) {
+                auto ptr = static_cast<RocJpegStreamHandle>(PyCapsule_GetPointer(capsule, "RocJpegStreamHandle"));
+                rocJpegStreamDestroy(ptr);
+            }
+            );
 }
 
 py::object PyRocJpegDecoder::rocPyJpegStreamParse(py::array_t<uint8_t> file_data, size_t length, py::capsule stream_handle) {
@@ -81,14 +82,14 @@ py::capsule PyRocJpegDecoder::rocPyJpegCreate(RocJpegBackend backend, int device
     RocJpegHandle decode_handle = nullptr;
     CHECK_ROCJPEG(rocJpegCreate(backend, device_id, &decode_handle));
 
-    // Wrap RocJpegHandle as capsule with destructor
     return py::capsule(
-        decode_handle,                         // Raw C pointer
-        "RocJpegHandle",                        // Capsule name (for type-checking in other functions)
-        (void (*)(void *))( [](void *ptr) {     // Explicit destructor cast
-            rocJpegDestroy(static_cast<RocJpegHandle>(ptr));  // Call cleanup when capsule is destroyed
-        })
-    );
+            decode_handle,
+            "RocJpegHandle",
+            [](PyObject *capsule) {
+                auto ptr = static_cast<RocJpegHandle>(PyCapsule_GetPointer(capsule, "RocJpegHandle"));
+                rocJpegDestroy(ptr);
+            }
+            );
 }
 
 std::tuple<uint8_t, RocJpegChromaSubsampling, std::array<uint32_t, ROCJPEG_MAX_COMPONENT>, std::array<uint32_t, ROCJPEG_MAX_COMPONENT>>
