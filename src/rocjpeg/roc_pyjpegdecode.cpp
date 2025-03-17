@@ -32,7 +32,8 @@ void PyRocJpegDecoderInitializer(py::module& m) {
         .def("rocPyJpegStreamCreate",&PyRocJpegDecoder::rocPyJpegStreamCreate)
         .def("rocPyJpegStreamParse",&PyRocJpegDecoder::rocPyJpegStreamParse)
         .def("rocPyJpegGetImageInfo",&PyRocJpegDecoder::rocPyJpegGetImageInfo)
-        .def("rocPyJpegDecode",&PyRocJpegDecoder::rocPyJpegDecode);
+        .def("rocPyJpegDecode",&PyRocJpegDecoder::rocPyJpegDecode)
+        .def("rocPyJpegDecodeBatched",&PyRocJpegDecoder::rocPyJpegDecodeBatched);
 }
 
 void PyRocJpegUtilsInitializer(py::module& m) {
@@ -47,8 +48,7 @@ void PyRocJpegUtilsInitializer(py::module& m) {
         .def("PyInitHipDevice",&PyRocJpegUtils::PyInitHipDevice)
         .def("PyAllocHipDeviceMemory",&PyRocJpegUtils::PyAllocHipDeviceMemory)
         .def("PyFreeHipDeviceMemory",&PyRocJpegUtils::PyFreeHipDeviceMemory)
-        .def("test",&PyRocJpegUtils::test)
-        ;
+        .def("test",&PyRocJpegUtils::test); // TODO: remove when done debugging
 }
 
 //
@@ -126,9 +126,6 @@ py::object PyRocJpegDecoder::rocPyJpegDecodeBatched(
     std::vector<RocJpegStreamHandle> stream_handles;
     for (auto item : stream_capsules) {
         py::capsule stream_capsule = py::cast<py::capsule>(item);
-        if (std::string(stream_capsule.name()) != "RocJpegStreamHandle") {
-            throw std::runtime_error("Invalid stream handle in list");
-        }
         auto* stream_handle = static_cast<RocJpegStreamHandle>(stream_capsule.get_pointer());
         stream_handles.push_back(stream_handle);
     }

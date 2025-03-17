@@ -70,10 +70,7 @@ def JDecoder(
         print(f"Cropped image resolution: {roi_width}x{roi_height}")
 
     # parse input
-    file_paths = []
-    is_dir = False
-    is_file = False
-    n_input_path, n_file_paths, n_is_dir, n_is_file = jpegutils.PyGetFilePaths(input_file_path, file_paths, is_dir, is_file)
+    input_path, file_paths, is_dir, is_file = jpegutils.PyGetFilePaths(input_file_path, [], False, False)
 
     # init HIP
     if(jpegutils.PyInitHipDevice(device_id)):
@@ -105,7 +102,7 @@ def JDecoder(
     # -------------------------------------------
     # loop to decode images
     # -------------------------------------------
-    for file_path in n_file_paths:
+    for file_path in file_paths:
         image_count = 0
         base_file_name = os.path.basename(file_path)
 

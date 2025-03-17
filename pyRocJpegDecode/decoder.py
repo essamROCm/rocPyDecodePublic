@@ -30,6 +30,9 @@ class PyRocJpegImage(ctypes.Structure):
         ('pitch', ctypes.c_uint32 * jpegt.ROCJPEG_MAX_COMPONENT),
     ]
 
+def PyRocJpegImageArray(batch_size):
+    return (PyRocJpegImage * batch_size)()  # Creates array of PyRocJpegImage
+
 def PyRocJpegDecodeParams():
     return rocpyjpeg.RocJpegDecodeParams()
 
@@ -63,3 +66,8 @@ class decoder(object):
         ctypes.pythonapi.PyCapsule_New.restype = ctypes.py_object
         capsule = ctypes.pythonapi.PyCapsule_New(ctypes.byref(output_image), b'RocJpegImage', None)
         return self.jpegdec.rocPyJpegDecode(decode_params, rocjpeg_handle, rocjpeg_stream_handle, capsule)
+
+    def rocPyJpegDecodeBatched(self, decode_handle_capsule, stream_capsules, batch_size, in_decode_params, destinations_capsule):
+        ctypes.pythonapi.PyCapsule_New.restype = ctypes.py_object
+        capsule = ctypes.pythonapi.PyCapsule_New(ctypes.byref(destinations_capsule), b'RocJpegImage', None)
+        return self.jpegdec.rocPyJpegDecodeBatched(decode_handle_capsule, stream_capsules, batch_size, in_decode_params, capsule)
