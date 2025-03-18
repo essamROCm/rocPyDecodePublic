@@ -47,7 +47,7 @@ THE SOFTWARE.
 #include "roc_pyjpeg.h"
 
 
-class PyRocJpegDecoder : public RocJpegUtils {
+class PyRocJpegDecoder {
 
 public:
 
@@ -62,21 +62,9 @@ public:
     rocPyJpegGetImageInfo(py::capsule decode_handle, py::capsule stream_handle);
     py::object rocPyJpegDecode(PyRocJpegDecodeParams &in_decode_params, py::capsule decode_handle, py::capsule stream_handle, void *image);
     py::object rocPyJpegDecodeBatched(py::capsule decode_handle_capsule, py::list stream_capsules, int batch_size, py::list in_decode_params, py::capsule destinations_capsule);
-
-    RocJpegDecodeParams get_decode_param(PyRocJpegDecodeParams& in){
-        RocJpegDecodeParams out;
-        out.output_format = in.output_format;
-        out.crop_rectangle.left = in.crop_rectangle.left;
-        out.crop_rectangle.top = in.crop_rectangle.top;
-        out.crop_rectangle.right = in.crop_rectangle.right;
-        out.crop_rectangle.bottom = in.crop_rectangle.bottom;
-        out.target_dimension.width = in.target_dimension.width;
-        out.target_dimension.height = in.target_dimension.height;
-        return out;
-    }
 };
 
-class PyRocJpegUtils : public PyRocJpegDecoder {
+class PyRocJpegUtils : public RocJpegUtils {
 
 public:
 

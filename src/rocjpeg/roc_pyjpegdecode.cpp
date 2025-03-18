@@ -106,7 +106,8 @@ PyRocJpegDecoder::rocPyJpegGetImageInfo(py::capsule decode_handle, py::capsule s
 
 py::object PyRocJpegDecoder::rocPyJpegDecode(PyRocJpegDecodeParams &in_decode_params, py::capsule decode_handle, py::capsule stream_handle, void *image_ptr) {
     RocJpegImage* output_image = static_cast<RocJpegImage*>(image_ptr);
-    RocJpegDecodeParams decode_params = get_decode_param(in_decode_params);
+    RocJpegDecodeParams decode_params;
+    memcpy(&decode_params,&in_decode_params,sizeof(RocJpegDecodeParams));
     RocJpegStreamHandle jpeg_stream_handle = stream_handle.get_pointer();
     RocJpegHandle jpeg_decode_handle = decode_handle.get_pointer();
     RocJpegStatus status = rocJpegDecode(jpeg_decode_handle, jpeg_stream_handle, &decode_params, output_image);
@@ -137,11 +138,14 @@ py::object PyRocJpegDecoder::rocPyJpegDecodeBatched(
 
     auto* destinations = static_cast<RocJpegImage*>(destinations_capsule.get_pointer());
 
+    RocJpegDecodeParams decode_params;
+
     // Extract decode parameters
     std::vector<RocJpegDecodeParams> decode_params_list;
     for (auto item : in_decode_params) {
         PyRocJpegDecodeParams py_decode_param = py::cast<PyRocJpegDecodeParams>(item);
-        decode_params_list.push_back(get_decode_param(py_decode_param));
+        memcpy(&decode_params,&py_decode_param,sizeof(RocJpegDecodeParams));
+        decode_params_list.push_back(decode_params);
     }
 
     if (decode_params_list.size() != static_cast<size_t>(batch_size)) {
@@ -192,7 +196,8 @@ PyRocJpegUtils::PyGetChannelPitchAndSizes(PyRocJpegDecodeParams &in_decode_param
     RocJpegImage* output_image = static_cast<RocJpegImage*>(image_ptr);
     std::array<uint32_t, ROCJPEG_MAX_COMPONENT> channel_sizes = {};
     uint32_t num_channels=0;
-    RocJpegDecodeParams decode_params = get_decode_param(in_decode_params);
+    RocJpegDecodeParams decode_params;
+    memcpy(&decode_params,&in_decode_params,sizeof(RocJpegDecodeParams));
     bool ret = GetChannelPitchAndSizes(decode_params, subsampling, widths.data(), heights.data(), num_channels, *output_image, reinterpret_cast<uint32_t *>(&channel_sizes));
     if(ret != EXIT_SUCCESS)
         num_channels = 0;
