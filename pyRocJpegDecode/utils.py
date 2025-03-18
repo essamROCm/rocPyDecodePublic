@@ -25,37 +25,7 @@ import ctypes
 class utils(object):
 
     def __init__(self):
-        self.jpegutils = rocpyjpeg.PyRocJpegUtils()
+        self.jpegtest = rocpyjpeg.PyTest()
 
-    def PyGetFilePaths(self, input_path, file_paths, is_dir, is_file):
-        n_input_path, n_file_paths, n_is_dir, n_is_file = self.jpegutils.PyGetFilePaths(input_path, file_paths, is_dir, is_file)
-        return n_input_path, n_file_paths, n_is_dir, n_is_file
-
-    def PyGetChromaSubsamplingStr(self, subsampling):
-        chroma_string = self.jpegutils.PyGetChromaSubsamplingStr(subsampling)
-        return chroma_string
-
-    def PyGetChannelPitchAndSizes(self, decode_params, subsampling, widths, heights, output_image):
-        ctypes.pythonapi.PyCapsule_New.restype = ctypes.py_object
-        capsule = ctypes.pythonapi.PyCapsule_New(ctypes.byref(output_image), b'RocJpegImage', None)
-        return self.jpegutils.PyGetChannelPitchAndSizes(decode_params, subsampling, widths, heights, capsule)
-
-    def PyGetOutputFileExt(self, decode_params, base_file_name, image_width, image_height, subsampling, output_file_name):
-        return self.jpegutils.PyGetOutputFileExt(decode_params, base_file_name, image_width, image_height, subsampling, output_file_name)
-
-    def PySaveImage(self, decode_params, image_save_path, width, height, subsampling, output_image):
-        ctypes.pythonapi.PyCapsule_New.restype = ctypes.py_object
-        capsule = ctypes.pythonapi.PyCapsule_New(ctypes.byref(output_image), b'RocJpegImage', None)
-        return self.jpegutils.PySaveImage(decode_params, image_save_path, width, height, subsampling, capsule)
-
-    def PyInitHipDevice(self, device_id):
-        return self.jpegutils.PyInitHipDevice(device_id)
-
-    def PyAllocHipDeviceMemory(self, channel_size):
-        return self.jpegutils.PyAllocHipDeviceMemory(channel_size)
-
-    def PyFreeHipDeviceMemory(self, output_image_channel):
-        return self.jpegutils.PyFreeHipDeviceMemory(output_image_channel)
-
-    def test(self):
-        return self.jpegutils.test()
+    def Test(self):
+        return self.jpegtest.Test()

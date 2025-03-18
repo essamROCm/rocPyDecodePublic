@@ -57,34 +57,7 @@ THE SOFTWARE.
 
 namespace py = pybind11;
 
-// Define CropRectangle struct
-struct CropRectangle {
-    int16_t left;
-    int16_t top;
-    int16_t right;
-    int16_t bottom;
-};
-
-// Define TargetDimension struct
-struct TargetDimension {
-    uint32_t width;
-    uint32_t height;
-};
-
-// Re-Define Main Struct RocJpegDecodeParams to contain the 2 split structures
-typedef struct {
-    RocJpegOutputFormat output_format;
-    CropRectangle crop_rectangle;
-    TargetDimension target_dimension;
-} PyRocJpegDecodeParams;
-
-struct PyRocJpegImage {
-    std::array<uint8_t*, ROCJPEG_MAX_COMPONENT> channel;
-    std::array<uint32_t, ROCJPEG_MAX_COMPONENT> pitch;
-};
-
 // defined in roc_pyjpegdecoder.cpp
 void PyRocJpegDecoderInitializer(py::module& m);
-void PyRocJpegUtilsInitializer(py::module& m);
 
 #endif // PY_ROC_JPEG_PYBIND11_HEADER
