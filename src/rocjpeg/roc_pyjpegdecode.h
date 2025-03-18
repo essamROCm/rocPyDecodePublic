@@ -61,7 +61,7 @@ public:
     std::tuple<uint8_t, RocJpegChromaSubsampling, std::array<uint32_t, ROCJPEG_MAX_COMPONENT>, std::array<uint32_t, ROCJPEG_MAX_COMPONENT>>
     rocPyJpegGetImageInfo(py::capsule decode_handle, py::capsule stream_handle);
     py::object rocPyJpegDecode(PyRocJpegDecodeParams &in_decode_params, py::capsule decode_handle, py::capsule stream_handle, void *image);
-    py::object rocPyJpegDecodeBatched(py::capsule decode_handle_capsule, py::list stream_capsules, int batch_size, PyRocJpegDecodeParams& in_decode_params, py::capsule destinations_capsule);
+    py::object rocPyJpegDecodeBatched(py::capsule decode_handle_capsule, py::list stream_capsules, int batch_size, py::list in_decode_params, py::capsule destinations_capsule);
 
     RocJpegDecodeParams get_decode_param(PyRocJpegDecodeParams& in){
         RocJpegDecodeParams out;

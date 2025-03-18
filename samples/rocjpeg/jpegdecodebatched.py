@@ -1,11 +1,11 @@
-
 import pyRocJpegDecode.decoder as jdec
 import pyRocJpegDecode.utils as jutils
 import pyRocJpegDecode.types as jpegt
-import datetime
-import sys
 import argparse
-import os.path
+import datetime
+import os
+import sys
+import ctypes
 
 
 def get_format(out_fmt):
@@ -17,102 +17,137 @@ def get_format(out_fmt):
     }
     return format_mapping.get(out_fmt, jpegt.ROCJPEG_OUTPUT_NATIVE)
 
-
 def read_image(file_path):
+    # Check if the file exists
     if not os.path.exists(file_path):
         print(f"ERROR: Cannot open image: {file_path}", file=sys.stderr)
-        return None
-    with open(file_path, "rb") as f:
-        return f.read()
+        return None, 0
+    try:
+        # Open file in binary mode
+        with open(file_path, "rb") as input_file:
+            # Get file size
+            input_file.seek(0, os.SEEK_END)
+            file_size = input_file.tell()
+            input_file.seek(0)
+            # Read file content
+            file_data = input_file.read(file_size)
+        return file_data, file_size
+    except Exception as e:
+        print(f"ERROR: Cannot read from file: {file_path}\n{e}", file=sys.stderr)
+        return None, 0
 
 
 def JDecoderBatched(
-        input_file_path, 
-        output_file_path, 
-        device_id, 
-        rocjpeg_backend, 
-        output_format, 
+        input_dir,
+        output_path,
+        device_id,
+        rocjpeg_backend,
+        output_format,
+        crop_rect,
         batch_size):
-    
-    # JPEG decode & utils instance
+
+    # Instances of decoder & utils
     jpegdecode = jdec.decoder()
     jpegutils = jutils.utils()
-    
+
     # Create/Init RocJpegDecodeParams
     decode_params = jdec.PyRocJpegDecodeParams()
     decode_params.output_format = get_format(output_format)
+    crp_rct = [0,0,0,0]
+    if(crop_rect is not None):
+        crp_rct = crop_rect
+    decode_params.crop_rectangle.left = crp_rct[0]
+    decode_params.crop_rectangle.top = crp_rct[1]
+    decode_params.crop_rectangle.right = crp_rct[2]
+    decode_params.crop_rectangle.bottom = crp_rct[3]
+    decode_params.target_dimension.width = 0
+    decode_params.target_dimension.height = 0
 
-    # parse input
-    file_paths, is_dir, is_file = jpegutils.PyGetFilePaths(input_file_path, [], False, False)[1:4]
+    # HIP device init
+    jpegutils.PyInitHipDevice(device_id)
 
-    # init HIP
-    if not jpegutils.PyInitHipDevice(device_id):
-        print("ERROR: Failed to initialize HIP!", file=sys.stderr)
-        return
-
-    # init the stream & the codec - output images array
+    # Create decode handle
     decode_handle = jpegdecode.rocPyJpegCreate(rocjpeg_backend, device_id)
-    batch_size = min(batch_size, len(file_paths))
 
+    # Get list of files
+    input_path, file_paths, is_dir, is_file = jpegutils.PyGetFilePaths(input_dir, [], False, False)
+    total_files = len(file_paths)
+    batch_size = min(batch_size, total_files)
+
+    # Prepare batch structures
     stream_handles = [jpegdecode.rocPyJpegStreamCreate() for _ in range(batch_size)]
     output_images = jdec.PyRocJpegImageArray(batch_size)
+    decode_params_batch = [decode_params] * batch_size
 
-    total_images, mpixels_all, time_per_image_all = 0, 0, 0
+    # Helper data for reuse
+    prior_channel_sizes = [[0] * jpegt.ROCJPEG_MAX_COMPONENT for _ in range(batch_size)]
 
-    print("Decoding started, please wait...")
+    # Iterate over files in batches
+    for i in range(0, total_files, batch_size):
+        current_batch_files = file_paths[i:i + batch_size]
+        stream_handles_batch = []
+        widths_list = []
+        heights_list = []
+        subsampling_list = []
 
-    for i in range(0, len(file_paths), batch_size):
-        current_files = file_paths[i:i + batch_size]
-        current_batch_size = len(current_files)
-        widths, heights, subsamplings = [], [], []
+        for idx, file_path in enumerate(current_batch_files):
+            # Read image
+            file_data, file_size = read_image(file_path)
 
-        for idx, file_path in enumerate(current_files):
-            file_data = read_image(file_path)
-            jpegdecode.rocPyJpegStreamParse(file_data, len(file_data), stream_handles[idx])
-            num_components, subsampling, w, h = jpegdecode.rocPyJpegGetImageInfo(decode_handle, stream_handles[idx])
-            subsamplings.append(subsampling)
-            widths.append(w)
-            heights.append(h)
-            num_channels, channel_sizes = jpegutils.PyGetChannelPitchAndSizes(decode_params, subsampling, w, h, output_images[idx])
+            # Parse stream
+            jpegdecode.rocPyJpegStreamParse(file_data, file_size, stream_handles[idx])
 
-            for ch_idx in range(num_channels):
-                _, ptr = jpegutils.PyAllocHipDeviceMemory(channel_sizes[ch_idx])
-                output_images[idx].channel[ch_idx] = ptr
+            # Get image info
+            _, subsampling, widths, heights = jpegdecode.rocPyJpegGetImageInfo(decode_handle, stream_handles[idx])
 
+            # Get channel sizes & allocate memory
+            num_channels, channel_sizes = jpegutils.PyGetChannelPitchAndSizes(decode_params_batch[idx], subsampling, widths, heights, output_images[idx])
+
+            # alloc for each channel
+            for ch in range(num_channels):
+                if prior_channel_sizes[idx][ch] != channel_sizes[ch]:
+                    if output_images[idx].channel[ch] != 0:
+                        jpegutils.PyFreeHipDeviceMemory(output_images[idx].channel[ch])
+                    status, ptr = jpegutils.PyAllocHipDeviceMemory(channel_sizes[ch])
+                    output_images[idx].channel[ch] = ptr
+                    prior_channel_sizes[idx][ch] = channel_sizes[ch]
+
+            # Prepare for batched call
+            widths_list.append(widths)
+            heights_list.append(heights)
+            subsampling_list.append(subsampling)
+            stream_handles_batch.append(stream_handles[idx])
+
+        # Batched Decode
         start_time = datetime.datetime.now()
-        jpegdecode.rocPyJpegDecodeBatched(decode_handle, stream_handles[:current_batch_size], current_batch_size, decode_params, output_images)
+        jpegdecode.rocPyJpegDecodeBatched(decode_handle, stream_handles_batch, len(current_batch_files), decode_params_batch, output_images)
         end_time = datetime.datetime.now()
 
-        time_taken = (end_time - start_time).total_seconds() * 1000
-        time_per_image_all += time_taken
-        for w, h in zip(widths, heights):
-            mpixels_all += (w[0] * h[0]) / 1_000_000
-        total_images += current_batch_size
+        time_per_batch = (end_time - start_time).total_seconds() * 1000
+        print(f"Batch of {len(current_batch_files)} images decoded in {time_per_batch:.2f} ms")
 
-        if output_file_path:
-            for idx in range(current_batch_size):
-                save_path = output_file_path
-                jpegutils.PySaveImage(decode_params, save_path, widths[idx][0], heights[idx][0], subsamplings[idx], output_images[idx])
-                print(f"Saved: {save_path}")
+        # Save Images
+        if output_path:
+            for idx, file_path in enumerate(current_batch_files):
+                base_name = os.path.basename(file_path)
+                # if ROI is present, need to pass roi_width and roi_height
+                roi_width = decode_params_batch[idx].crop_rectangle.right - decode_params_batch[idx].crop_rectangle.left
+                roi_height = decode_params_batch[idx].crop_rectangle.bottom - decode_params_batch[idx].crop_rectangle.top
+                is_roi_valid = True if(roi_width > 0 and roi_height > 0 and roi_width <= widths_list[idx][0] and roi_height <= heights_list[idx][0]) else False
+                width = roi_width if(is_roi_valid) else widths_list[idx][0]
+                height = roi_height if(is_roi_valid) else heights_list[idx][0]
+                if(is_dir):
+                    output_file_name = jpegutils.PyGetOutputFileExt(decode_params_batch[idx], base_name, width, height, subsampling_list[idx], output_path)
+                jpegutils.PySaveImage(decode_params_batch[idx], output_file_name, width, height, subsampling_list[idx], output_images[idx])
+                print(f"Saved: {output_file_name}")
 
-        print(f"Batch of {current_batch_size} images processed in {time_taken:.2f} ms.")
+        # Free Allocated Memory
+        for idx in range(len(current_batch_files)):
+            for ch in range(jpegt.ROCJPEG_MAX_COMPONENT):
+                if output_images[idx].channel[ch] != 0:
+                    jpegutils.PyFreeHipDeviceMemory(output_images[idx].channel[ch])
 
-    # Performance statistics if there are processed images
-    if total_images:
-        avg_time = time_per_image_all / total_images
-        images_per_sec = 1000 / avg_time
-        mpixels_per_sec = mpixels_all * images_per_sec / total_images
-        print(f"Total decoded images: {total_images}")
-        print(f"Average processing time per image (ms): {avg_time:.2f}")
-        print(f"Average images/sec: {images_per_sec:.2f}")
-        print(f"Average Mpixels/sec: {mpixels_per_sec:.2f}")
-
-    for idx in range(batch_size):
-        for ch in output_images[idx].channel:
-            if ch != 0:
-                jpegutils.PyFreeHipDeviceMemory(ch)
-
-    print("Batch Decoding completed.")
+    print("\nBatched JPEG decoding completed.\n")
 
 
 if __name__ == "__main__":
@@ -130,7 +165,7 @@ if __name__ == "__main__":
         '-o',
         '--output',
         type=str,
-        help='Path to an output file, or a path to an existing directory - write decoded images to a file or an existing directory based on selected output format - [optional]',
+        help='Path to an existing directory - write decoded images to an existing directory based on selected output format - [optional]',
         required=False)
     parser.add_argument(
         '-d',
@@ -160,6 +195,13 @@ if __name__ == "__main__":
         default=2,
         help='Batch size for decoding',
         required=True)
+    parser.add_argument(
+        '-crop',
+        '--crop_rect',
+        nargs=4,
+        type=int,
+        help='Crop rectangle (left, top, right, bottom), optional, default: no cropping',
+        required=False)
 
     try:
         args = parser.parse_args()
@@ -173,6 +215,7 @@ if __name__ == "__main__":
     rocjpeg_backend = args.backend
     output_format = args.output_format
     batch_size = args.batch_size
+    crop_rect = args.crop_rect
 
     JDecoderBatched(
         input_file_path,
@@ -180,5 +223,6 @@ if __name__ == "__main__":
         device_id,
         rocjpeg_backend,
         output_format,
+        crop_rect,
         batch_size
         )

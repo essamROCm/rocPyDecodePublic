@@ -118,7 +118,7 @@ py::object PyRocJpegDecoder::rocPyJpegDecodeBatched(
     py::capsule decode_handle_capsule,
     py::list stream_capsules,
     int batch_size,
-    PyRocJpegDecodeParams& in_decode_params,
+    py::list in_decode_params,
     py::capsule destinations_capsule
 ) {
     auto* decode_handle = static_cast<RocJpegHandle>(decode_handle_capsule.get_pointer());
@@ -137,17 +137,27 @@ py::object PyRocJpegDecoder::rocPyJpegDecodeBatched(
 
     auto* destinations = static_cast<RocJpegImage*>(destinations_capsule.get_pointer());
 
-    RocJpegDecodeParams decode_params = get_decode_param(in_decode_params);
+    // Extract decode parameters
+    std::vector<RocJpegDecodeParams> decode_params_list;
+    for (auto item : in_decode_params) {
+        PyRocJpegDecodeParams py_decode_param = py::cast<PyRocJpegDecodeParams>(item);
+        decode_params_list.push_back(get_decode_param(py_decode_param));
+    }
 
-    // Call C API for batched decoding
+    if (decode_params_list.size() != static_cast<size_t>(batch_size)) {
+        throw std::runtime_error("Batch size does not match number of decode parameters provided");
+    }
+
+    // Call C API for batched decoding with decode_params_list.data()
     return py::cast(rocJpegDecodeBatched(
         decode_handle,
         stream_handles.data(),
         batch_size,
-        &decode_params,
+        decode_params_list.data(),  // Pass as contiguous array
         destinations
     ));
 }
+
 
 //
 // Utils
