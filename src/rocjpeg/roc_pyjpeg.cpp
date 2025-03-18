@@ -22,8 +22,6 @@ THE SOFTWARE.
 
 #include "roc_pyjpegdecode.h"
 
-using namespace std;
-
 PYBIND11_MODULE(rocpyjpegdecode, m) {
  
     m.doc() = "Python bindings for the C++ portions of rocJPEG ..";

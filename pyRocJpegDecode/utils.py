@@ -19,7 +19,6 @@
 # THE SOFTWARE.
 
 import rocpyjpegdecode as rocpyjpeg
-import ctypes
 
 # rocPyJpeg Utilities Class
 class utils(object):

@@ -24,28 +24,7 @@ THE SOFTWARE.
 #define PY_ROC_JPEG_HEADER
 #pragma once
 
-#include <iostream>
-#include <fstream>
-#include <iomanip>
-#include <string>
-#include <vector>
-#include <thread>
-#include <mutex>
-#include <algorithm>
-#include <functional>
-#include <condition_variable>
-#include <queue>
-#if __cplusplus >= 201703L && __has_include(<filesystem>)
-    #include <filesystem>
-    namespace fs = std::filesystem;
-#else
-    #include <experimental/filesystem>
-    namespace fs = std::experimental::filesystem;
-#endif
-#include <chrono>
-
 #include "roc_pyjpeg.h"
-
 
 class PyTest {
 

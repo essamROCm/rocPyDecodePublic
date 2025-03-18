@@ -24,36 +24,15 @@ THE SOFTWARE.
 #define PY_ROC_JPEG_PYBIND11_HEADER
 #pragma once
 
-#include <iostream>
-#include <fstream>
-#include <iomanip>
-#include <string>
-#include <vector>
-#include <thread>
-#include <mutex>
-#include <algorithm>
-#include <functional>
-#include <condition_variable>
-#include <queue>
-#if __cplusplus >= 201703L && __has_include(<filesystem>)
-    #include <filesystem>
-    namespace fs = std::filesystem;
-#else
-    #include <experimental/filesystem>
-    namespace fs = std::experimental::filesystem;
-#endif
-#include <chrono>
-
 #include "rocjpeg.h"
 #include "rocjpeg_samples_utils.h"
 
 #include <pybind11/pybind11.h>	 
 #include <pybind11/functional.h>
-#include <pybind11/stl.h>
-#include <pybind11/numpy.h>
-#include <iostream>
-#include <pybind11/embed.h>
-#include <pybind11/eval.h>
+// #include <pybind11/stl.h>
+// #include <pybind11/numpy.h>
+// #include <pybind11/embed.h>
+// #include <pybind11/eval.h>
 
 namespace py = pybind11;
 
