@@ -163,8 +163,8 @@ find_package(pybind11 QUIET)
 find_package(dlpack QUIET)
 find_package(FFmpeg QUIET)
 
-# Search for all installed Python versions on the system
-execute_process(COMMAND bash -c "compgen -c | grep -E '^python3\.[0-9]+$' | sort -Vru" OUTPUT_VARIABLE PYTHON_EXECUTABLES OUTPUT_STRIP_TRAILING_WHITESPACE)
+# Search for all installed Python versions - exclude Python versions lower than 3.9
+execute_process(COMMAND bash -c "compgen -c | grep -E '^python3\.[0-9]+$' | awk -F. '$2 >= 9' | sort -Vru" OUTPUT_VARIABLE PYTHON_EXECUTABLES OUTPUT_STRIP_TRAILING_WHITESPACE)
 # Convert space-separated list to CMake list
 string(REPLACE "\n" ";" PYTHON_EXECUTABLES_LIST "${PYTHON_EXECUTABLES}")
 # Merge the user defined python folder if passed here
@@ -216,6 +216,7 @@ if(BUILD_ROCPYDECODE)
     set(LINK_LIBRARY_LIST ${LINK_LIBRARY_LIST} hip::device)
     # rocDecode
     include_directories(${ROCDECODE_INCLUDE_DIR}
+        ${ROCM_PATH}/include/rocdecode
         ${ROCM_PATH}/share/rocdecode/utils
         ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode)
     set(LINK_LIBRARY_LIST ${LINK_LIBRARY_LIST} ${ROCDECODE_LIBRARY})
@@ -299,24 +300,13 @@ if(BUILD_ROCPYDECODE)
                 # include
                 target_include_directories(${TARGET_NAME_VERSIONED} PRIVATE ${pybind11_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIR})
 
-                # TODO: remove after ROCDECODE_CHECK_VERSION macro is pushed to mainline
-                if(${ROCDECODE_VER_MAJOR} VERSION_GREATER_EQUAL "0" AND ${ROCDECODE_VER_MINOR} VERSION_GREATER_EQUAL "6" AND ${ROCDECODE_VER_MICRO} VERSION_GREATER_EQUAL "0")
-                    target_compile_definitions(${TARGET_NAME_VERSIONED} PUBLIC OVERHEAD_SUPPORT=1)
-                else()
-                    target_compile_definitions(${TARGET_NAME_VERSIONED} PUBLIC OVERHEAD_SUPPORT=0)
-                endif()
-                # TODO: remove after ROCDECODE_CHECK_VERSION macro is pushed to mainline
-                if(${ROCDECODE_VER_MAJOR} VERSION_GREATER_EQUAL "0" AND ${ROCDECODE_VER_MINOR} VERSION_GREATER_EQUAL "7" AND ${ROCDECODE_VER_MICRO} VERSION_GREATER_EQUAL "0")
-                    target_compile_definitions(${TARGET_NAME_VERSIONED} PUBLIC CODEC_SUPPORTED_CHECK=1)
-                else()
-                    target_compile_definitions(${TARGET_NAME_VERSIONED} PUBLIC CODEC_SUPPORTED_CHECK=0)
-                endif()
                 # FFMPEG multi-version support
                 if(_FFMPEG_AVCODEC_VERSION VERSION_LESS_EQUAL 58.134.100)
                     target_compile_definitions(${TARGET_NAME_VERSIONED} PUBLIC USE_AVCODEC_GREATER_THAN_58_134=0)
                 else()
                     target_compile_definitions(${TARGET_NAME_VERSIONED} PUBLIC USE_AVCODEC_GREATER_THAN_58_134=1)
                 endif()
+
                 foreach (filename ${pyfiles})
                     get_filename_component(target "${filename}" REALPATH)
                     #to maintain folder structure
