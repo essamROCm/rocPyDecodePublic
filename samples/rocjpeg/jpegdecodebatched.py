@@ -128,6 +128,7 @@ def JDecoderBatched(
 
         # Save Images
         if output_path:
+            output_file_name = output_path
             for idx, file_path in enumerate(current_batch_files):
                 base_name = os.path.basename(file_path)
                 # if ROI is present, need to pass roi_width and roi_height

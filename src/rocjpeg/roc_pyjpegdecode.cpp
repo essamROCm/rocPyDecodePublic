@@ -103,8 +103,8 @@ PyRocJpegDecoder::rocPyJpegGetImageInfo(py::capsule decode_handle, py::capsule s
     return std::make_tuple(num_components, subsampling, m_widths, m_heights);
 }
 
-py::object PyRocJpegDecoder::rocPyJpegDecode(PyRocJpegDecodeParams &in_decode_params, py::capsule decode_handle, py::capsule stream_handle, void *image_ptr) {
-    RocJpegImage* output_image = static_cast<RocJpegImage*>(image_ptr);
+py::object PyRocJpegDecoder::rocPyJpegDecode(PyRocJpegDecodeParams &in_decode_params, py::capsule decode_handle, py::capsule stream_handle, py::capsule image_ptr) {
+    RocJpegImage* output_image = static_cast<RocJpegImage*>(image_ptr.get_pointer());
     RocJpegDecodeParams decode_params;
     memcpy(&decode_params,&in_decode_params,sizeof(RocJpegDecodeParams));
     RocJpegStreamHandle jpeg_stream_handle = stream_handle.get_pointer();
@@ -174,8 +174,8 @@ PyRocJpegUtils::PyGetOutputFileExt(PyRocJpegDecodeParams &in_decode_params, std:
 }
 
 py::object
-PyRocJpegUtils::PySaveImage(PyRocJpegDecodeParams &in_decode_params, std::string image_save_path, uint32_t img_width, uint32_t img_height, RocJpegChromaSubsampling subsampling, void *image_ptr) {
-    RocJpegImage* output_image = static_cast<RocJpegImage*>(image_ptr);
+PyRocJpegUtils::PySaveImage(PyRocJpegDecodeParams &in_decode_params, std::string image_save_path, uint32_t img_width, uint32_t img_height, RocJpegChromaSubsampling subsampling, py::capsule image_ptr) {
+    RocJpegImage* output_image = static_cast<RocJpegImage*>(image_ptr.get_pointer());
     SaveImage(image_save_path, output_image, img_width, img_height, subsampling, in_decode_params.output_format);
     return py::cast<py::none>(Py_None);
 }
@@ -191,8 +191,8 @@ PyRocJpegUtils::PyGetFilePaths(std::string &input_path, std::vector<std::string>
 
 std::tuple<int, std::array<uint32_t, ROCJPEG_MAX_COMPONENT>>
 PyRocJpegUtils::PyGetChannelPitchAndSizes(PyRocJpegDecodeParams &in_decode_params, RocJpegChromaSubsampling subsampling, std::array<uint32_t, ROCJPEG_MAX_COMPONENT> &widths,
-                    std::array<uint32_t, ROCJPEG_MAX_COMPONENT> &heights, void *image_ptr) {
-    RocJpegImage* output_image = static_cast<RocJpegImage*>(image_ptr);
+                    std::array<uint32_t, ROCJPEG_MAX_COMPONENT> &heights, py::capsule image_ptr) {
+    RocJpegImage* output_image = static_cast<RocJpegImage*>(image_ptr.get_pointer());
     std::array<uint32_t, ROCJPEG_MAX_COMPONENT> channel_sizes = {};
     uint32_t num_channels=0;
     RocJpegDecodeParams decode_params;
