@@ -24,28 +24,7 @@ THE SOFTWARE.
 #define PY_ROC_JPEG_HEADER
 #pragma once
 
-#include <iostream>
-#include <fstream>
-#include <iomanip>
-#include <string>
-#include <vector>
-#include <thread>
-#include <mutex>
-#include <algorithm>
-#include <functional>
-#include <condition_variable>
-#include <queue>
-#if __cplusplus >= 201703L && __has_include(<filesystem>)
-    #include <filesystem>
-    namespace fs = std::filesystem;
-#else
-    #include <experimental/filesystem>
-    namespace fs = std::experimental::filesystem;
-#endif
-#include <chrono>
-
 #include "roc_pyjpeg.h"
-
 
 class PyRocJpegDecoder {
 
@@ -84,7 +63,6 @@ public:
     std::tuple<RocJpegStatus,uintptr_t> PyAllocHipDeviceMemory(uint32_t &channel_size);
     py::object PyFreeHipDeviceMemory(uintptr_t output_image_channel);
     py::object PyInitHipDevice(int device_id);
-    int test();
 };
 
 #endif // PY_ROC_JPEG_HEADER
