@@ -24,7 +24,7 @@ THE SOFTWARE.
 #define PY_ROC_JPEG_PYBIND11_HEADER
 #pragma once
 
-#include "rocjpeg.h"
+#include "rocjpeg/rocjpeg.h"
 #include "rocjpeg_samples_utils.h"
 
 #include <pybind11/pybind11.h>	 

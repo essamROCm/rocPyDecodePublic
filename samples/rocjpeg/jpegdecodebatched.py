@@ -212,6 +212,7 @@ if __name__ == "__main__":
     batch_size = args.batch_size
     crop_rect = args.crop_rect
 
+    # validate params
     if not os.path.exists(input_file_path):  # Input must exist
         print("ERROR: input file doesn't exist.")
         sys.exit()
