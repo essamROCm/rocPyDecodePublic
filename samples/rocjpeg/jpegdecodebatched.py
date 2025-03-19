@@ -142,12 +142,6 @@ def JDecoderBatched(
                 jpegutils.PySaveImage(decode_params_batch[idx], output_file_name, width, height, subsampling_list[idx], output_images[idx])
                 print(f"Saved: {output_file_name}")
 
-        # Free Allocated Memory
-        for idx in range(len(current_batch_files)):
-            for ch in range(jpegt.ROCJPEG_MAX_COMPONENT):
-                if output_images[idx].channel[ch] != 0:
-                    jpegutils.PyFreeHipDeviceMemory(output_images[idx].channel[ch])
-
     print("\nBatched JPEG decoding completed.\n")
 
 
