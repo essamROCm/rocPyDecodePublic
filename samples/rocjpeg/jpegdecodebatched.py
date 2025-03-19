@@ -160,7 +160,7 @@ if __name__ == "__main__":
         '-o',
         '--output',
         type=str,
-        help='Path to an existing directory - write decoded images to an existing directory based on selected output format - [optional]',
+        help='Path to an existing directory or will be created - write decoded images to a directory based on selected output format - [optional]',
         required=False)
     parser.add_argument(
         '-d',
@@ -187,8 +187,8 @@ if __name__ == "__main__":
         '-bs', 
         '--batch_size',
         type=int,
-        default=2,
-        help='Batch size for decoding',
+        default=1,
+        help='Batch size for decoding, must pass the batch size desired, default is 1 - required',
         required=True)
     parser.add_argument(
         '-crop',
@@ -211,6 +211,26 @@ if __name__ == "__main__":
     output_format = args.output_format
     batch_size = args.batch_size
     crop_rect = args.crop_rect
+
+    if not os.path.exists(input_file_path):  # Input must exist
+        print("ERROR: input file doesn't exist.")
+        sys.exit()
+    if(batch_size <= 0):
+        print(f"Arg Error: Invalid batch size: -bs {batch_size}\n")
+        sys.exit()
+    if(device_id < 0):
+        print(f"Arg Error: Invalid device ID: {device_id}\n")
+        sys.exit()
+    if(rocjpeg_backend < 0):
+        print(f"Arg Error: Invalid back end: {rocjpeg_backend}\n")
+        sys.exit()
+    if(output_format < 1 or output_format > 5):
+        print(f"Arg Error: Invalid output format: {output_format}\n")
+        sys.exit()
+    if(output_file_path is not None):
+        if(not os.path.exists(output_file_path) or not os.path.isdir(output_file_path)):
+            print("Warning: output folder specified doesn't exist, no image(s) will be saved.")
+            output_file_path = None # decode with no attempt to save
 
     JDecoderBatched(
         input_file_path,

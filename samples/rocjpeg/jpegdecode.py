@@ -292,6 +292,25 @@ if __name__ == "__main__":
     crop_rect = args.crop_rect
     output_format = args.output_format
 
+    # validate params
+    if not os.path.exists(input_file_path): # Input must exist
+        print("ERROR: input file doesn't exist.")
+        sys.exit()
+    if os.path.isdir(input_file_path): # if in dir
+        if output_file_path is not None:
+            if not os.path.isdir(output_file_path): # out must be dir
+                print("ERROR: for passing folder path as input, you must pass an existing folder path as output.")
+                sys.exit()
+    if(device_id < 0):
+        print(f"Arg Error: Invalid device ID: {device_id}\n")
+        sys.exit()
+    if(rocjpeg_backend < 0):
+        print(f"Arg Error: Invalid back end: {rocjpeg_backend}\n")
+        sys.exit()
+    if(output_format < 1 or output_format > 5):
+        print(f"Arg Error: Invalid output format: {output_format}\n")
+        sys.exit()
+
     JDecoder(
         input_file_path,
         output_file_path,
