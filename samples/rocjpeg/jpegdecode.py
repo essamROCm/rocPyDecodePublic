@@ -158,7 +158,6 @@ def JDecoder(
         if(num_channels <= 0):
             print(f"ERROR: Failed to get the channel pitch and sizes {num_channels}")
             exit
-        print(f"channel_sizes: {channel_sizes}")
 
         # allocate memory for each channel and reuse them if the sizes remain unchanged for a new image.
         for i in range(num_channels):
@@ -200,12 +199,6 @@ def JDecoder(
             total_images += image_count
             time_per_image_all += time_per_image_in_milli_sec;
             mpixels_all += image_size_in_mpixels
-
-        # Free allocated MEM
-        for i in range(num_channels):
-            if output_image.channel[i] is not None:
-                rocjpeg_status = jpegutils.PyFreeHipDeviceMemory(output_image.channel[i])
-        print(f"Successfully freed allocated MEM, channels count: {num_channels}\n")
 
         if (is_dir):
             time_per_image_all /= total_images  # Compute average time per image
