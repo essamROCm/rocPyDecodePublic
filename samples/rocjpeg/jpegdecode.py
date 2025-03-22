@@ -62,23 +62,28 @@ def JDecoder(
     decode_params.target_dimension.height = 0
     is_roi_valid = False
 
-    # roi?
-    roi_width = decode_params.crop_rectangle.right - decode_params.crop_rectangle.left
-    roi_height = decode_params.crop_rectangle.bottom - decode_params.crop_rectangle.top
-    if(roi_width > 0 and roi_height > 0 and roi_width <= widths[0] and roi_height <= heights[0]):
-        is_roi_valid = True
-        print(f"Cropped image resolution: {roi_width}x{roi_height}")
-
     # parse input
-    input_path, file_paths, is_dir, is_file = jpegutils.PyGetFilePaths(input_file_path, [], False, False)
+    file_paths, is_dir, status = jpegutils.PyGetFilePaths(input_file_path)
+    if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
+        print(f"Failure - GetFilePaths Status: {status}")
 
     # init HIP
-    if(jpegutils.PyInitHipDevice(device_id)):
+    status = jpegutils.PyInitHipDevice(device_id)
+    if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
+        print(f"Failure - InitHipDevice Status: {status}")
+    else:
         print("HIP Device Initialized Successfully..\n")
 
     # init the stream & the codec
-    decode_handle = jpegdecode.rocPyJpegCreate(rocjpeg_backend, device_id)
-    stream_handle = jpegdecode.rocPyJpegStreamCreate()
+    decode_handle, status = jpegdecode.rocPyJpegCreate(rocjpeg_backend, device_id)
+
+    if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
+        print(f"Failure - JpegDecoderCreate Status: {status}")
+
+    stream_handle, status = jpegdecode.rocPyJpegStreamCreate()
+
+    if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
+        print(f"Failure - JpegStreamCreate Status: {status}")
 
     # vars-init
     save_images = False if(output_file_path is None) else True
@@ -86,7 +91,6 @@ def JDecoder(
     num_jpegs_with_unknown_subsampling = 0
     num_jpegs_with_unsupported_resolution = 0
     num_bad_jpegs = 0
-    num_components = 0
     total_images = 0
     time_per_image_all = 0
     mpixels_all = 0
@@ -117,9 +121,9 @@ def JDecoder(
 
         print(f"Input file name, size: {file_path}, {file_size}")
 
-        rocjpeg_status = jpegdecode.rocPyJpegStreamParse(file_data, file_size, stream_handle)
+        status = jpegdecode.rocPyJpegStreamParse(file_data, file_size, stream_handle)
 
-        if (rocjpeg_status != jpegt.ROCJPEG_STATUS_SUCCESS):
+        if (status != jpegt.ROCJPEG_STATUS_SUCCESS):
             if (is_dir):
                 num_bad_jpegs += 1
                 continue
@@ -128,9 +132,21 @@ def JDecoder(
                 exit
 
         # Get image info
-        num_components, subsampling, widths, heights = jpegdecode.rocPyJpegGetImageInfo(decode_handle, stream_handle)
+        subsampling, widths, heights, status = jpegdecode.rocPyJpegGetImageInfo(decode_handle, stream_handle)
 
-        chroma_sub_sampling = jpegutils.PyGetChromaSubsamplingStr(subsampling)
+        if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
+            print(f"Failure - JpegGetImageInfo Status: {status}")
+
+        # roi?
+        roi_width = decode_params.crop_rectangle.right - decode_params.crop_rectangle.left
+        roi_height = decode_params.crop_rectangle.bottom - decode_params.crop_rectangle.top
+        if(roi_width > 0 and roi_height > 0 and roi_width <= widths[0] and roi_height <= heights[0]):
+            is_roi_valid = True
+            print(f"Cropped image resolution: {roi_width}x{roi_height}")
+
+        chroma_sub_sampling, status = jpegutils.PyGetChromaSubsamplingStr(subsampling)
+        if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
+            print(f"Failure - GetChromaSubsamplingStr Status: {status}")
         print(f"Input image resolution: {widths[0]}x{heights[0]}")
         print(f"Chroma subsampling: {chroma_sub_sampling}")
 
@@ -153,25 +169,32 @@ def JDecoder(
             else:
                 exit
 
-        num_channels, channel_sizes = jpegutils.PyGetChannelPitchAndSizes(decode_params, subsampling, widths, heights, output_image)
-
-        if(num_channels <= 0):
-            print(f"ERROR: Failed to get the channel pitch and sizes {num_channels}")
-            exit
+        num_channels, channel_sizes, status = jpegutils.PyGetChannelPitchAndSizes(decode_params, subsampling, widths, heights, output_image)
+        if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
+            print(f"Failure - GetChannelPitchAndSizes Status: {status}")
 
         # allocate memory for each channel and reuse them if the sizes remain unchanged for a new image.
         for i in range(num_channels):
             if prior_channel_sizes[i] != channel_sizes[i]:
                 if output_image.channel[i] != 0:
-                    rocjpeg_status = jpegutils.PyFreeHipDeviceMemory(output_image.channel[i])
-                    output_image.channel[i] = 0
-                rocjpeg_status, ptr = jpegutils.PyAllocHipDeviceMemory(channel_sizes[i])
-                output_image.channel[i] = ptr
+                    status = jpegutils.PyFreeHipDeviceMemory(output_image.channel[i])
+                    if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
+                        print(f"Failure - FreeHipDeviceMemory Status: {status}")
+                    else:
+                        output_image.channel[i] = 0
+                ptr, status = jpegutils.PyAllocHipDeviceMemory(channel_sizes[i])
+                if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
+                    print(f"Failure - AllocHipDeviceMemory Status: {status}")
+                else:
+                    output_image.channel[i] = ptr
 
         print("Decoding started, please wait! ... ")
         start_time = datetime.datetime.now()
 
-        rocjpeg_status = jpegdecode.rocPyJpegDecode(decode_params, decode_handle, stream_handle, output_image) # Call the JPEG decode
+        status = jpegdecode.rocPyJpegDecode(decode_params, decode_handle, stream_handle, output_image) # Call the JPEG decode
+
+        if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
+            print(f"Failure - JpegDecode Status: {status}")
 
         end_time = datetime.datetime.now()
         time_per_image_in_milli_sec = (end_time - start_time).total_seconds() * 1000 # Compute time per image in milliseconds

@@ -27,18 +27,19 @@ class utils(object):
     def __init__(self):
         self.jpegutils = rocpyjpeg.PyRocJpegUtils()
 
-    def PyGetFilePaths(self, input_path, file_paths, is_dir, is_file):
-        n_input_path, n_file_paths, n_is_dir, n_is_file = self.jpegutils.PyGetFilePaths(input_path, file_paths, is_dir, is_file)
-        return n_input_path, n_file_paths, n_is_dir, n_is_file
+    def PyGetFilePaths(self, input_path):
+        n_file_paths, n_is_dir, status = self.jpegutils.PyGetFilePaths(input_path)
+        return n_file_paths, n_is_dir, status
 
     def PyGetChromaSubsamplingStr(self, subsampling):
-        chroma_string = self.jpegutils.PyGetChromaSubsamplingStr(subsampling)
-        return chroma_string
+        chroma_string, status = self.jpegutils.PyGetChromaSubsamplingStr(subsampling)
+        return chroma_string, status
 
     def PyGetChannelPitchAndSizes(self, decode_params, subsampling, widths, heights, output_image):
         ctypes.pythonapi.PyCapsule_New.restype = ctypes.py_object
         capsule = ctypes.pythonapi.PyCapsule_New(ctypes.byref(output_image), b'RocJpegImage', None)
-        return self.jpegutils.PyGetChannelPitchAndSizes(decode_params, subsampling, widths, heights, capsule)
+        num_channels, channel_sizes, status = self.jpegutils.PyGetChannelPitchAndSizes(decode_params, subsampling, widths, heights, capsule)
+        return num_channels, channel_sizes, status
 
     def PyGetOutputFileExt(self, decode_params, base_file_name, image_width, image_height, subsampling, output_file_name):
         return self.jpegutils.PyGetOutputFileExt(decode_params, base_file_name, image_width, image_height, subsampling, output_file_name)
@@ -52,7 +53,9 @@ class utils(object):
         return self.jpegutils.PyInitHipDevice(device_id)
 
     def PyAllocHipDeviceMemory(self, channel_size):
-        return self.jpegutils.PyAllocHipDeviceMemory(channel_size)
+        output_ptr, status = self.jpegutils.PyAllocHipDeviceMemory(channel_size)
+        return output_ptr, status
 
     def PyFreeHipDeviceMemory(self, output_image_channel):
-        return self.jpegutils.PyFreeHipDeviceMemory(output_image_channel)
+        status = self.jpegutils.PyFreeHipDeviceMemory(output_image_channel)
+        return status

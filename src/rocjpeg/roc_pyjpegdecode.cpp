@@ -54,19 +54,19 @@ void PyRocJpegUtilsInitializer(py::module& m) {
 // rocPyJPEG APIs
 //
 
-py::capsule PyRocJpegDecoder::rocPyJpegStreamCreate() {
+py::tuple PyRocJpegDecoder::rocPyJpegStreamCreate() {
     RocJpegStreamHandle rocjpeg_stream_handle = nullptr;
-    CHECK_ROCJPEG(rocJpegStreamCreate(&rocjpeg_stream_handle));
-
-    // Wrap handle in capsule with destructor
-    return py::capsule(
-            rocjpeg_stream_handle,
-            "RocJpegStreamHandle",
-            [](PyObject *capsule) {
-                auto ptr = static_cast<RocJpegStreamHandle>(PyCapsule_GetPointer(capsule, "RocJpegStreamHandle"));
-                rocJpegStreamDestroy(ptr);
-            }
-            );
+    RocJpegStatus status = rocJpegStreamCreate(&rocjpeg_stream_handle);
+    CHECK_ROCJPEG(status);
+    py::capsule capsule(
+        rocjpeg_stream_handle,
+        "RocJpegStreamHandle",
+        [](PyObject *capsule) {
+            auto ptr = static_cast<RocJpegStreamHandle>(PyCapsule_GetPointer(capsule, "RocJpegStreamHandle"));
+            rocJpegStreamDestroy(ptr);
+        }
+    );
+    return py::make_tuple(capsule, status);
 }
 
 py::object PyRocJpegDecoder::rocPyJpegStreamParse(py::array_t<uint8_t> file_data, size_t length, py::capsule stream_handle) {
@@ -74,34 +74,37 @@ py::object PyRocJpegDecoder::rocPyJpegStreamParse(py::array_t<uint8_t> file_data
     uint8_t* ptr = static_cast<uint8_t*>(buf.ptr);
     RocJpegStreamHandle jpeg_stream_handle = stream_handle.get_pointer();
     RocJpegStatus status = rocJpegStreamParse(ptr, length, jpeg_stream_handle);
+    CHECK_ROCJPEG(status);
     return py::cast(status);
 }
 
-py::capsule PyRocJpegDecoder::rocPyJpegCreate(RocJpegBackend backend, int device_id) {
+py::tuple PyRocJpegDecoder::rocPyJpegCreate(RocJpegBackend backend, int device_id) {
     RocJpegHandle decode_handle = nullptr;
-    CHECK_ROCJPEG(rocJpegCreate(backend, device_id, &decode_handle));
-
-    return py::capsule(
-            decode_handle,
-            "RocJpegHandle",
-            [](PyObject *capsule) {
-                auto ptr = static_cast<RocJpegHandle>(PyCapsule_GetPointer(capsule, "RocJpegHandle"));
-                rocJpegDestroy(ptr);
-            }
-            );
+    RocJpegStatus status = rocJpegCreate(backend, device_id, &decode_handle);
+    CHECK_ROCJPEG(status);
+    py::capsule capsule(
+        decode_handle,
+        "RocJpegHandle",
+        [](PyObject *capsule) {
+            auto ptr = static_cast<RocJpegHandle>(PyCapsule_GetPointer(capsule, "RocJpegHandle"));
+            rocJpegDestroy(ptr);
+        }
+    );
+    return py::make_tuple(capsule, status);
 }
 
-std::tuple<uint8_t, RocJpegChromaSubsampling, std::array<uint32_t, ROCJPEG_MAX_COMPONENT>, std::array<uint32_t, ROCJPEG_MAX_COMPONENT>>
-PyRocJpegDecoder::rocPyJpegGetImageInfo(py::capsule decode_handle, py::capsule stream_handle) {
-    uint8_t num_components=0;
+py::tuple PyRocJpegDecoder::rocPyJpegGetImageInfo(py::capsule decode_handle, py::capsule stream_handle) {
+    uint8_t num_components = 0;
     RocJpegChromaSubsampling subsampling;
     std::array<uint32_t, ROCJPEG_MAX_COMPONENT> m_widths = {};
     std::array<uint32_t, ROCJPEG_MAX_COMPONENT> m_heights = {};
-    RocJpegStreamHandle jpeg_stream_handle = stream_handle.get_pointer();
-    RocJpegHandle jpeg_decode_handle = decode_handle.get_pointer();
-    CHECK_ROCJPEG(rocJpegGetImageInfo(jpeg_decode_handle, jpeg_stream_handle, &num_components, &subsampling, m_widths.data(), m_heights.data()));
-    return std::make_tuple(num_components, subsampling, m_widths, m_heights);
+    auto* jpeg_stream_handle = static_cast<RocJpegStreamHandle>(stream_handle.get_pointer());
+    auto* jpeg_decode_handle = static_cast<RocJpegHandle>(decode_handle.get_pointer());
+    RocJpegStatus status = rocJpegGetImageInfo(jpeg_decode_handle, jpeg_stream_handle, &num_components, &subsampling, m_widths.data(), m_heights.data());
+    CHECK_ROCJPEG(status);
+    return py::make_tuple(subsampling, m_widths, m_heights, status);
 }
+
 
 py::object PyRocJpegDecoder::rocPyJpegDecode(PyRocJpegDecodeParams &in_decode_params, py::capsule decode_handle, py::capsule stream_handle, py::capsule image_ptr) {
     RocJpegImage* output_image = static_cast<RocJpegImage*>(image_ptr.get_pointer());
@@ -122,7 +125,6 @@ py::object PyRocJpegDecoder::rocPyJpegDecodeBatched(
     py::capsule destinations_capsule
 ) {
     auto* decode_handle = static_cast<RocJpegHandle>(decode_handle_capsule.get_pointer());
-
     // Extract stream handles
     std::vector<RocJpegStreamHandle> stream_handles;
     for (auto item : stream_capsules) {
@@ -130,11 +132,8 @@ py::object PyRocJpegDecoder::rocPyJpegDecodeBatched(
         auto* stream_handle = static_cast<RocJpegStreamHandle>(stream_capsule.get_pointer());
         stream_handles.push_back(stream_handle);
     }
-
     auto* destinations = static_cast<RocJpegImage*>(destinations_capsule.get_pointer());
-
     RocJpegDecodeParams decode_params;
-
     // Extract decode parameters
     std::vector<RocJpegDecodeParams> decode_params_list;
     for (auto item : in_decode_params) {
@@ -142,15 +141,16 @@ py::object PyRocJpegDecoder::rocPyJpegDecodeBatched(
         memcpy(&decode_params,&py_decode_param,sizeof(RocJpegDecodeParams));
         decode_params_list.push_back(decode_params);
     }
-
     // Call C API for batched decoding with decode_params_list.data()
-    return py::cast(rocJpegDecodeBatched(
+    RocJpegStatus status = rocJpegDecodeBatched(
         decode_handle,
         stream_handles.data(),
         batch_size,
-        decode_params_list.data(),  // Pass as contiguous array
+        decode_params_list.data(),
         destinations
-    ));
+    );
+    CHECK_ROCJPEG(status);
+    return py::cast(status);
 }
 
 
@@ -172,32 +172,42 @@ PyRocJpegUtils::PySaveImage(PyRocJpegDecodeParams &in_decode_params, std::string
     return py::cast<py::none>(Py_None);
 }
 
-std::tuple<std::string, std::vector<std::string>, bool, bool>
-PyRocJpegUtils::PyGetFilePaths(std::string &input_path, std::vector<std::string> &file_paths, bool &is_dir, bool &is_file) {
-    is_dir = is_file = false;
+py::tuple PyRocJpegUtils::PyGetFilePaths(std::string &input_path) {
+    bool is_dir = false, is_file = false;
+    std::vector<std::string> file_paths;
+    RocJpegStatus status = ROCJPEG_STATUS_SUCCESS;
     if (!GetFilePaths(input_path, file_paths, is_dir, is_file)) {
         std::cerr << "ERROR: Failed to get input file paths!" << std::endl;
+        status = ROCJPEG_STATUS_RUNTIME_ERROR;
     }
-    return std::make_tuple(input_path, file_paths, is_dir, is_file);
+    return py::make_tuple(file_paths, is_dir, status);
 }
 
-std::tuple<int, std::array<uint32_t, ROCJPEG_MAX_COMPONENT>>
-PyRocJpegUtils::PyGetChannelPitchAndSizes(PyRocJpegDecodeParams &in_decode_params, RocJpegChromaSubsampling subsampling, std::array<uint32_t, ROCJPEG_MAX_COMPONENT> &widths,
-                    std::array<uint32_t, ROCJPEG_MAX_COMPONENT> &heights, py::capsule image_ptr) {
+
+py::tuple PyRocJpegUtils::PyGetChannelPitchAndSizes(
+    PyRocJpegDecodeParams &in_decode_params,
+    RocJpegChromaSubsampling subsampling,
+    std::array<uint32_t, ROCJPEG_MAX_COMPONENT> &widths,
+    std::array<uint32_t, ROCJPEG_MAX_COMPONENT> &heights,
+    py::capsule image_ptr) {
     RocJpegImage* output_image = static_cast<RocJpegImage*>(image_ptr.get_pointer());
     std::array<uint32_t, ROCJPEG_MAX_COMPONENT> channel_sizes = {};
-    uint32_t num_channels=0;
+    uint32_t num_channels = 0;
+    RocJpegStatus status = ROCJPEG_STATUS_SUCCESS;
     RocJpegDecodeParams decode_params;
-    memcpy(&decode_params,&in_decode_params,sizeof(RocJpegDecodeParams));
-    bool ret = GetChannelPitchAndSizes(decode_params, subsampling, widths.data(), heights.data(), num_channels, *output_image, reinterpret_cast<uint32_t *>(&channel_sizes));
-    if(ret != EXIT_SUCCESS)
+    memcpy(&decode_params, &in_decode_params, sizeof(RocJpegDecodeParams));
+    bool ret = GetChannelPitchAndSizes(decode_params, subsampling, widths.data(), heights.data(), num_channels, *output_image, reinterpret_cast<uint32_t*>(&channel_sizes));
+    if (ret != EXIT_SUCCESS) {
         num_channels = 0;
-    return std::make_tuple(num_channels, channel_sizes);
+        status = ROCJPEG_STATUS_RUNTIME_ERROR;
+    }
+    return py::make_tuple(num_channels, channel_sizes, status);
 }
 
-std::string
-PyRocJpegUtils::PyGetChromaSubsamplingStr(RocJpegChromaSubsampling subsampling) {
+
+py::tuple PyRocJpegUtils::PyGetChromaSubsamplingStr(RocJpegChromaSubsampling subsampling) {
     std::string chroma_sub_sampling;
+    RocJpegStatus status = ROCJPEG_STATUS_SUCCESS;
     switch (subsampling) {
         case ROCJPEG_CSS_444:
             chroma_sub_sampling = "YUV 4:4:4";
@@ -222,27 +232,28 @@ PyRocJpegUtils::PyGetChromaSubsamplingStr(RocJpegChromaSubsampling subsampling) 
             break;
         default:
             chroma_sub_sampling = "";
+            status = ROCJPEG_STATUS_RUNTIME_ERROR;
             break;
     }
-    std::cout << "Chroma String: " << chroma_sub_sampling << std::endl;
-    return chroma_sub_sampling.c_str();
+    return py::make_tuple(chroma_sub_sampling, status);
 }
+
 
 py::object PyRocJpegUtils::PyInitHipDevice(int device_id) {
-    bool ret = true;
-    if (!(ret=InitHipDevice(device_id))) {
+    RocJpegStatus status = ROCJPEG_STATUS_SUCCESS;
+    if (!InitHipDevice(device_id)) {
         std::cerr << "ERROR: Failed to initialize HIP!" << std::endl;
+        status = ROCJPEG_STATUS_RUNTIME_ERROR;
     }
-    return py::cast(ret);
+    return py::cast(status);
 }
 
-std::tuple<RocJpegStatus,uintptr_t>
-PyRocJpegUtils::PyAllocHipDeviceMemory(uint32_t &channel_size) {
+py::tuple PyRocJpegUtils::PyAllocHipDeviceMemory(uint32_t &channel_size) {
     // allocate device memory
     uint8_t *output_image_channel = nullptr;
     RocJpegStatus status = static_cast<RocJpegStatus>(hipMalloc((void **)&output_image_channel, channel_size));
     uintptr_t output_ptr = reinterpret_cast<uintptr_t>(output_image_channel);
-    return std::make_tuple(status, output_ptr);
+    return py::make_tuple(output_ptr, status);
 }
 
 py::object PyRocJpegUtils::PyFreeHipDeviceMemory(uintptr_t output_image_channel) {

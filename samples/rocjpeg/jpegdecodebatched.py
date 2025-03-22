@@ -64,18 +64,36 @@ def JDecoderBatched(
     decode_params.target_dimension.height = 0
 
     # HIP device init
-    jpegutils.PyInitHipDevice(device_id)
+    status = jpegutils.PyInitHipDevice(device_id)
+    if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
+        print(f"Failure - InitHipDevice Status: {status}")
+    else:
+        print("HIP Device Initialized Successfully..\n")
 
     # Create decode handle
-    decode_handle = jpegdecode.rocPyJpegCreate(rocjpeg_backend, device_id)
+    decode_handle, status = jpegdecode.rocPyJpegCreate(rocjpeg_backend, device_id)
+
+    if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
+        print(f"Failure - JpegDecoderCreate Status: {status}")
 
     # Get list of files
-    input_path, file_paths, is_dir, is_file = jpegutils.PyGetFilePaths(input_dir, [], False, False)
+    file_paths, is_dir, status = jpegutils.PyGetFilePaths(input_dir)
+    if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
+        print(f"Failure - GetFilePaths Status: {status}")
+
     total_files = len(file_paths)
     batch_size = min(batch_size, total_files)
 
     # Prepare batch structures
-    stream_handles = [jpegdecode.rocPyJpegStreamCreate() for _ in range(batch_size)]
+    results = [jpegdecode.rocPyJpegStreamCreate() for _ in range(batch_size)]
+    # Unpack handles and status
+    stream_handles = [r[0] for r in results]
+    status_array = [r[1] for r in results]
+    # Check statuses
+    for i, status in enumerate(status_array):
+        if status != jpegt.ROCJPEG_STATUS_SUCCESS:
+            print(f"Failure - JpegStreamCreate Status at index {i}: {status}")
+
     output_images = jdec.PyRocJpegImageArray(batch_size)
     decode_params_batch = [decode_params] * batch_size
 
@@ -98,19 +116,29 @@ def JDecoderBatched(
             jpegdecode.rocPyJpegStreamParse(file_data, file_size, stream_handles[idx])
 
             # Get image info
-            _, subsampling, widths, heights = jpegdecode.rocPyJpegGetImageInfo(decode_handle, stream_handles[idx])
+            subsampling, widths, heights, status = jpegdecode.rocPyJpegGetImageInfo(decode_handle, stream_handles[idx])
+
+            if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
+                print(f"Failure - JpegGetImageInfo Status: {status}")
 
             # Get channel sizes & allocate memory
-            num_channels, channel_sizes = jpegutils.PyGetChannelPitchAndSizes(decode_params_batch[idx], subsampling, widths, heights, output_images[idx])
+            num_channels, channel_sizes, status = jpegutils.PyGetChannelPitchAndSizes(decode_params_batch[idx], subsampling, widths, heights, output_images[idx])
+            if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
+                print(f"Failure - GetChannelPitchAndSizes Status: {status}")
 
             # alloc for each channel
             for ch in range(num_channels):
                 if prior_channel_sizes[idx][ch] != channel_sizes[ch]:
                     if output_images[idx].channel[ch] != 0:
-                        jpegutils.PyFreeHipDeviceMemory(output_images[idx].channel[ch])
-                    status, ptr = jpegutils.PyAllocHipDeviceMemory(channel_sizes[ch])
-                    output_images[idx].channel[ch] = ptr
-                    prior_channel_sizes[idx][ch] = channel_sizes[ch]
+                        status = jpegutils.PyFreeHipDeviceMemory(output_images[idx].channel[ch])
+                        if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
+                            print(f"Failure - FreeHipDeviceMemory Status: {status}")
+                    ptr, status = jpegutils.PyAllocHipDeviceMemory(channel_sizes[ch])
+                    if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
+                        print(f"Failure - AllocHipDeviceMemory Status: {status}")
+                    else:
+                        output_images[idx].channel[ch] = ptr
+                        prior_channel_sizes[idx][ch] = channel_sizes[ch]
 
             # Prepare for batched call
             widths_list.append(widths)
