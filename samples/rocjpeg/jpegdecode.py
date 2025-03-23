@@ -71,19 +71,20 @@ def JDecoder(
     status = jpegutils.PyInitHipDevice(device_id)
     if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
         print(f"Failure - InitHipDevice Status: {status}")
+        sys.exit(1)
     else:
         print("HIP Device Initialized Successfully..\n")
 
     # init the stream & the codec
     decode_handle, status = jpegdecode.rocPyJpegCreate(rocjpeg_backend, device_id)
-
     if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
         print(f"Failure - JpegDecoderCreate Status: {status}")
+        sys.exit(1)
 
     stream_handle, status = jpegdecode.rocPyJpegStreamCreate()
-
     if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
         print(f"Failure - JpegStreamCreate Status: {status}")
+        sys.exit(1)
 
     # vars-init
     save_images = False if(output_file_path is None) else True
@@ -117,7 +118,7 @@ def JDecoder(
 
         if file_data is None:
             print(f"Unable to read from {file_path}")
-            exit
+            sys.exit(1)
 
         print(f"Input file name, size: {file_path}, {file_size}")
 
@@ -129,13 +130,13 @@ def JDecoder(
                 continue
             else:
                 print(f"ERROR: Failed to parse the input jpeg stream with {rocjpeg_status}")
-                exit
+                sys.exit(1)
 
         # Get image info
         subsampling, widths, heights, status = jpegdecode.rocPyJpegGetImageInfo(decode_handle, stream_handle)
-
         if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
             print(f"Failure - JpegGetImageInfo Status: {status}")
+            sys.exit(1)
 
         # roi?
         roi_width = decode_params.crop_rectangle.right - decode_params.crop_rectangle.left
@@ -156,7 +157,7 @@ def JDecoder(
                 num_jpegs_with_unsupported_resolution += 1
                 continue
             else:
-                exit
+                sys.exit(1)
 
         if (subsampling == jpegt.ROCJPEG_CSS_411 or subsampling == jpegt.ROCJPEG_CSS_UNKNOWN):
             print("The chroma sub-sampling is not supported by VCN Hardware")
@@ -167,7 +168,7 @@ def JDecoder(
                     num_jpegs_with_unknown_subsampling += 1
                 continue
             else:
-                exit
+                sys.exit(1)
 
         num_channels, channel_sizes, status = jpegutils.PyGetChannelPitchAndSizes(decode_params, subsampling, widths, heights, output_image)
         if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
@@ -180,11 +181,13 @@ def JDecoder(
                     status = jpegutils.PyFreeHipDeviceMemory(output_image.channel[i])
                     if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
                         print(f"Failure - FreeHipDeviceMemory Status: {status}")
+                        sys.exit(1)
                     else:
                         output_image.channel[i] = 0
                 ptr, status = jpegutils.PyAllocHipDeviceMemory(channel_sizes[i])
                 if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
                     print(f"Failure - AllocHipDeviceMemory Status: {status}")
+                    sys.exit(1)
                 else:
                     output_image.channel[i] = ptr
 
@@ -192,9 +195,9 @@ def JDecoder(
         start_time = datetime.datetime.now()
 
         status = jpegdecode.rocPyJpegDecode(decode_params, decode_handle, stream_handle, output_image) # Call the JPEG decode
-
         if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
             print(f"Failure - JpegDecode Status: {status}")
+            sys.exit(1)
 
         end_time = datetime.datetime.now()
         time_per_image_in_milli_sec = (end_time - start_time).total_seconds() * 1000 # Compute time per image in milliseconds
@@ -230,9 +233,7 @@ def JDecoder(
             print(f"Total decoded images: {total_images}")
 
             # Check if any images were skipped due to errors or unsupported formats
-            total_skipped_images = (num_bad_jpegs + num_jpegs_with_411_subsampling +
-                                    num_jpegs_with_unknown_subsampling + num_jpegs_with_unsupported_resolution)
-
+            total_skipped_images = (num_bad_jpegs + num_jpegs_with_411_subsampling + num_jpegs_with_unknown_subsampling + num_jpegs_with_unsupported_resolution)
             if (total_skipped_images):
                 print(f"Total skipped images: {total_skipped_images}", end="")
                 if num_bad_jpegs:
@@ -247,10 +248,9 @@ def JDecoder(
 
             # Performance statistics if there are processed images
             if total_images:
-                print(f"Average processing time per image (ms): {time_per_image_all:.2f}")
-                print(f"Average decoded images per sec (Images/Sec): {images_per_sec:.2f}")
-                print(f"Average decoded images size (Mpixels/Sec): {mpixels_per_sec:.2f}")
-
+                print(f"Average processing time per image (ms): {time_per_image_all:.3f}")
+                print(f"Average decoded images per sec (Images/Sec): {images_per_sec:.3f}")
+                print(f"Average decoded images size (Mpixels/Sec): {mpixels_per_sec:.3f}")
     # end
     print("\nDecoding completed!\n")
     return
@@ -318,21 +318,21 @@ if __name__ == "__main__":
     # validate params
     if not os.path.exists(input_file_path): # Input must exist
         print("ERROR: input file doesn't exist.")
-        sys.exit()
+        sys.exit(1)
     if os.path.isdir(input_file_path): # if in dir
         if output_file_path is not None:
             if not os.path.isdir(output_file_path): # out must be dir
                 print("ERROR: for passing folder path as input, you must pass an existing folder path as output.")
-                sys.exit()
+                sys.exit(1)
     if(device_id < 0):
         print(f"Arg Error: Invalid device ID: {device_id}\n")
-        sys.exit()
+        sys.exit(1)
     if(rocjpeg_backend < 0):
         print(f"Arg Error: Invalid back end: {rocjpeg_backend}\n")
-        sys.exit()
+        sys.exit(1)
     if(output_format < 1 or output_format > 5):
         print(f"Arg Error: Invalid output format: {output_format}\n")
-        sys.exit()
+        sys.exit(1)
 
     JDecoder(
         input_file_path,
