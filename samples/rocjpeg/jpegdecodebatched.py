@@ -44,7 +44,19 @@ def JDecoderBatched(
         rocjpeg_backend,
         output_format,
         crop_rect,
-        batch_size):
+        in_batch_size):
+
+    # init variables
+    total_images = 0
+    batch_size = 2 if(in_batch_size is None or in_batch_size <= 0) else in_batch_size
+    time_per_image_all = float(0)
+    mpixels_all = float(0)
+    images_per_sec = float(0)
+    time_per_batch_in_milli_sec = float(0)
+    num_bad_jpegs = 0
+    num_jpegs_with_411_subsampling = 0
+    num_jpegs_with_unknown_subsampling = 0
+    num_jpegs_with_unsupported_resolution = 0
 
     # Instances of decoder & utils
     jpegdecode = jdec.decoder()
@@ -67,108 +79,185 @@ def JDecoderBatched(
     status = jpegutils.PyInitHipDevice(device_id)
     if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
         print(f"Failure - InitHipDevice Status: {status}")
+        sys.exit(1)
     else:
         print("HIP Device Initialized Successfully..\n")
 
     # Create decode handle
-    decode_handle, status = jpegdecode.rocPyJpegCreate(rocjpeg_backend, device_id)
-
+    rocjpeg_handle, status = jpegdecode.rocPyJpegCreate(rocjpeg_backend, device_id)
     if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
         print(f"Failure - JpegDecoderCreate Status: {status}")
+        sys.exit(1)
 
     # Get list of files
     file_paths, is_dir, status = jpegutils.PyGetFilePaths(input_dir)
     if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
         print(f"Failure - GetFilePaths Status: {status}")
 
-    total_files = len(file_paths)
-    batch_size = min(batch_size, total_files)
+    batch_size = min(batch_size, len(file_paths))
 
     # Prepare batch structures
     results = [jpegdecode.rocPyJpegStreamCreate() for _ in range(batch_size)]
     # Unpack handles and status
-    stream_handles = [r[0] for r in results]
+    rocjpeg_stream_handles = [r[0] for r in results]
     status_array = [r[1] for r in results]
-    # Check statuses
+    # Check all statuses
     for i, status in enumerate(status_array):
         if status != jpegt.ROCJPEG_STATUS_SUCCESS:
             print(f"Failure - JpegStreamCreate Status at index {i}: {status}")
-
-    output_images = jdec.PyRocJpegImageArray(batch_size)
-    decode_params_batch = [decode_params] * batch_size
+            sys.exit(1)
 
     # Helper data for reuse
+    output_images = jdec.PyRocJpegImageArray(batch_size)
+    decode_params_batch = [decode_params] * batch_size
     prior_channel_sizes = [[0] * jpegt.ROCJPEG_MAX_COMPONENT for _ in range(batch_size)]
+    rocjpeg_stream_handles_for_current_batch = []
+    base_name_list = []
+    widths_list = []
+    heights_list = []
+    subsampling_list = []
+    current_batch_size = 0
 
     # Iterate over files in batches
-    for i in range(0, total_files, batch_size):
-        current_batch_files = file_paths[i:i + batch_size]
-        stream_handles_batch = []
-        widths_list = []
-        heights_list = []
-        subsampling_list = []
+    for i in range(0, len(file_paths), batch_size):
+        batch_end = min(i + batch_size, len(file_paths));
+        for j in range(i, batch_end):
+            index = j - i
+            temp_base_file_name = os.path.basename(file_paths[j])
 
-        for idx, file_path in enumerate(current_batch_files):
-            # Read image
-            file_data, file_size = read_image(file_path)
+            # Read an image from disk (get the size)
+            file_data, file_size = read_image(file_paths[j])
 
             # Parse stream
-            jpegdecode.rocPyJpegStreamParse(file_data, file_size, stream_handles[idx])
+            status = jpegdecode.rocPyJpegStreamParse(file_data, file_size, rocjpeg_stream_handles[index])
+            if (status != jpegt.ROCJPEG_STATUS_SUCCESS):
+                if (is_dir):
+                    num_bad_jpegs += 1
+                    print(f"Skipping decoding input file: {file_paths[j]}")
+                    continue
+                else:
+                    print(f"ERROR: Failed to parse the input jpeg stream with: {status}")
+                    sys.exit(1)
 
             # Get image info
-            subsampling, widths, heights, status = jpegdecode.rocPyJpegGetImageInfo(decode_handle, stream_handles[idx])
+            temp_subsampling, temp_widths, temp_heights, status = jpegdecode.rocPyJpegGetImageInfo(rocjpeg_handle, rocjpeg_stream_handles[index])
 
+            # check status and return values
             if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
                 print(f"Failure - JpegGetImageInfo Status: {status}")
+                sys.exit(1)
+
+            if (temp_widths[0] < 64 or temp_heights[0] < 64):
+                if (is_dir):
+                    num_jpegs_with_unsupported_resolution += 1
+                    continue
+                else:
+                    print("The image resolution is not supported by VCN Hardware", file=sys.stderr)
+                    sys.exit(1)
+
+            if (temp_subsampling == jpegt.ROCJPEG_CSS_411 or temp_subsampling == jpegt.ROCJPEG_CSS_UNKNOWN):
+                if (is_dir):
+                    if (temp_subsampling == jpegt.ROCJPEG_CSS_411):
+                        num_jpegs_with_411_subsampling += 1
+                    if (temp_subsampling == jpegt.ROCJPEG_CSS_UNKNOWN):
+                        num_jpegs_with_unknown_subsampling += 1
+                    continue
+                else:
+                    print("The chroma sub-sampling is not supported by VCN Hardware", file=sys.stderr)
+                    sys.exit(1)
 
             # Get channel sizes & allocate memory
-            num_channels, channel_sizes, status = jpegutils.PyGetChannelPitchAndSizes(decode_params_batch[idx], subsampling, widths, heights, output_images[idx])
+            num_channels, channel_sizes, status = jpegutils.PyGetChannelPitchAndSizes(decode_params_batch[index], temp_subsampling, temp_widths, temp_heights, output_images[current_batch_size])
             if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
                 print(f"Failure - GetChannelPitchAndSizes Status: {status}")
+                sys.exit(1)
 
             # alloc for each channel
             for ch in range(num_channels):
-                if prior_channel_sizes[idx][ch] != channel_sizes[ch]:
-                    if output_images[idx].channel[ch] != 0:
-                        status = jpegutils.PyFreeHipDeviceMemory(output_images[idx].channel[ch])
+                if prior_channel_sizes[current_batch_size][ch] != channel_sizes[ch]:
+                    if output_images[current_batch_size].channel[ch] != 0:
+                        status = jpegutils.PyFreeHipDeviceMemory(output_images[current_batch_size].channel[ch])
                         if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
                             print(f"Failure - FreeHipDeviceMemory Status: {status}")
                     ptr, status = jpegutils.PyAllocHipDeviceMemory(channel_sizes[ch])
                     if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
                         print(f"Failure - AllocHipDeviceMemory Status: {status}")
                     else:
-                        output_images[idx].channel[ch] = ptr
-                        prior_channel_sizes[idx][ch] = channel_sizes[ch]
+                        output_images[current_batch_size].channel[ch] = ptr
+                        prior_channel_sizes[current_batch_size][ch] = channel_sizes[ch]
 
             # Prepare for batched call
-            widths_list.append(widths)
-            heights_list.append(heights)
-            subsampling_list.append(subsampling)
-            stream_handles_batch.append(stream_handles[idx])
+            rocjpeg_stream_handles_for_current_batch.append(rocjpeg_stream_handles[index])
+            subsampling_list.append(temp_subsampling)
+            widths_list.append(temp_widths)
+            heights_list.append(temp_heights)
+            base_name_list.append(temp_base_file_name)
+            current_batch_size += 1
 
         # Batched Decode
-        start_time = datetime.datetime.now()
-        jpegdecode.rocPyJpegDecodeBatched(decode_handle, stream_handles_batch, len(current_batch_files), decode_params_batch, output_images)
-        end_time = datetime.datetime.now()
+        time_per_batch_in_milli_sec = float(0)
+        if(current_batch_size > 0):
+            start_time = datetime.datetime.now()
+            status = jpegdecode.rocPyJpegDecodeBatched(rocjpeg_handle, rocjpeg_stream_handles_for_current_batch, len(file_paths), decode_params_batch, output_images)
+            end_time = datetime.datetime.now()
+            time_per_batch_in_milli_sec = (end_time - start_time).total_seconds() * 1000.0
+            if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
+                print(f"Failure - PyJpegDecodeBatched Status: {status}")
+                sys.exit(1)
 
-        time_per_batch = (end_time - start_time).total_seconds() * 1000
-        print(f"Batch of {len(current_batch_files)} images decoded in {time_per_batch:.2f} ms")
+        image_size_in_mpixels = float(0)
+        for b in range(current_batch_size):
+            image_size_in_mpixels += (float(temp_widths[b][0]) * float(temp_heights[b][0]) / 1_000_000)
+
+        total_images += current_batch_size
 
         # Save Images
         if output_path:
-            output_file_name = output_path
-            for idx, file_path in enumerate(current_batch_files):
-                base_name = os.path.basename(file_path)
+            for b in range(current_batch_size):
+                output_file_name = output_path
                 # if ROI is present, need to pass roi_width and roi_height
-                roi_width = decode_params_batch[idx].crop_rectangle.right - decode_params_batch[idx].crop_rectangle.left
-                roi_height = decode_params_batch[idx].crop_rectangle.bottom - decode_params_batch[idx].crop_rectangle.top
-                is_roi_valid = True if(roi_width > 0 and roi_height > 0 and roi_width <= widths_list[idx][0] and roi_height <= heights_list[idx][0]) else False
-                width = roi_width if(is_roi_valid) else widths_list[idx][0]
-                height = roi_height if(is_roi_valid) else heights_list[idx][0]
+                roi_width = decode_params_batch[b].crop_rectangle.right - decode_params_batch[b].crop_rectangle.left
+                roi_height = decode_params_batch[b].crop_rectangle.bottom - decode_params_batch[b].crop_rectangle.top
+                is_roi_valid = True if(roi_width > 0 and roi_height > 0 and roi_width <= widths_list[b][0] and roi_height <= heights_list[b][0]) else False
+                width = roi_width if(is_roi_valid) else widths_list[b][0]
+                height = roi_height if(is_roi_valid) else heights_list[b][0]
                 if(is_dir):
-                    output_file_name = jpegutils.PyGetOutputFileExt(decode_params_batch[idx], base_name, width, height, subsampling_list[idx], output_path)
-                jpegutils.PySaveImage(decode_params_batch[idx], output_file_name, width, height, subsampling_list[idx], output_images[idx])
-                print(f"Saved: {output_file_name}")
+                    output_file_name = jpegutils.PyGetOutputFileExt(decode_params_batch[b], base_name_list[b], width, height, subsampling_list[b], output_path)
+                jpegutils.PySaveImage(decode_params_batch[b], output_file_name, width, height, subsampling_list[b], output_images[b])
+
+        if(is_dir):
+            time_per_image_all = time_per_image_all + time_per_batch_in_milli_sec
+            mpixels_all = mpixels_all + image_size_in_mpixels
+
+        current_batch_size = 0
+        base_name_list.clear()
+        widths_list.clear()
+        heights_list.clear()
+        subsampling_list.clear()
+        rocjpeg_stream_handles_for_current_batch.clear()
+
+    if is_dir:
+        time_per_image_all = time_per_image_all / total_images
+        images_per_sec = 1000 / time_per_image_all
+        mpixels_per_sec = mpixels_all * images_per_sec / total_images
+        print(f"Total decoded images: {total_images}")
+
+        if (num_bad_jpegs or num_jpegs_with_411_subsampling or num_jpegs_with_unknown_subsampling or num_jpegs_with_unsupported_resolution):
+            skipped_total = (num_bad_jpegs + num_jpegs_with_411_subsampling + num_jpegs_with_unknown_subsampling + num_jpegs_with_unsupported_resolution)
+            print(f"Total skipped images: {skipped_total}", end='')
+            if num_bad_jpegs:
+                print(f" ,total images that cannot be parsed: {num_bad_jpegs}", end='')
+            if num_jpegs_with_411_subsampling:
+                print(f" ,total images with YUV 4:1:1 chroma temp_subsampling: {num_jpegs_with_411_subsampling}", end='')
+            if num_jpegs_with_unknown_subsampling:
+                print(f" ,total images with unknown chroma temp_subsampling: {num_jpegs_with_unknown_subsampling}", end='')
+            if num_jpegs_with_unsupported_resolution:
+                print(f" ,total images with unsupported resolution: {num_jpegs_with_unsupported_resolution}", end='')
+            print()  # Final newline
+        if total_images:
+            print(f"Average processing time per image (ms): {time_per_image_all}")
+            print(f"Average decoded images per sec (Images/Sec): {images_per_sec}")
+            print(f"Average decoded images size (Mpixels/Sec): {mpixels_per_sec}")
 
     print("\nBatched JPEG decoding completed.\n")
 

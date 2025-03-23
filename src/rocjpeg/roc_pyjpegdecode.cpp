@@ -57,7 +57,6 @@ void PyRocJpegUtilsInitializer(py::module& m) {
 py::tuple PyRocJpegDecoder::rocPyJpegStreamCreate() {
     RocJpegStreamHandle rocjpeg_stream_handle = nullptr;
     RocJpegStatus status = rocJpegStreamCreate(&rocjpeg_stream_handle);
-    CHECK_ROCJPEG(status);
     py::capsule capsule(
         rocjpeg_stream_handle,
         "RocJpegStreamHandle",
@@ -74,14 +73,12 @@ py::object PyRocJpegDecoder::rocPyJpegStreamParse(py::array_t<uint8_t> file_data
     uint8_t* ptr = static_cast<uint8_t*>(buf.ptr);
     RocJpegStreamHandle jpeg_stream_handle = stream_handle.get_pointer();
     RocJpegStatus status = rocJpegStreamParse(ptr, length, jpeg_stream_handle);
-    CHECK_ROCJPEG(status);
     return py::cast(status);
 }
 
 py::tuple PyRocJpegDecoder::rocPyJpegCreate(RocJpegBackend backend, int device_id) {
     RocJpegHandle decode_handle = nullptr;
     RocJpegStatus status = rocJpegCreate(backend, device_id, &decode_handle);
-    CHECK_ROCJPEG(status);
     py::capsule capsule(
         decode_handle,
         "RocJpegHandle",
@@ -101,7 +98,6 @@ py::tuple PyRocJpegDecoder::rocPyJpegGetImageInfo(py::capsule decode_handle, py:
     auto* jpeg_stream_handle = static_cast<RocJpegStreamHandle>(stream_handle.get_pointer());
     auto* jpeg_decode_handle = static_cast<RocJpegHandle>(decode_handle.get_pointer());
     RocJpegStatus status = rocJpegGetImageInfo(jpeg_decode_handle, jpeg_stream_handle, &num_components, &subsampling, m_widths.data(), m_heights.data());
-    CHECK_ROCJPEG(status);
     return py::make_tuple(subsampling, m_widths, m_heights, status);
 }
 
@@ -113,7 +109,6 @@ py::object PyRocJpegDecoder::rocPyJpegDecode(PyRocJpegDecodeParams &in_decode_pa
     RocJpegStreamHandle jpeg_stream_handle = stream_handle.get_pointer();
     RocJpegHandle jpeg_decode_handle = decode_handle.get_pointer();
     RocJpegStatus status = rocJpegDecode(jpeg_decode_handle, jpeg_stream_handle, &decode_params, output_image);
-    CHECK_ROCJPEG(status);
     return py::cast(status);
 }
 
@@ -149,10 +144,8 @@ py::object PyRocJpegDecoder::rocPyJpegDecodeBatched(
         decode_params_list.data(),
         destinations
     );
-    CHECK_ROCJPEG(status);
     return py::cast(status);
 }
-
 
 //
 // Utils
@@ -183,7 +176,6 @@ py::tuple PyRocJpegUtils::PyGetFilePaths(std::string &input_path) {
     return py::make_tuple(file_paths, is_dir, status);
 }
 
-
 py::tuple PyRocJpegUtils::PyGetChannelPitchAndSizes(
     PyRocJpegDecodeParams &in_decode_params,
     RocJpegChromaSubsampling subsampling,
@@ -203,7 +195,6 @@ py::tuple PyRocJpegUtils::PyGetChannelPitchAndSizes(
     }
     return py::make_tuple(num_channels, channel_sizes, status);
 }
-
 
 py::tuple PyRocJpegUtils::PyGetChromaSubsamplingStr(RocJpegChromaSubsampling subsampling) {
     std::string chroma_sub_sampling;
@@ -237,7 +228,6 @@ py::tuple PyRocJpegUtils::PyGetChromaSubsamplingStr(RocJpegChromaSubsampling sub
     }
     return py::make_tuple(chroma_sub_sampling, status);
 }
-
 
 py::object PyRocJpegUtils::PyInitHipDevice(int device_id) {
     RocJpegStatus status = ROCJPEG_STATUS_SUCCESS;
