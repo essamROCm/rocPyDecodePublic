@@ -251,9 +251,9 @@ def JDecoderBatched(
                 print(f" ,total images with unsupported resolution: {num_jpegs_with_unsupported_resolution}", end='')
             print()  # Final newline
         if total_images:
-            print(f"Average processing time per image (ms): {time_per_image_all}")
-            print(f"Average decoded images per sec (Images/Sec): {images_per_sec}")
-            print(f"Average decoded images size (Mpixels/Sec): {mpixels_per_sec}")
+            print(f"Average processing time per image (ms): {time_per_image_all:.3f}")
+            print(f"Average decoded images per sec (Images/Sec): {images_per_sec:.3f}")
+            print(f"Average decoded images size (Mpixels/Sec): {mpixels_per_sec:.3f}")
 
     print("\nBatched JPEG decoding completed.\n")
 
