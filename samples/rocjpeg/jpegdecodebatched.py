@@ -97,12 +97,10 @@ def JDecoderBatched(
     batch_size = min(batch_size, len(file_paths))
 
     # Prepare batch structures
-    results = [jpegdecode.rocPyJpegStreamCreate() for _ in range(batch_size)]
-    # Unpack handles and status
-    rocjpeg_stream_handles = [r[0] for r in results]
-    status_array = [r[1] for r in results]
-    # Check all statuses
-    for i, status in enumerate(status_array):
+    rocjpeg_stream_handles = []
+    for i in range(batch_size):
+        handle, status = jpegdecode.rocPyJpegStreamCreate()
+        rocjpeg_stream_handles.append(handle)
         if status != jpegt.ROCJPEG_STATUS_SUCCESS:
             print(f"Failure - JpegStreamCreate Status at index {i}: {status}")
             sys.exit(1)
@@ -141,8 +139,6 @@ def JDecoderBatched(
 
             # Get image info
             temp_subsampling, temp_widths, temp_heights, status = jpegdecode.rocPyJpegGetImageInfo(rocjpeg_handle, rocjpeg_stream_handles[index])
-
-            # check status and return values
             if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
                 print(f"Failure - JpegGetImageInfo Status: {status}")
                 sys.exit(1)
@@ -198,7 +194,7 @@ def JDecoderBatched(
         time_per_batch_in_milli_sec = float(0)
         if(current_batch_size > 0):
             start_time = datetime.datetime.now()
-            status = jpegdecode.rocPyJpegDecodeBatched(rocjpeg_handle, rocjpeg_stream_handles_for_current_batch, len(file_paths), decode_params_batch, output_images)
+            status = jpegdecode.rocPyJpegDecodeBatched(rocjpeg_handle, rocjpeg_stream_handles_for_current_batch, current_batch_size, decode_params_batch, output_images)
             end_time = datetime.datetime.now()
             time_per_batch_in_milli_sec = (end_time - start_time).total_seconds() * 1000.0
             if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
@@ -207,7 +203,7 @@ def JDecoderBatched(
 
         image_size_in_mpixels = float(0)
         for b in range(current_batch_size):
-            image_size_in_mpixels += (float(temp_widths[b][0]) * float(temp_heights[b][0]) / 1_000_000)
+            image_size_in_mpixels += (float(widths_list[b][0]) * float(heights_list[b][0]) / 1_000_000)
 
         total_images += current_batch_size
 
