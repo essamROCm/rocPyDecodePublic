@@ -1,3 +1,5 @@
+# Copyright (c) 2025 Advanced Micro Devices, Inc. All rights reserved.
+
 import pyRocJpegDecode.decoder as jdec
 import pyRocJpegDecode.utils as jutils
 import pyRocJpegDecode.types as jpegt
@@ -51,13 +53,10 @@ def JDecoder(
     # Create/Init RocJpegDecodeParams
     decode_params = jdec.PyRocJpegDecodeParams()
     decode_params.output_format = get_format(output_format)
-    crp_rct = [0,0,0,0]
-    if(crop_rect is not None):
-        crp_rct = crop_rect
-    decode_params.crop_rectangle.left = crp_rct[0]
-    decode_params.crop_rectangle.top = crp_rct[1]
-    decode_params.crop_rectangle.right = crp_rct[2]
-    decode_params.crop_rectangle.bottom = crp_rct[3]
+    decode_params.crop_rectangle.left = crop_rect[0]
+    decode_params.crop_rectangle.top = crop_rect[1]
+    decode_params.crop_rectangle.right = crop_rect[2]
+    decode_params.crop_rectangle.bottom = crop_rect[3]
     decode_params.target_dimension.width = 0
     decode_params.target_dimension.height = 0
     is_roi_valid = False
@@ -173,6 +172,7 @@ def JDecoder(
         num_channels, channel_sizes, status = jpegutils.PyGetChannelPitchAndSizes(decode_params, subsampling, widths, heights, output_image)
         if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
             print(f"Failure - GetChannelPitchAndSizes Status: {status}")
+            sys.exit(1)
 
         # allocate memory for each channel and reuse them if the sizes remain unchanged for a new image.
         for i in range(num_channels):
@@ -194,7 +194,7 @@ def JDecoder(
         print("Decoding started, please wait! ... ")
         start_time = datetime.datetime.now()
 
-        status = jpegdecode.rocPyJpegDecode(decode_params, decode_handle, stream_handle, output_image) # Call the JPEG decode
+        status = jpegdecode.rocPyJpegDecode(decode_handle, stream_handle, decode_params, output_image) # Call the JPEG decode
         if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
             print(f"Failure - JpegDecode Status: {status}")
             sys.exit(1)
@@ -226,6 +226,20 @@ def JDecoder(
             time_per_image_all += time_per_image_in_milli_sec;
             mpixels_all += image_size_in_mpixels
 
+        # Copy channel_sizes to prior_channel_sizes
+        for i in range(jpegt.ROCJPEG_MAX_COMPONENT):
+            prior_channel_sizes[i] = channel_sizes[i]
+
+        # Free GPU memory for each channel
+        for i in range(num_channels):
+            if output_image.channel[i] != 0:
+                status = jpegutils.PyFreeHipDeviceMemory(output_image.channel[i])
+                if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
+                    print(f"Failure - FreeHipDeviceMemory Status: {status}")
+                    sys.exit(1)
+                else:
+                    output_image.channel[i] = 0
+
         if (is_dir):
             time_per_image_all /= total_images  # Compute average time per image
             images_per_sec = 1000 / time_per_image_all  # Compute images per second
@@ -251,7 +265,12 @@ def JDecoder(
                 print(f"Average processing time per image (ms): {time_per_image_all:.3f}")
                 print(f"Average decoded images per sec (Images/Sec): {images_per_sec:.3f}")
                 print(f"Average decoded images size (Mpixels/Sec): {mpixels_per_sec:.3f}")
-    # end
+    # end - cleanup
+    status1 = jpegdecode.rocPyJpegDestroy(decode_handle)
+    status2 = jpegdecode.rocPyJpegStreamDestroy(stream_handle)
+    if(status1 != jpegt.ROCJPEG_STATUS_SUCCESS or status2 != jpegt.ROCJPEG_STATUS_SUCCESS):
+        print(f"Failure - during destroy of decoder or stream handle - Status: {status}")
+
     print("\nDecoding completed!\n")
     return
 
@@ -312,7 +331,7 @@ if __name__ == "__main__":
     output_file_path = args.output
     device_id = args.device
     rocjpeg_backend = args.backend
-    crop_rect = args.crop_rect
+    crop_rct = args.crop_rect
     output_format = args.output_format
 
     # validate params
@@ -333,6 +352,8 @@ if __name__ == "__main__":
     if(output_format < 1 or output_format > 5):
         print(f"Arg Error: Invalid output format: {output_format}\n")
         sys.exit(1)
+
+    crop_rect = [0,0,0,0] if(crop_rct is None) else crop_rct
 
     JDecoder(
         input_file_path,

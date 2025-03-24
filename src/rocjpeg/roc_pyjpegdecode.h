@@ -38,8 +38,10 @@ public:
     py::object rocPyJpegStreamParse(py::array_t<uint8_t> file_data, size_t length, py::capsule stream_handle);
     py::tuple rocPyJpegCreate(RocJpegBackend backend, int device_id);
     py::tuple rocPyJpegGetImageInfo(py::capsule decode_handle, py::capsule stream_handle);
-    py::object rocPyJpegDecode(PyRocJpegDecodeParams &in_decode_params, py::capsule decode_handle, py::capsule stream_handle, py::capsule image);
+    py::object rocPyJpegDecode(py::capsule decode_handle, py::capsule stream_handle, PyRocJpegDecodeParams &in_decode_params, py::capsule image);
     py::object rocPyJpegDecodeBatched(py::capsule decode_handle_capsule, py::list stream_capsules, int batch_size, py::list in_decode_params, py::capsule destinations_capsule);
+    py::object rocPyJpegStreamDestroy(py::capsule stream_handle);
+    py::object rocPyJpegDestroy(py::capsule decode_handle);
 };
 
 class PyRocJpegUtils : public RocJpegUtils {

@@ -33,7 +33,9 @@ void PyRocJpegDecoderInitializer(py::module& m) {
         .def("rocPyJpegStreamParse",&PyRocJpegDecoder::rocPyJpegStreamParse)
         .def("rocPyJpegGetImageInfo",&PyRocJpegDecoder::rocPyJpegGetImageInfo)
         .def("rocPyJpegDecode",&PyRocJpegDecoder::rocPyJpegDecode)
-        .def("rocPyJpegDecodeBatched",&PyRocJpegDecoder::rocPyJpegDecodeBatched);
+        .def("rocPyJpegDecodeBatched",&PyRocJpegDecoder::rocPyJpegDecodeBatched)
+        .def("rocPyJpegDestroy",&PyRocJpegDecoder::rocPyJpegDestroy)
+        .def("rocPyJpegStreamDestroy",&PyRocJpegDecoder::rocPyJpegStreamDestroy);
 }
 
 void PyRocJpegUtilsInitializer(py::module& m) {
@@ -57,14 +59,7 @@ void PyRocJpegUtilsInitializer(py::module& m) {
 py::tuple PyRocJpegDecoder::rocPyJpegStreamCreate() {
     RocJpegStreamHandle rocjpeg_stream_handle = nullptr;
     RocJpegStatus status = rocJpegStreamCreate(&rocjpeg_stream_handle);
-    py::capsule capsule(
-        rocjpeg_stream_handle,
-        "RocJpegStreamHandle",
-        [](PyObject *capsule) {
-            auto ptr = static_cast<RocJpegStreamHandle>(PyCapsule_GetPointer(capsule, "RocJpegStreamHandle"));
-            rocJpegStreamDestroy(ptr);
-        }
-    );
+    py::capsule capsule(rocjpeg_stream_handle, "RocJpegStreamHandle");
     return py::make_tuple(capsule, status);
 }
 
@@ -79,14 +74,7 @@ py::object PyRocJpegDecoder::rocPyJpegStreamParse(py::array_t<uint8_t> file_data
 py::tuple PyRocJpegDecoder::rocPyJpegCreate(RocJpegBackend backend, int device_id) {
     RocJpegHandle decode_handle = nullptr;
     RocJpegStatus status = rocJpegCreate(backend, device_id, &decode_handle);
-    py::capsule capsule(
-        decode_handle,
-        "RocJpegHandle",
-        [](PyObject *capsule) {
-            auto ptr = static_cast<RocJpegHandle>(PyCapsule_GetPointer(capsule, "RocJpegHandle"));
-            rocJpegDestroy(ptr);
-        }
-    );
+    py::capsule capsule(decode_handle, "RocJpegHandle");
     return py::make_tuple(capsule, status);
 }
 
@@ -102,7 +90,7 @@ py::tuple PyRocJpegDecoder::rocPyJpegGetImageInfo(py::capsule decode_handle, py:
 }
 
 
-py::object PyRocJpegDecoder::rocPyJpegDecode(PyRocJpegDecodeParams &in_decode_params, py::capsule decode_handle, py::capsule stream_handle, py::capsule image_ptr) {
+py::object PyRocJpegDecoder::rocPyJpegDecode(py::capsule decode_handle, py::capsule stream_handle, PyRocJpegDecodeParams &in_decode_params, py::capsule image_ptr) {
     RocJpegImage* output_image = static_cast<RocJpegImage*>(image_ptr.get_pointer());
     RocJpegDecodeParams decode_params;
     memcpy(&decode_params,&in_decode_params,sizeof(RocJpegDecodeParams));
@@ -145,6 +133,16 @@ py::object PyRocJpegDecoder::rocPyJpegDecodeBatched(
         destinations
     );
     return py::cast(status);
+}
+
+py::object PyRocJpegDecoder::rocPyJpegStreamDestroy(py::capsule stream_handle) {
+    RocJpegStreamHandle jpeg_stream_handle = stream_handle.get_pointer();
+    return py::cast(rocJpegStreamDestroy(jpeg_stream_handle));
+}
+
+py::object PyRocJpegDecoder::rocPyJpegDestroy(py::capsule decode_handle) {
+    RocJpegHandle jpeg_decode_handle = decode_handle.get_pointer();
+    return py::cast(rocJpegDestroy(jpeg_decode_handle));
 }
 
 //

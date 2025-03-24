@@ -1,3 +1,5 @@
+# Copyright (c) 2025 Advanced Micro Devices, Inc. All rights reserved.
+
 import pyRocJpegDecode.decoder as jdec
 import pyRocJpegDecode.utils as jutils
 import pyRocJpegDecode.types as jpegt
@@ -65,13 +67,10 @@ def JDecoderBatched(
     # Create/Init RocJpegDecodeParams
     decode_params = jdec.PyRocJpegDecodeParams()
     decode_params.output_format = get_format(output_format)
-    crp_rct = [0,0,0,0]
-    if(crop_rect is not None):
-        crp_rct = crop_rect
-    decode_params.crop_rectangle.left = crp_rct[0]
-    decode_params.crop_rectangle.top = crp_rct[1]
-    decode_params.crop_rectangle.right = crp_rct[2]
-    decode_params.crop_rectangle.bottom = crp_rct[3]
+    decode_params.crop_rectangle.left = crop_rect[0]
+    decode_params.crop_rectangle.top = crop_rect[1]
+    decode_params.crop_rectangle.right = crop_rect[2]
+    decode_params.crop_rectangle.bottom = crop_rect[3]
     decode_params.target_dimension.width = 0
     decode_params.target_dimension.height = 0
 
@@ -255,6 +254,28 @@ def JDecoderBatched(
             print(f"Average decoded images per sec (Images/Sec): {images_per_sec:.3f}")
             print(f"Average decoded images size (Mpixels/Sec): {mpixels_per_sec:.3f}")
 
+    # Cleanup output images
+    for it in output_images:
+        for i in range(jpegt.ROCJPEG_MAX_COMPONENT):
+            if it.channel[i] != 0:
+                status = jpegutils.PyFreeHipDeviceMemory(it.channel[i])
+                if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
+                    print(f"Failure - FreeHipDeviceMemory Status: {status}")
+                    sys.exit(1)
+                else:
+                    it.channel[i] = 0
+
+    # Destroy main handle
+    status = jpegdecode.rocPyJpegDestroy(rocjpeg_handle)
+    if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
+        print(f"Failure - during destroy of decoder - Status: {status}")
+
+    # Destroy all stream handles
+    for it in rocjpeg_stream_handles:
+        status = jpegdecode.rocPyJpegStreamDestroy(it)
+        if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
+            print(f"Failure - during destroy of stream handle - Status: {status}")
+
     print("\nBatched JPEG decoding completed.\n")
 
 
@@ -323,7 +344,7 @@ if __name__ == "__main__":
     rocjpeg_backend = args.backend
     output_format = args.output_format
     batch_size = args.batch_size
-    crop_rect = args.crop_rect
+    crop_rct = args.crop_rect
 
     # validate params
     if not os.path.exists(input_file_path):  # Input must exist
@@ -345,6 +366,8 @@ if __name__ == "__main__":
         if(not os.path.exists(output_file_path) or not os.path.isdir(output_file_path)):
             print("Warning: output folder specified doesn't exist, no image(s) will be saved.")
             output_file_path = None # decode with no attempt to save
+
+    crop_rect = [0,0,0,0] if(crop_rct is None) else crop_rct
 
     JDecoderBatched(
         input_file_path,
