@@ -442,9 +442,9 @@ if(BUILD_ROCPYDECODE)
     endif()
 
     # Set the dependent packages
-    set(ROCPYDECODE_DEBIAN_PACKAGE_LIST  "rocdecode-dev, libdlpack-dev, python3-dev, python3-pip")
+    set(ROCPYDECODE_DEBIAN_PACKAGE_LIST  "rocdecode-dev, libdlpack-dev, python3-dev, python3-pip, rocjpeg-dev")
     # TBD: libdlpack-devel not available
-    set(ROCPYDECODE_RPM_PACKAGE_LIST  "rocdecode-devel, python3-devel, python3-pip")
+    set(ROCPYDECODE_RPM_PACKAGE_LIST  "rocdecode-devel, python3-devel, python3-pip, rocjpeg-devel")
 
     # '%{?dist}' breaks manual builds on debian systems due to empty Provides
     execute_process(
