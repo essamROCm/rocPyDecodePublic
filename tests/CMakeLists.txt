@@ -142,20 +142,16 @@ if(Python3_FOUND AND ROCPYDECODE_PYBIND_SCRIPTS)
   list(APPEND CMAKE_PREFIX_PATH ${ROCM_PATH}/lib/cmake)
   find_package(ROCJPEG QUIET)
   if(ROCJPEG_FOUND)
-    if(${ROCJPEG_VERSION_MAJOR} VERSION_GREATER_EQUAL "0" AND ${ROCJPEG_VERSION_MINOR} VERSION_GREATER_EQUAL "11" AND ${ROCJPEG_VERSION_PATCH} VERSION_GREATER_EQUAL "1")
+    if(${ROCJPEG_VERSION_MAJOR} VERSION_GREATER_EQUAL "0" OR
+        (${ROCJPEG_VERSION_MAJOR} VERSION_EQUAL "0" AND ${ROCJPEG_VERSION_MINOR} VERSION_GREATER_EQUAL "11") OR
+        (${ROCJPEG_VERSION_MAJOR} VERSION_EQUAL "0" AND ${ROCJPEG_VERSION_MINOR} VERSION_EQUAL "11" AND ${ROCJPEG_VERSION_PATCH} VERSION_GREATER_EQUAL "1"))
         add_test(NAME jpeg_decode_python
               COMMAND ${Python3_EXECUTABLE}
               ${ROCM_PATH}/lib/pyRocVideoDecode/samples/rocjpeg/jpegdecode.py
               -i ${ROCM_PATH}/share/rocjpeg/images/
               WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
         set_property(TEST jpeg_decode_python PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
-    endif()
-  endif()
-  # 13 - jpegdecodebatched_test
-  list(APPEND CMAKE_PREFIX_PATH ${ROCM_PATH}/lib/cmake)
-  find_package(ROCJPEG QUIET)
-  if(ROCJPEG_FOUND)
-    if(${ROCJPEG_VERSION_MAJOR} VERSION_GREATER_EQUAL "0" AND ${ROCJPEG_VERSION_MINOR} VERSION_GREATER_EQUAL "11" AND ${ROCJPEG_VERSION_PATCH} VERSION_GREATER_EQUAL "1")
+        # 13 - jpegdecodebatched_test
         add_test(NAME jpeg_decodebatched_python
               COMMAND ${Python3_EXECUTABLE}
               ${ROCM_PATH}/lib/pyRocVideoDecode/samples/rocjpeg/jpegdecodebatched.py

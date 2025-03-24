@@ -197,7 +197,9 @@ if(NOT ROCJPEG_FOUND)
     set(ENABLE_ROCPYJPEG 0)
     message("-- ${Yellow}NOTE: ${PROJECT_NAME} library optional rocJPEG, Not Found ${ColourReset}")
 else()
-    if(${ROCJPEG_VERSION_MAJOR} VERSION_GREATER_EQUAL "0" AND ${ROCJPEG_VERSION_MINOR} VERSION_GREATER_EQUAL "11" AND ${ROCJPEG_VERSION_PATCH} VERSION_GREATER_EQUAL "1")
+    if(${ROCJPEG_VERSION_MAJOR} VERSION_GREATER_EQUAL "0" OR
+        (${ROCJPEG_VERSION_MAJOR} VERSION_EQUAL "0" AND ${ROCJPEG_VERSION_MINOR} VERSION_GREATER_EQUAL "11") OR
+        (${ROCJPEG_VERSION_MAJOR} VERSION_EQUAL "0" AND ${ROCJPEG_VERSION_MINOR} VERSION_EQUAL "11" AND ${ROCJPEG_VERSION_PATCH} VERSION_GREATER_EQUAL "1"))
         set(ENABLE_ROCPYJPEG 1)
         message("-- Found rocJPEG version ${ROCJPEG_VERSION_MAJOR}.${ROCJPEG_VERSION_MINOR}.${ROCJPEG_VERSION_PATCH} ${ColourReset}")
     else()
@@ -250,7 +252,7 @@ if(BUILD_ROCPYDECODE)
             ${ROCM_PATH}/share/rocjpeg/samples)
         set(LINK_LIBRARY_LIST ${LINK_LIBRARY_LIST} ${ROCJPEG_LIBRARY})
         file(GLOB pyfiles_jpeg pyRocJpegDecode/*.py pyRocJpegDecode/*.pyi)
-        file(GLOB include_jpeg src/rocjpeg/*.h ${ROCM_PATH}/share/rocjpeg/samples/*.h) # include the "rocjpeg_samples_utils.h"
+        file(GLOB include_jpeg src/rocjpeg/*.h ${ROCM_PATH}/share/rocjpeg/samples/rocjpeg_samples_utils.h)
         file(GLOB sources_jpeg src/rocjpeg/*.cpp)
     endif()
 
