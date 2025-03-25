@@ -7,7 +7,7 @@ import datetime
 import sys
 import argparse
 import os.path
-import ctypes
+from pathlib import Path
 
 
 def get_format(out_fmt):
@@ -20,22 +20,11 @@ def get_format(out_fmt):
     return format_mapping.get(out_fmt, jpegt.ROCJPEG_OUTPUT_NATIVE)
 
 def read_image(file_path):
-    # Check if the file exists
-    if not os.path.exists(file_path):
-        print(f"ERROR: Cannot open image: {file_path}", file=sys.stderr)
-        return None, 0
     try:
-        # Open file in binary mode
-        with open(file_path, "rb") as input_file:
-            # Get file size
-            input_file.seek(0, os.SEEK_END)
-            file_size = input_file.tell()
-            input_file.seek(0)
-            # Read file content
-            file_data = input_file.read(file_size)
-        return file_data, file_size
+        data = Path(file_path).read_bytes()
+        return data, len(data)
     except Exception as e:
-        print(f"ERROR: Cannot read from file: {file_path}\n{e}", file=sys.stderr)
+        print(f"ERROR: Cannot read image: {file_path}\n{e}", file=sys.stderr)
         return None, 0
 
 def JDecoder(
@@ -53,12 +42,8 @@ def JDecoder(
     # Create/Init RocJpegDecodeParams
     decode_params = jdec.PyRocJpegDecodeParams()
     decode_params.output_format = get_format(output_format)
-    decode_params.crop_rectangle.left = crop_rect[0]
-    decode_params.crop_rectangle.top = crop_rect[1]
-    decode_params.crop_rectangle.right = crop_rect[2]
-    decode_params.crop_rectangle.bottom = crop_rect[3]
-    decode_params.target_dimension.width = 0
-    decode_params.target_dimension.height = 0
+    decode_params.crop_rectangle.left, decode_params.crop_rectangle.top, decode_params.crop_rectangle.right, decode_params.crop_rectangle.bottom = crop_rect
+    decode_params.target_dimension.width, decode_params.target_dimension.height = 0, 0
     is_roi_valid = False
 
     # parse input
@@ -75,7 +60,7 @@ def JDecoder(
         print("HIP Device Initialized Successfully..\n")
 
     # init the stream & the codec
-    decode_handle, status = jpegdecode.rocPyJpegCreate(rocjpeg_backend, device_id)
+    status = jpegdecode.rocPyJpegCreate(rocjpeg_backend, device_id)
     if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
         print(f"Failure - JpegDecoderCreate Status: {status}")
         sys.exit(1)
@@ -132,7 +117,7 @@ def JDecoder(
                 sys.exit(1)
 
         # Get image info
-        subsampling, widths, heights, status = jpegdecode.rocPyJpegGetImageInfo(decode_handle, stream_handle)
+        subsampling, widths, heights, status = jpegdecode.rocPyJpegGetImageInfo(stream_handle)
         if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
             print(f"Failure - JpegGetImageInfo Status: {status}")
             sys.exit(1)
@@ -194,7 +179,7 @@ def JDecoder(
         print("Decoding started, please wait! ... ")
         start_time = datetime.datetime.now()
 
-        status = jpegdecode.rocPyJpegDecode(decode_handle, stream_handle, decode_params, output_image) # Call the JPEG decode
+        status = jpegdecode.rocPyJpegDecode(stream_handle, decode_params, output_image) # Call the JPEG decode
         if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
             print(f"Failure - JpegDecode Status: {status}")
             sys.exit(1)
@@ -263,7 +248,7 @@ def JDecoder(
                 sys.exit(1)
 
     # Destroy decoder
-    status = jpegdecode.rocPyJpegDestroy(decode_handle)
+    status = jpegdecode.rocPyJpegDestroy()
     if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
         print(f"Failure - rocPyJpegDestroy - Status: {status}")
 
@@ -297,15 +282,17 @@ if __name__ == "__main__":
         '-d',
         '--device',
         type=int,
+        choices=range(9),
         default=0,
-        help='GPU device ID - optional, default 0, specify the GPU device id for the desired device (use 0 for the first device, 1 for the second device, and so on.',
+        help='GPU device ID (0-8) - optional, default is 0. Specify the GPU device ID to use (0 for the first device, 1 for the second, etc).',
         required=False)
     parser.add_argument(
         '-be',
         '--backend',
         type=int,
+        choices=range(2),
         default=0,
-        help='Select rocJPEG backend (0 for hardware-accelerated JPEG decoding using VCN, 1 for hybrid JPEG decoding using CPU and GPU HIP kernels (currently not supported)) [optional - default: 0]',
+        help='Select rocJPEG backend: 0 for hardware-accelerated decoding (VCN), 1 for hybrid CPU+GPU decoding (currently not supported). [optional, default: 0]',
         required=False)
     parser.add_argument(
         '-crop',
@@ -318,8 +305,9 @@ if __name__ == "__main__":
         '-fmt',
         '--output_format',
         type=int,
+        choices=range(1, 6),
         default=1,
-        help="Select rocJPEG output format for decoding, one of the [1:native, 2:yuv_planar, 3:y, 4:rgb, 5:rgb_planar] - [optional - default: 1:native]",
+        help="Select rocJPEG output format for decoding: 1=native, 2=yuv_planar, 3=y, 4=rgb, 5=rgb_planar [optional - default: 1:native]",
         required=False)
 
     try:
@@ -344,15 +332,6 @@ if __name__ == "__main__":
             if not os.path.isdir(output_file_path): # out must be dir
                 print("ERROR: for passing folder path as input, you must pass an existing folder path as output.")
                 sys.exit(1)
-    if(device_id < 0):
-        print(f"Arg Error: Invalid device ID: {device_id}\n")
-        sys.exit(1)
-    if(rocjpeg_backend < 0):
-        print(f"Arg Error: Invalid back end: {rocjpeg_backend}\n")
-        sys.exit(1)
-    if(output_format < 1 or output_format > 5):
-        print(f"Arg Error: Invalid output format: {output_format}\n")
-        sys.exit(1)
 
     crop_rect = [0,0,0,0] if(crop_rct is None) else crop_rct
 

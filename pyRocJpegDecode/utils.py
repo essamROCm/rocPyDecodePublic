@@ -52,10 +52,10 @@ class utils(object):
     def PyInitHipDevice(self, device_id):
         return self.jpegutils.PyInitHipDevice(device_id)
 
-    def PyAllocHipDeviceMemory(self, channel_size):
-        output_ptr, status = self.jpegutils.PyAllocHipDeviceMemory(channel_size)
+    def PyAllocHipDeviceMemory(self, memory_size):
+        output_ptr, status = self.jpegutils.PyAllocHipDeviceMemory(memory_size)
         return output_ptr, status
 
-    def PyFreeHipDeviceMemory(self, output_image_channel):
-        status = self.jpegutils.PyFreeHipDeviceMemory(output_image_channel)
+    def PyFreeHipDeviceMemory(self, memory_to_free):
+        status = self.jpegutils.PyFreeHipDeviceMemory(memory_to_free)
         return status

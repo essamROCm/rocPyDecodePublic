@@ -45,8 +45,8 @@ class decoder(object):
     def rocPyJpegCreate(self, backend, device):
         self.device = device
         self.backend = backend
-        self.jpeg_handle, status = self.jpegdec.rocPyJpegCreate(jpegt.RocJpegBackend(self.backend), self.device)
-        return self.jpeg_handle, status
+        self.decode_handle, status = self.jpegdec.rocPyJpegCreate(jpegt.RocJpegBackend(self.backend), self.device)
+        return status
 
     def rocPyJpegStreamCreate(self):
         self.stream_handle, status = self.jpegdec.rocPyJpegStreamCreate()
@@ -57,24 +57,24 @@ class decoder(object):
         status = self.jpegdec.rocPyJpegStreamParse(file_array, length, jpeg_stream_handle)
         return status
 
-    def rocPyJpegGetImageInfo(self, rocjpeg_handle, rocjpeg_stream_handle):
-        subsampling, widths, heights, status = self.jpegdec.rocPyJpegGetImageInfo(rocjpeg_handle, rocjpeg_stream_handle)
+    def rocPyJpegGetImageInfo(self, stream_handle):
+        subsampling, widths, heights, status = self.jpegdec.rocPyJpegGetImageInfo(self.decode_handle, stream_handle)
         return subsampling, widths, heights, status
 
-    def rocPyJpegDecode(self, rocjpeg_handle, rocjpeg_stream_handle, decode_params, output_image):
+    def rocPyJpegDecode(self, stream_handle, decode_params, output_image):
         ctypes.pythonapi.PyCapsule_New.restype = ctypes.py_object
         capsule = ctypes.pythonapi.PyCapsule_New(ctypes.byref(output_image), b'RocJpegImage', None)
-        status = self.jpegdec.rocPyJpegDecode(rocjpeg_handle, rocjpeg_stream_handle, decode_params, capsule)
+        status = self.jpegdec.rocPyJpegDecode(self.decode_handle, stream_handle, decode_params, capsule)
         return status
 
-    def rocPyJpegDecodeBatched(self, decode_handle, stream_handles, batch_size, in_decode_params, destinations):
+    def rocPyJpegDecodeBatched(self, stream_handles, batch_size, in_decode_params, destinations):
         ctypes.pythonapi.PyCapsule_New.restype = ctypes.py_object
         capsule = ctypes.pythonapi.PyCapsule_New(ctypes.byref(destinations), b'RocJpegImage', None)
-        status = self.jpegdec.rocPyJpegDecodeBatched(decode_handle, stream_handles, batch_size, in_decode_params, capsule)
+        status = self.jpegdec.rocPyJpegDecodeBatched(self.decode_handle, stream_handles, batch_size, in_decode_params, capsule)
         return status
 
     def rocPyJpegStreamDestroy(self, stream_handle):
         return self.jpegdec.rocPyJpegStreamDestroy(stream_handle)
 
-    def rocPyJpegDestroy(self, decode_handle):
-        return self.jpegdec.rocPyJpegDestroy(decode_handle)
+    def rocPyJpegDestroy(self):
+        return self.jpegdec.rocPyJpegDestroy(self.decode_handle)
