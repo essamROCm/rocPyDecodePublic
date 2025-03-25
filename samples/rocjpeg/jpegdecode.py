@@ -230,46 +230,47 @@ def JDecoder(
         for i in range(jpegt.ROCJPEG_MAX_COMPONENT):
             prior_channel_sizes[i] = channel_sizes[i]
 
-        # Free GPU memory for each channel
-        for i in range(num_channels):
-            if output_image.channel[i] != 0:
-                status = jpegutils.PyFreeHipDeviceMemory(output_image.channel[i])
-                if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
-                    print(f"Failure - FreeHipDeviceMemory Status: {status}")
-                    sys.exit(1)
-                else:
-                    output_image.channel[i] = 0
+    if (is_dir):
+        time_per_image_all /= total_images  # Compute average time per image
+        images_per_sec = 1000 / time_per_image_all  # Compute images per second
+        mpixels_per_sec = mpixels_all * images_per_sec / total_images  # Compute megapixels per second
+        print(f"\nTotal decoded images: {total_images}")
+        # Check if any images were skipped due to errors or unsupported formats
+        total_skipped_images = (num_bad_jpegs + num_jpegs_with_411_subsampling + num_jpegs_with_unknown_subsampling + num_jpegs_with_unsupported_resolution)
+        if (total_skipped_images):
+            print(f"Total skipped images: {total_skipped_images}", end="")
+            if num_bad_jpegs:
+                print(f", total images that cannot be parsed: {num_bad_jpegs}", end="")
+            if num_jpegs_with_411_subsampling:
+                print(f", total images with YUV 4:1:1 chroma subsampling: {num_jpegs_with_411_subsampling}", end="")
+            if num_jpegs_with_unknown_subsampling:
+                print(f", total images with unknown chroma subsampling: {num_jpegs_with_unknown_subsampling}", end="")
+            if num_jpegs_with_unsupported_resolution:
+                print(f", total images with unsupported resolution: {num_jpegs_with_unsupported_resolution}", end="")
+            print("\n")
+        # Performance statistics if there are processed images
+        if total_images:
+            print(f"Average processing time per image (ms): {time_per_image_all:.3f}")
+            print(f"Average decoded images per sec (Images/Sec): {images_per_sec:.3f}")
+            print(f"Average decoded images size (Mpixels/Sec): {mpixels_per_sec:.3f}")
 
-        if (is_dir):
-            time_per_image_all /= total_images  # Compute average time per image
-            images_per_sec = 1000 / time_per_image_all  # Compute images per second
-            mpixels_per_sec = mpixels_all * images_per_sec / total_images  # Compute megapixels per second
-            print(f"Total decoded images: {total_images}")
+    # Free GPU memory for each channel
+    for i in range(num_channels):
+        if output_image.channel[i] != 0:
+            status = jpegutils.PyFreeHipDeviceMemory(output_image.channel[i])
+            if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
+                print(f"Failure - FreeHipDeviceMemory Status: {status}")
+                sys.exit(1)
 
-            # Check if any images were skipped due to errors or unsupported formats
-            total_skipped_images = (num_bad_jpegs + num_jpegs_with_411_subsampling + num_jpegs_with_unknown_subsampling + num_jpegs_with_unsupported_resolution)
-            if (total_skipped_images):
-                print(f"Total skipped images: {total_skipped_images}", end="")
-                if num_bad_jpegs:
-                    print(f", total images that cannot be parsed: {num_bad_jpegs}", end="")
-                if num_jpegs_with_411_subsampling:
-                    print(f", total images with YUV 4:1:1 chroma subsampling: {num_jpegs_with_411_subsampling}", end="")
-                if num_jpegs_with_unknown_subsampling:
-                    print(f", total images with unknown chroma subsampling: {num_jpegs_with_unknown_subsampling}", end="")
-                if num_jpegs_with_unsupported_resolution:
-                    print(f", total images with unsupported resolution: {num_jpegs_with_unsupported_resolution}", end="")
-                print()  # Newline
+    # Destroy decoder
+    status = jpegdecode.rocPyJpegDestroy(decode_handle)
+    if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
+        print(f"Failure - rocPyJpegDestroy - Status: {status}")
 
-            # Performance statistics if there are processed images
-            if total_images:
-                print(f"Average processing time per image (ms): {time_per_image_all:.3f}")
-                print(f"Average decoded images per sec (Images/Sec): {images_per_sec:.3f}")
-                print(f"Average decoded images size (Mpixels/Sec): {mpixels_per_sec:.3f}")
-    # end - cleanup
-    status1 = jpegdecode.rocPyJpegDestroy(decode_handle)
-    status2 = jpegdecode.rocPyJpegStreamDestroy(stream_handle)
-    if(status1 != jpegt.ROCJPEG_STATUS_SUCCESS or status2 != jpegt.ROCJPEG_STATUS_SUCCESS):
-        print(f"Failure - during destroy of decoder or stream handle - Status: {status}")
+    # Destroy stream
+    status = jpegdecode.rocPyJpegStreamDestroy(stream_handle)
+    if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
+        print(f"Failure - rocPyJpegStreamDestroy - Status: {status}")
 
     print("\nDecoding completed!\n")
     return

@@ -268,13 +268,13 @@ def JDecoderBatched(
     # Destroy main handle
     status = jpegdecode.rocPyJpegDestroy(rocjpeg_handle)
     if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
-        print(f"Failure - during destroy of decoder - Status: {status}")
+        print(f"Failure - rocPyJpegDestroy - Status: {status}")
 
     # Destroy all stream handles
     for it in rocjpeg_stream_handles:
         status = jpegdecode.rocPyJpegStreamDestroy(it)
         if(status != jpegt.ROCJPEG_STATUS_SUCCESS):
-            print(f"Failure - during destroy of stream handle - Status: {status}")
+            print(f"Failure - rocPyJpegStreamDestroy - Status: {status}")
 
     print("\nBatched JPEG decoding completed.\n")
 
