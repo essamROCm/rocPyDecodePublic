@@ -20,9 +20,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-#include "roc_pyjpegdecode.h"
+#include "roc_pyjpeg.h"
+#include "roc_pyjpeg_decoder.h"
+#include "roc_pyjpeg_codestream.h"
+#include "roc_pyjpeg_decode_source.h"
 
 using namespace std;
+
+RocJpegHandle rocjpeg_handle = nullptr;
 
 PYBIND11_MODULE(rocpyjpegdecode, m) {
  
@@ -32,11 +37,17 @@ PYBIND11_MODULE(rocpyjpegdecode, m) {
     // Types:
     // ------
     py::module types_m = m.def_submodule("jpegTypes");
-    types_m.doc() = "Datatypes and options used by rocJPEG";
+    types_m.doc() = R"pbdoc(
+
+        rocPyJpegDecode Python API reference
+
+        This is the Python API reference for the AMD ROCm rocJEPEG library.
+    )pbdoc";
 
     // current version
-    // Todo: to be changed to match version on CMakeLists with every future version update
+    // Todo: match version on CMakeLists for future version update
     m.attr("__version__") = py::str("0.1.0");
+
     types_m.attr("ROCJPEG_MAX_COMPONENT") = ROCJPEG_MAX_COMPONENT;
 
     // RocJpegChromaSubsampling
@@ -83,71 +94,9 @@ PYBIND11_MODULE(rocpyjpegdecode, m) {
         .value("ROCJPEG_STATUS_NOT_IMPLEMENTED",ROCJPEG_STATUS_NOT_IMPLEMENTED)
         .export_values();
 
-    // -----------------------------------
-    // AMD JPEG Decoder 'PyRocJpegDecoder'
-    // -----------------------------------
-    PyRocJpegDecoderInitializer(m);
-
-    // -------------------------------
-    // AMD JPEG Utils 'PyRocJpegUtils'
-    // -------------------------------
-    PyRocJpegUtilsInitializer(m);
-
-    // -----------
-    // Structures:
-    // -----------
-
-    // CropRectangle Struct Binding
-    py::class_<CropRectangle>(m, "CropRectangle")
-        .def(py::init<>())
-        .def_readwrite("left", &CropRectangle::left)
-        .def_readwrite("top", &CropRectangle::top)
-        .def_readwrite("right", &CropRectangle::right)
-        .def_readwrite("bottom", &CropRectangle::bottom);
-
-    // TargetDimension Struct Binding
-    py::class_<TargetDimension>(m, "TargetDimension")
-        .def(py::init<>())
-        .def_readwrite("width", &TargetDimension::width)
-        .def_readwrite("height", &TargetDimension::height);
-
-    // RocJpegDecodeParams Struct Binding
-    py::class_<PyRocJpegDecodeParams>(m, "RocJpegDecodeParams")
-        .def(py::init<>())
-        .def_readwrite("output_format", &PyRocJpegDecodeParams::output_format)
-        .def_readwrite("crop_rectangle", &PyRocJpegDecodeParams::crop_rectangle)
-        .def_readwrite("target_dimension", &PyRocJpegDecodeParams::target_dimension);
-
-    py::class_<PyRocJpegImage>(m, "PyRocJpegImage")
-        .def(py::init<>())
-        .def_property("pitch",
-            [](const PyRocJpegImage& img) {
-                // Getter for pitch as vector
-                return std::vector<uint32_t>(img.pitch.begin(), img.pitch.end());
-            },
-            [](PyRocJpegImage& img, const std::vector<uint32_t>& pitches) {
-                // Setter for pitch
-                if (pitches.size() != ROCJPEG_MAX_COMPONENT)
-                    throw std::runtime_error("Invalid pitch size");
-                std::copy(pitches.begin(), pitches.end(), img.pitch.begin());
-            },
-            "Pitch (stride) of each channel"
-        )
-        .def_property("channel",
-            [](const PyRocJpegImage& img) {
-                // Getter: return channel pointers as integers (uintptr_t)
-                std::vector<uintptr_t> channels;
-                for (auto ptr : img.channel)
-                    channels.push_back(reinterpret_cast<uintptr_t>(ptr));
-                return channels;
-            },
-            [](PyRocJpegImage& img, const std::vector<uintptr_t>& channels) {
-                // Setter: set channel pointers from integers
-                if (channels.size() != ROCJPEG_MAX_COMPONENT)
-                    throw std::runtime_error("Invalid channel size");
-                for (size_t i = 0; i < ROCJPEG_MAX_COMPONENT; ++i)
-                    img.channel[i] = reinterpret_cast<uint8_t*>(channels[i]);
-            },
-            "Channel pointers as integer addresses"
-        );
+    // AMD JPEG Decoder exported classes
+    Decoder::exportToPython(m);
+    CodeStream::exportToPython(m);
+    DecodeSource::exportToPython(m);
+    BufferInterface::exportToPython(m);   
 }

@@ -21,60 +21,34 @@
 import rocpyjpegdecode as rocpyjpeg
 import rocpyjpegdecode.jpegTypes as jpegt
 import numpy as np
-import ctypes
 
+class DecodeSource(object):
+    def __init__(
+            self,
+            param):
+        self.DS = rocpyjpeg.DecodeSource(param)
 
-class PyRocJpegImage(ctypes.Structure):
-    _fields_ = [
-        ('channel', ctypes.c_uint64 * jpegt.ROCJPEG_MAX_COMPONENT),
-        ('pitch', ctypes.c_uint32 * jpegt.ROCJPEG_MAX_COMPONENT),
-    ]
-
-def PyRocJpegImageArray(batch_size):
-    return (PyRocJpegImage * batch_size)()  # Creates array of PyRocJpegImage
-
-def PyRocJpegDecodeParams():
-    return rocpyjpeg.RocJpegDecodeParams()
-
-# rocPyJpeg Decoder Class
 class decoder(object):
+    def __init__(
+            self, 
+            device_id = 0, 
+            backend = 0):
+        self.jpegdec = rocpyjpeg.Decoder(device_id, backend)
 
-    def __init__(self):
-        self.jpegdec = rocpyjpeg.PyRocJpegDecoder()
+    # send actual file path to be opned/read and decoded
+    def read(self, img_full_bath):
+        self.img = self.jpegdec.read(img_full_bath)
+        return self.img        
 
-    def rocPyJpegCreate(self, backend, device):
-        self.device = device
-        self.backend = backend
-        self.decode_handle, status = self.jpegdec.rocPyJpegCreate(jpegt.RocJpegBackend(self.backend), self.device)
-        return status
+    # send actual file path to be opned/read and decoded
+    def decode(self, img_full_bath):
+        self.img = self.jpegdec.decode(img_full_bath)
+        return self.img
 
-    def rocPyJpegStreamCreate(self):
-        self.stream_handle, status = self.jpegdec.rocPyJpegStreamCreate()
-        return self.stream_handle, status
-
-    def rocPyJpegStreamParse(self, file_data, length, jpeg_stream_handle):
-        file_array = np.frombuffer(file_data, dtype=np.uint8)
-        status = self.jpegdec.rocPyJpegStreamParse(file_array, length, jpeg_stream_handle)
-        return status
-
-    def rocPyJpegGetImageInfo(self, stream_handle):
-        subsampling, widths, heights, status = self.jpegdec.rocPyJpegGetImageInfo(self.decode_handle, stream_handle)
-        return subsampling, widths, heights, status
-
-    def rocPyJpegDecode(self, stream_handle, decode_params, output_image):
-        ctypes.pythonapi.PyCapsule_New.restype = ctypes.py_object
-        capsule = ctypes.pythonapi.PyCapsule_New(ctypes.byref(output_image), b'RocJpegImage', None)
-        status = self.jpegdec.rocPyJpegDecode(self.decode_handle, stream_handle, decode_params, capsule)
-        return status
-
-    def rocPyJpegDecodeBatched(self, stream_handles, batch_size, in_decode_params, destinations):
-        ctypes.pythonapi.PyCapsule_New.restype = ctypes.py_object
-        capsule = ctypes.pythonapi.PyCapsule_New(ctypes.byref(destinations), b'RocJpegImage', None)
-        status = self.jpegdec.rocPyJpegDecodeBatched(self.decode_handle, stream_handles, batch_size, in_decode_params, capsule)
-        return status
-
-    def rocPyJpegStreamDestroy(self, stream_handle):
-        return self.jpegdec.rocPyJpegStreamDestroy(stream_handle)
-
-    def rocPyJpegDestroy(self):
-        return self.jpegdec.rocPyJpegDestroy(self.decode_handle)
+    # send in-memory data to be decoded
+    def DecodeSource(self, img_data):
+        file_array = img_data
+        if isinstance(img_data, (bytes, bytearray)):
+            file_array = np.frombuffer(img_data, dtype=np.uint8)
+        self.img = self.jpegdec.DecodeSource(file_array)
+        return self.img

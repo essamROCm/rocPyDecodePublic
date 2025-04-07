@@ -24,44 +24,67 @@ THE SOFTWARE.
 #define PY_ROC_JPEG_PYBIND11_HEADER
 #pragma once
 
+#include <iostream>
 #include "rocjpeg/rocjpeg.h"
-#include "rocjpeg_samples_utils.h"
+#include "roc_pyjpeg_buffer.h"
 
 #include <pybind11/pybind11.h>	 
 #include <pybind11/functional.h>
 #include <pybind11/stl.h>
 #include <pybind11/numpy.h>
+#include <pybind11/complex.h>
+#include <pybind11/chrono.h>
 
 namespace py = pybind11;
+using namespace py::literals;
 
-// Define CropRectangle struct
-struct CropRectangle {
-    int16_t left;
-    int16_t top;
-    int16_t right;
-    int16_t bottom;
+extern RocJpegHandle rocjpeg_handle;
+
+#define PY_CHECK_DECODER() {        \
+    if (!rocjpeg_handle) {          \
+        std::cerr << "ERROR: Decoder is not instantiated. Please create/instantiate the Decoder class first." << std::endl; \
+        std::exit(EXIT_FAILURE);    \
+    }                               \
+}
+
+#include <pybind11/numpy.h>
+
+class PyJpegImages {
+
+public:
+    PyJpegImages() {
+        ext_buf.push_back(std::make_shared<BufferInterface>());
+        ext_buf.push_back(std::make_shared<BufferInterface>());
+        ext_buf.push_back(std::make_shared<BufferInterface>());
+    }
+
+    ~PyJpegImages(){
+        if(cpu_data_temp) {
+            hipError_t hip_status = hipFree((void *)cpu_data_temp);
+            cpu_data_temp = nullptr;
+        }
+    };
+
+    // to export as GPU MEM (dlpack)
+    std::vector<std::shared_ptr<BufferInterface>> ext_buf;
+
+    // to export as numpy array (HOST MEM)
+    uint8_t* cpu_data_temp = nullptr;
+
+    py::array_t<uint8_t> to_numpy(int index = 0) {
+        if (index < 0 || index >= static_cast<int>(ext_buf.size()))
+            throw std::out_of_range("Invalid channel index");
+        auto& buf = ext_buf[index];
+        uint8_t* data_ptr = static_cast<uint8_t*>(buf->data());
+        py::tuple py_shape = buf->shape();
+        py::tuple py_strides = buf->strides();
+        std::vector<ssize_t> shape, strides;
+        for (auto item : py_shape)
+            shape.push_back(item.cast<ssize_t>());
+        for (auto item : py_strides)
+            strides.push_back(item.cast<ssize_t>());
+        return py::array_t<uint8_t>(shape, strides, cpu_data_temp, py::cast(buf));
+    }
 };
-
-// Define TargetDimension struct
-struct TargetDimension {
-    uint32_t width;
-    uint32_t height;
-};
-
-// Re-Define Main Struct RocJpegDecodeParams to contain the 2 split structures
-typedef struct {
-    RocJpegOutputFormat output_format;
-    CropRectangle crop_rectangle;
-    TargetDimension target_dimension;
-} PyRocJpegDecodeParams;
-
-struct PyRocJpegImage {
-    std::array<uint8_t*, ROCJPEG_MAX_COMPONENT> channel;
-    std::array<uint32_t, ROCJPEG_MAX_COMPONENT> pitch;
-};
-
-// defined in roc_pyjpegdecoder.cpp
-void PyRocJpegDecoderInitializer(py::module& m);
-void PyRocJpegUtilsInitializer(py::module& m);
 
 #endif // PY_ROC_JPEG_PYBIND11_HEADER
