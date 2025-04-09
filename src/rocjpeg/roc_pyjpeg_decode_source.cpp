@@ -70,6 +70,7 @@ void DecodeSource::exportToPython(py::module& m) {
         .def_property_readonly("code_stream", &DecodeSource::code_stream,
             "Returns the code stream to be decoded into an image.")
         ;
+
     // clang-format on
     py::implicitly_convertible<py::bytes, DecodeSource>();
     py::implicitly_convertible<py::array_t<uint8_t>, DecodeSource>();

@@ -20,8 +20,41 @@
 
 import torch
 import pyRocJpegDecode.decoder as jdec
+import numpy as np
 
-# example of BATCHED images decode
+def printout_tensor_info(image):
+    # print GPU tensor details
+    print("\n", type(image))
+    print("Tensor Shape:   ", image.ext_buf[0].shape)
+    print("Tensor Strides: ", image.ext_buf[0].strides)
+    print("Tensor dType:   ", image.ext_buf[0].dtype)
+    print("Tensor Device:  ", image.ext_buf[0].__dlpack_device__(), "\n")
+    # ------------
+    # GPU Tensor
+    # ------------
+    # yuv_tensor = torch.from_dlpack(image.ext_buf[0].__dlpack__(image))
+    # print(f"Device:\t\t\t {yuv_tensor.device}")
+    # print(f"Tensor GPU MEM address:\t {hex(yuv_tensor.data_ptr())}\n")
+    # ------------
+    #  CPU Tensor
+    # ------------
+    tensor = torch.from_numpy(image.to_numpy_8bits())
+    print(f"Tensor tensor: {tensor.device}")  # Should output: cpu
+    print(f"Tensor CPU MEM address:\t {hex(tensor.data_ptr())}\n")
+    print("Shape:", tensor.shape)
+    print("Dtype:", tensor.dtype)
+    # Print top-left 5x5 region (for 2D tensors)
+    print(tensor[:5, :5], "\n")
+
+# torch - info - details - debug
+print(f"torch.version:\t {torch.version}")
+print(f"HIP Version:\t {torch.version.hip}")                # should not be None
+print(f"HIP Supported:\t {torch.cuda.is_available()}\n")    # should return True for HIP backend too
+line = '\n' + '-' * 40 + '\n'
+
+# //////////////////////////////////
+# Example of BATCHED images decode
+# //////////////////////////////////
 device_id = 0
 backend = 0
 
@@ -30,35 +63,35 @@ batch_size = len(image_paths)
 
 decoder = jdec.decoder(device_id, backend)
 
+# --------------------------------------------------
+# TEST (1) LIST of 'files' (Batch)
+# --------------------------------------------------
+print(line, "TEST (1) batch of files", line)
 images = decoder.decode(image_paths)
-
-# printout all info
 for i in range(batch_size):
+    printout_tensor_info(images[i])
 
-    # print GPU tensor details
-    print("\n", type(images[i]))
-    print("Tensor Shape:   ", images[i].ext_buf[0].shape)
-    print("Tensor Strides: ", images[i].ext_buf[0].strides)
-    print("Tensor dType:   ", images[i].ext_buf[0].dtype)
-    print("Tensor Device:  ", images[i].ext_buf[0].__dlpack_device__(), "\n")
+# --------------------------------------------------
+# TEST (2) LIST of 'data' (Batch)
+# --------------------------------------------------
+print(line, "TEST (2) batch of data", line)
+data_list = []
+for p in image_paths:
+    with open(p, 'rb') as in_file:
+        data = in_file.read()
+        data_list.append(data)
+print("Type of data:", type(data_list))
+image_list = decoder.decode(data_list)
+for img in image_list:
+    printout_tensor_info(img)
 
-    # ------------
-    # GPU Tensor
-    # ------------
-    yuv_tensor = torch.from_dlpack(images[i].ext_buf[0].__dlpack__(images[i]))
-
-    print(f"Device:\t\t\t {yuv_tensor.device}")
-    print(f"Tensor GPU MEM address:\t {hex(yuv_tensor.data_ptr())}\n")
-
-    # ------------
-    #  CPU Tensor
-    # ------------
-    tensor = torch.from_numpy(images[i].to_numpy())
-
-    print(f"Tensor tensor: {tensor.device}")  # Should output: cpu
-    print(f"Tensor CPU MEM address:\t {hex(tensor.data_ptr())}\n")
-    print("Shape:", tensor.shape)
-    print("Dtype:", tensor.dtype)
-
-    # Print top-left 5x5 region (for 2D tensors)
-    print(tensor[:5, :5], "\n")
+# --------------------------------------------------
+# TEST (3) LIST of 'arrays' (Batch) numpy arrays
+# --------------------------------------------------
+print(line, "TEST (3) batch of numpy Array(s)", line)
+arrays_list = []
+for p in image_paths:
+    arrays_list.append(np.fromfile(p, dtype=np.uint8))
+images_from_array_list = decoder.decode(arrays_list)
+for img in images_from_array_list:
+    printout_tensor_info(img)

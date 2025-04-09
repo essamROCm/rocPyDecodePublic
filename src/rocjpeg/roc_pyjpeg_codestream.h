@@ -39,6 +39,9 @@ public:
     CodeStream(py::bytes);
     CodeStream(py::array_t<uint8_t>);
     ~CodeStream();
+    CodeStream();
+
+    CodeStream& operator=(const CodeStream& other);
 
     static void exportToPython(py::module& m);
     CodeStream* handle();
@@ -46,12 +49,13 @@ public:
     int width();
     int height();
     
-    std::unique_ptr<CodeStream> code_stream_;
+    CodeStream* code_stream_;
 
     // related descriptor of 'this' image
     RocJpegStreamHandle stream_handle = nullptr;
     RocJpegDecodeParams decode_params;
     RocJpegImage output_image;
+    RocJpegChromaSubsampling subsampling;
     uint32_t widths[ROCJPEG_MAX_COMPONENT] = {};
     uint32_t heights[ROCJPEG_MAX_COMPONENT] = {};    
     uint32_t channel_sizes[ROCJPEG_MAX_COMPONENT] = {};
@@ -61,9 +65,6 @@ private:
     // to keep a reference to the argument data, so that they are kept alive throughout the lifetime of the object
     py::bytes data_ref_bytes_;
     py::array_t<uint8_t> data_ref_arr_;
-
-    // subsampling
-    RocJpegChromaSubsampling subsampling;
 
     int m_width;
     int m_height;

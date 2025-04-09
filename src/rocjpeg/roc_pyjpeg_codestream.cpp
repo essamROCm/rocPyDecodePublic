@@ -24,6 +24,7 @@ THE SOFTWARE.
 #include "roc_pyjpeg_decoder.h"
 #include "roc_pyjpeg_buffer.h"
 #include "roc_pyjpeg_codestream.h"
+#include <algorithm>     // for std::copy
 
 using namespace std;
 
@@ -81,6 +82,27 @@ CodeStream* CodeStream::handle() {
     return this;
 }
 
+CodeStream& CodeStream::operator=(const CodeStream& other) {
+    if (this == &other)
+        return *this;  // self-assignment guard
+    // Copy public members
+    stream_handle = other.stream_handle;
+    decode_params = other.decode_params;
+    output_image = other.output_image;
+    subsampling = other.subsampling;
+    std::copy(std::begin(other.widths), std::end(other.widths), std::begin(widths));
+    std::copy(std::begin(other.heights), std::end(other.heights), std::begin(heights));
+    std::copy(std::begin(other.channel_sizes), std::end(other.channel_sizes), std::begin(channel_sizes));
+    num_channels = other.num_channels;
+    code_stream_ = other.code_stream_;  // raw pointer copy (or convert to shared_ptr if needed)
+    // Copy private members
+    data_ref_bytes_ = other.data_ref_bytes_;
+    data_ref_arr_ = other.data_ref_arr_;
+    m_width = other.m_width;
+    m_height = other.m_height;
+    return *this;
+}
+
 int CodeStream::ReadImageFromDiskFile(const std::filesystem::path& filename, std::vector<char>& file_data, int& file_size) {
     // Read an image from disk.
     std::ifstream input(filename.c_str(), std::ios::in | std::ios::binary | std::ios::ate);
@@ -104,15 +126,23 @@ int CodeStream::ReadImageFromDiskFile(const std::filesystem::path& filename, std
 
 // Use the dat and its size if valid, otherwise use the file to load the data
 int CodeStream::PrepareStreamForOneImageDecoding(const std::filesystem::path& filename, const unsigned char* data, int data_size) {
+    // File sanity chek
+    if(!filename.empty()) {
+        std::cout << "Input file name: " << filename << std::endl;
+        if(!std::filesystem::exists(filename)) {
+            std::cerr << "Invalid or missing file: " << filename << std::endl;
+        }
+    }
     // Read file data if no data sent
     std::vector<char> file_data;
     int file_size = data_size;
     if (data != nullptr && data_size > 0) {
+        file_data.resize(data_size);
         file_data.assign(reinterpret_cast<const char*>(data), reinterpret_cast<const char*>(data) + data_size);
     }    
-    if(file_size<=0) {
+    if(data == nullptr) {
         int ret = EXIT_SUCCESS;
-        if((ret = ReadImageFromDiskFile(filename, file_data, file_size)))
+        if((ret = ReadImageFromDiskFile(filename, file_data, file_size)) != EXIT_SUCCESS)
             return ret;
     }
 
@@ -120,7 +150,6 @@ int CodeStream::PrepareStreamForOneImageDecoding(const std::filesystem::path& fi
     PY_CHECK_ROCJPEG(rocJpegStreamCreate(&stream_handle));
 
     // Stream Parse
-    std::cout << "Input file name: " << filename << std::endl;
     RocJpegStatus rocjpeg_status = rocJpegStreamParse(reinterpret_cast<uint8_t*>(file_data.data()), file_size, stream_handle);
     if (rocjpeg_status != ROCJPEG_STATUS_SUCCESS) {
         std::cerr << "ERROR: Failed to parse the input jpeg stream with " << rocJpegGetErrorName(rocjpeg_status) << std::endl;
@@ -137,7 +166,8 @@ int CodeStream::PrepareStreamForOneImageDecoding(const std::filesystem::path& fi
     std::string chroma_sub_sampling = "";
     rocjpeg_utils.GetChromaSubsamplingStr(subsampling, chroma_sub_sampling);
     std::cout << "Input image resolution: " << widths[0] << "x" << heights[0] << std::endl;
-    std::cout << "Chroma subsampling: " + chroma_sub_sampling  << std::endl;
+    std::cout << "Chroma subsampling STR: " + chroma_sub_sampling  << std::endl;
+    std::cout << "Chroma subsampling INT: " << static_cast<int>(subsampling)  << std::endl;
     if (widths[0] < 64 || heights[0] < 64) {
         std::cerr << "The image resolution is not supported by VCN Hardware" << std::endl;
         return EXIT_FAILURE;
@@ -179,7 +209,7 @@ CodeStream::CodeStream(const std::filesystem::path& filename) {
 CodeStream::CodeStream(const unsigned char* data, size_t length) {
     PY_CHECK_DECODER();
     // code stream from one file
-    PrepareStreamForOneImageDecoding(static_cast<const std::filesystem::path>(nullptr), data, length);
+    PrepareStreamForOneImageDecoding(static_cast<const std::filesystem::path>(""), data, length);
 }
 
 CodeStream::CodeStream(py::bytes data) {
@@ -188,7 +218,7 @@ CodeStream::CodeStream(py::bytes data) {
     auto data_view = static_cast<std::string_view>(data_ref_bytes_);
     py::gil_scoped_release release;
     // code stream from one file
-    PrepareStreamForOneImageDecoding(static_cast<const std::filesystem::path>(nullptr), reinterpret_cast<const unsigned char*>(data_view.data()), data_view.size());
+    PrepareStreamForOneImageDecoding(static_cast<const std::filesystem::path>(""), reinterpret_cast<const unsigned char*>(data_view.data()), data_view.size());
 }
 
 CodeStream::CodeStream(py::array_t<uint8_t> arr) {
@@ -197,21 +227,13 @@ CodeStream::CodeStream(py::array_t<uint8_t> arr) {
     auto data = data_ref_arr_.unchecked<1>();
     py::gil_scoped_release release;
     // code stream from one file
-    PrepareStreamForOneImageDecoding(static_cast<const std::filesystem::path>(nullptr), data.data(0), data.size());
+    PrepareStreamForOneImageDecoding(static_cast<const std::filesystem::path>(""), data.data(0), data.size());
+}
+
+CodeStream::CodeStream() {
 }
 
 CodeStream::~CodeStream() {
-    // Destroy any allocated MEM
-    for (int i = 0; i < num_channels; i++) {
-        if (output_image.channel[i] != nullptr) {
-            PY_CHECK_HIP(hipFree((void *)output_image.channel[i]));
-            output_image.channel[i] = nullptr;
-        }
-    }
-    // Destroy stream
-    if(stream_handle) {
-        PY_CHECK_ROCJPEG(rocJpegStreamDestroy(stream_handle));
-    }
 }
 
 //

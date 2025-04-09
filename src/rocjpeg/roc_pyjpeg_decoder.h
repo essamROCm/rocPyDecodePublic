@@ -40,11 +40,18 @@ public:
 
     static void exportToPython(py::module& m);
 
-    // keep image(s) info here
-    CodeStream * code_stream; // single -one- process 
-    std::vector<CodeStream*> code_streams; // array -list-,-many-,-batch- process
+    // reset what was allocated and filled before
+    void reset_code_stream_store();
+    void reset_code_streams_store();
+    void reset_image_store();
+    void reset_images_store();
 
-    // to export to python
+
+    // STORE: keep code_stream(s) info here
+    CodeStream code_stream; // single -one- process 
+    std::vector<CodeStream> code_streams; // array -list-,-many-,-batch- process
+
+    // STORE: to export IMAGE/IMAGES-BATCH to python
     PyJpegImages image;
     std::vector<PyJpegImages> images;
 
@@ -52,7 +59,8 @@ private:
     PyRocJpegUtils utils;
     int m_device_id;
     RocJpegBackend m_backend;
-    void AsNumpyHostTensor(CodeStream* code_stream, PyJpegImages* image);
+    void AsNumpyHostTensor_8bits(CodeStream* code_stream, PyJpegImages* image);
+
 };
 
 #endif // PY_ROC_JPEG_HEADER
