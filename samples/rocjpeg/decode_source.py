@@ -32,9 +32,9 @@ def printout_tensor_info(image):
     # ------------
     # GPU Tensor
     # ------------
-    # yuv_tensor = torch.from_dlpack(image.ext_buf[0].__dlpack__(image))
-    # print(f"Device:\t\t\t {yuv_tensor.device}")
-    # print(f"Tensor GPU MEM address:\t {hex(yuv_tensor.data_ptr())}\n")
+    yuv_tensor = torch.from_dlpack(image.ext_buf[0].__dlpack__(image))
+    print(f"Device:\t\t\t {yuv_tensor.device}")
+    print(f"Tensor GPU MEM address:\t {hex(yuv_tensor.data_ptr())}\n")
     # ------------
     #  CPU Tensor
     # ------------
