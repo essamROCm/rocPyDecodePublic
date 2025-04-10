@@ -66,10 +66,11 @@ decoder = jdec.decoder(device_id, backend)
 # TEST (1) DecodeSource() - single file
 # --------------------------------------------------
 print(line, "TEST (1) DecodeSource() single file", line)
-source = jdec.DecodeSource(img_full_path).DecodeSource()
-image = decoder.read(source)
+cs = jdec.DecodeSource(img_full_path).cs()
+width = cs.width
+height = cs.height
+image = decoder.read(cs)
 printout_tensor_info(image)
-
 
 # --------------------------------------------------
 # TEST (2) DecodeSource() - Batch of files
@@ -78,7 +79,9 @@ print(line, "TEST (2) DecodeSource() Batch of files", line)
 image_paths = ["/opt/rocm/share/rocjpeg/images/mug_400.jpg", "/opt/rocm/share/rocjpeg/images/mug_420.jpg", "/opt/rocm/share/rocjpeg/images/mug_422.jpg"]
 batch_size = len(image_paths)
 
-sources = [jdec.DecodeSource(path).DecodeSource() for path in image_paths]
-images = decoder.read(sources)
+cs_list = [jdec.DecodeSource(path).cs() for path in image_paths]
+for i, cs in enumerate(cs_list):
+    print(f"\nimage [{i}] width: {width}\nimage[{i}] height: {height}")
+images = decoder.read(cs_list)
 for i, img in enumerate(images):
     printout_tensor_info(img)

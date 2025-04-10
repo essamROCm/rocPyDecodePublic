@@ -28,8 +28,14 @@ class DecodeSource(object):
             param):
         self.DS = rocpyjpeg.DecodeSource(param)
 
-    def DecodeSource(self):
-        return self.DS.code_stream;
+    def cs(self): # code stream
+        return self.DS.code_stream
+
+    def width(self):
+        return self.DS.width()
+
+    def height(self):
+        return self.DS.height()
 
 
 class decoder(object):

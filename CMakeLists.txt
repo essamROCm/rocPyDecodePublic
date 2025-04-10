@@ -395,7 +395,7 @@ if(BUILD_ROCPYDECODE)
 
     #install rocpyjpegdecode API folder -and- samples folder
     install(DIRECTORY pyRocJpegDecode DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime)
-    install(DIRECTORY samples/rocjpeg DESTINATION ${CMAKE_INSTALL_LIBDIR}/pyRocJpegDecode COMPONENT runtime)
+    install(DIRECTORY samples/rocPyJpeg DESTINATION ${CMAKE_INSTALL_LIBDIR}/pyRocJpegDecode COMPONENT runtime)
 
     # Test - Installed -rocpydecode
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/tests DESTINATION ${CMAKE_INSTALL_DATADIR}/rocpydecode COMPONENT test)
