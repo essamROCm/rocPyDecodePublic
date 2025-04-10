@@ -28,12 +28,15 @@ class DecodeSource(object):
             param):
         self.DS = rocpyjpeg.DecodeSource(param)
 
-    def cs(self): # code stream
+    # return the code stream
+    def cs(self):
         return self.DS.code_stream
 
+    # return the width of the decoded image
     def width(self):
         return self.DS.width()
 
+    # return the height of the decoded image
     def height(self):
         return self.DS.height()
 
@@ -45,13 +48,12 @@ class decoder(object):
             backend = 0):
         self.jpegdec = rocpyjpeg.Decoder(device_id, backend)
 
-    # send actual file path to be opned/read and decoded
+    # read image or batch of images
     def read(self, img_full_bath):
         self.img = self.jpegdec.read(img_full_bath)
         return self.img        
 
-    # send actual file path to be opned/read and decoded
+    # decode image or batch of images
     def decode(self, img_full_bath):
         self.img = self.jpegdec.decode(img_full_bath)
         return self.img
-

@@ -130,7 +130,8 @@ Decoder::Decoder(int device_id, int backend) {
     m_backend = RocJpegBackend(backend);
     // init hip
     RocJpegStatus status = ROCJPEG_STATUS_SUCCESS;
-    if (!utils.InitHipDevice(m_device_id)) {
+    PyRocJpegUtils rocjpeg_utils;
+    if (!rocjpeg_utils.InitHipDevice(m_device_id)) {
         std::cerr << "ERROR: Failed to initialize HIP!" << std::endl;
         status = ROCJPEG_STATUS_RUNTIME_ERROR;
     }

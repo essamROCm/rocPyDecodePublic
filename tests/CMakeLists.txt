@@ -138,26 +138,24 @@ if(Python3_FOUND AND ROCPYDECODE_PYBIND_SCRIPTS)
       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   )
   set_property(TEST video_decode_python_AV9 PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
-  # 12 - jpegdecode_test
+  # 12 - jpeg_decode_single_file_test
   list(APPEND CMAKE_PREFIX_PATH ${ROCM_PATH}/lib/cmake)
   find_package(ROCJPEG QUIET)
   if(ROCJPEG_FOUND)
     if(${ROCJPEG_VERSION_MAJOR} VERSION_GREATER "0" OR
       (${ROCJPEG_VERSION_MAJOR} VERSION_EQUAL "0" AND ${ROCJPEG_VERSION_MINOR} VERSION_GREATER_EQUAL "11") OR
       (${ROCJPEG_VERSION_MAJOR} VERSION_EQUAL "0" AND ${ROCJPEG_VERSION_MINOR} VERSION_EQUAL "11" AND ${ROCJPEG_VERSION_PATCH} VERSION_GREATER_EQUAL "1"))
-        add_test(NAME jpeg_decode_python
+        add_test(NAME jpeg_decode_single_file_python
               COMMAND ${Python3_EXECUTABLE}
-              ${ROCM_PATH}/lib/pyRocVideoDecode/samples/rocjpeg/jpegdecode.py
-              -i ${ROCM_PATH}/share/rocjpeg/images/
+              ${ROCM_PATH}/lib/pyRocVideoDecode/tests/rocPyJpeg/test_single_file_jpeg_decode.py #-i ${ROCM_PATH}/share/rocjpeg/images/
               WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-        set_property(TEST jpeg_decode_python PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
+        set_property(TEST jpeg_decode_single_file_python PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
         # 13 - jpegdecodebatched_test
-        add_test(NAME jpeg_decodebatched_python
+        add_test(NAME jpeg_decode_batched_files_python
               COMMAND ${Python3_EXECUTABLE}
-              ${ROCM_PATH}/lib/pyRocVideoDecode/samples/rocjpeg/jpegdecodebatched.py
-              -i ${ROCM_PATH}/share/rocjpeg/images/ -bs 3
+              ${ROCM_PATH}/lib/pyRocVideoDecode/tests/rocPyJpeg/test_batched_files_jpeg_decode.py # -i ${ROCM_PATH}/share/rocjpeg/images/ -bs 3
               WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-        set_property(TEST jpeg_decodebatched_python PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
+        set_property(TEST jpeg_decode_batched_files_python PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
     endif()
   endif()
 else()

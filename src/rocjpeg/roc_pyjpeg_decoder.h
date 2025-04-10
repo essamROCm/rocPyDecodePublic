@@ -56,7 +56,6 @@ public:
     std::vector<PyJpegImages> images;
 
 private:    
-    PyRocJpegUtils utils;
     int m_device_id;
     RocJpegBackend m_backend;
     void AsNumpyHostTensor_8bits(CodeStream* code_stream, PyJpegImages* image);
