@@ -49,10 +49,3 @@ class decoder(object):
         self.img = self.jpegdec.decode(img_full_bath)
         return self.img
 
-    # send in-memory data to be decoded
-    def DecodeSource(self, img_data):
-        file_array = img_data
-        if isinstance(img_data, (bytes, bytearray)):
-            file_array = np.frombuffer(img_data, dtype=np.uint8)
-        self.img = self.jpegdec.DecodeSource(file_array)
-        return self.img
