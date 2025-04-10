@@ -147,13 +147,13 @@ if(Python3_FOUND AND ROCPYDECODE_PYBIND_SCRIPTS)
       (${ROCJPEG_VERSION_MAJOR} VERSION_EQUAL "0" AND ${ROCJPEG_VERSION_MINOR} VERSION_EQUAL "11" AND ${ROCJPEG_VERSION_PATCH} VERSION_GREATER_EQUAL "1"))
         add_test(NAME jpeg_decode_single_file_python
               COMMAND ${Python3_EXECUTABLE}
-              ${ROCM_PATH}/lib/pyRocVideoDecode/tests/rocPyJpeg/test_single_file_jpeg_decode.py #-i ${ROCM_PATH}/share/rocjpeg/images/
+              ${ROCM_PATH}/lib/pyRocVideoDecode/samples/rocjpeg/test_single_file_jpeg_decode.py
               WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
         set_property(TEST jpeg_decode_single_file_python PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
         # 13 - jpegdecodebatched_test
         add_test(NAME jpeg_decode_batched_files_python
               COMMAND ${Python3_EXECUTABLE}
-              ${ROCM_PATH}/lib/pyRocVideoDecode/tests/rocPyJpeg/test_batched_files_jpeg_decode.py # -i ${ROCM_PATH}/share/rocjpeg/images/ -bs 3
+              ${ROCM_PATH}/lib/pyRocVideoDecode/samples/rocjpeg/test_batched_files_jpeg_decode.py
               WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
         set_property(TEST jpeg_decode_batched_files_python PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
     endif()
