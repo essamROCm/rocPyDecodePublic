@@ -58,37 +58,40 @@ line = '\n' + '-' * 40 + '\n'
 device_id = 0
 backend = 0
 
-img_full_path = "/opt/rocm/share/rocjpeg/images/mug_420.jpg"
+image_paths = ["/opt/rocm/share/rocjpeg/images/mug_400.jpg", "/opt/rocm/share/rocjpeg/images/mug_420.jpg", "/opt/rocm/share/rocjpeg/images/mug_422.jpg"]
+batch_size = len(image_paths)
 
 decoder = jdec.decoder(device_id, backend)
 
 # --------------------------------------------------
-# TEST (1) single file
+# TEST (1) LIST of 'files' (Batch)
 # --------------------------------------------------
-print(line, "TEST (1) decode single file", line)
-image = decoder.read(img_full_path)
-printout_tensor_info(image)
+print(line, "TEST (1) batch of files", line)
+images = decoder.decode(image_paths)
+for i in range(batch_size):
+    printout_tensor_info(images[i])
 
 # --------------------------------------------------
-# TEST (2) data (from file)
+# TEST (2) LIST of 'data' (Batch)
 # --------------------------------------------------
-try:
-    with open(img_full_path, 'rb') as in_file:
+print(line, "TEST (2) batch of data", line)
+data_list = []
+for p in image_paths:
+    with open(p, 'rb') as in_file:
         data = in_file.read()
-        if not data:
-            raise ValueError("File is empty.")
-except Exception as e:
-    print(f"Failed to read file: {e}")
-print("Type of data:", type(data))
-print(line, "TEST (2) data (buffer)", line)
-image = decoder.decode(data)
-printout_tensor_info(image)
+        data_list.append(data)
+print("Type of data:", type(data_list))
+image_list = decoder.decode(data_list)
+for img in image_list:
+    printout_tensor_info(img)
 
 # --------------------------------------------------
-# TEST (3) array (in-memory numpy buffer from file)
+# TEST (3) LIST of 'arrays' (Batch) numpy arrays
 # --------------------------------------------------
-# Decode source is a numpy array (in-memory)
-np_arr = np.fromfile(img_full_path, dtype=np.uint8)
-print(line, "TEST (3) array (numpy)", line)
-image = decoder.decode(np_arr)
-printout_tensor_info(image)
+print(line, "TEST (3) batch of numpy Array(s)", line)
+arrays_list = []
+for p in image_paths:
+    arrays_list.append(np.fromfile(p, dtype=np.uint8))
+images_from_array_list = decoder.decode(arrays_list)
+for img in images_from_array_list:
+    printout_tensor_info(img)
