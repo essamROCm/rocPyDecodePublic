@@ -36,7 +36,7 @@ public:
     ~Decoder();
 
     PyJpegImages decode(DecodeSource* data);
-    std::vector<PyJpegImages> decode(std::vector<DecodeSource*>& data_list);
+    std::vector<std::shared_ptr<PyJpegImages>> decode(std::vector<DecodeSource*>& data_list);
 
     static void exportToPython(py::module& m);
 
@@ -46,20 +46,21 @@ public:
     void reset_image_store();
     void reset_images_store();
 
+    // set batch size for batch process
+    void set_batch_size(int batch_size);
 
     // STORE: keep code_stream(s) info here
-    CodeStream code_stream; // single -one- process 
-    std::vector<CodeStream> code_streams; // array -list-,-many-,-batch- process
+    std::vector<CodeStream> code_stream; // add all live instance
 
     // STORE: to export IMAGE/IMAGES-BATCH to python
-    PyJpegImages image;
-    std::vector<PyJpegImages> images;
+    std::vector<PyJpegImages> image;                        // all live instance
+    std::vector<std::shared_ptr<PyJpegImages>> image_list;  // only this instance batch images addresses
 
 private:    
     int m_device_id;
     RocJpegBackend m_backend;
     void AsNumpyHostTensor_8bits(CodeStream* code_stream, PyJpegImages* image);
-
+    int m_batch_size = 2; // default, not used for now
 };
 
 #endif // PY_ROC_JPEG_HEADER

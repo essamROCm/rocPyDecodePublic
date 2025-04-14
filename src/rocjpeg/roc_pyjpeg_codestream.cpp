@@ -128,9 +128,10 @@ int CodeStream::ReadImageFromDiskFile(const std::filesystem::path& filename, std
 int CodeStream::PrepareStreamForOneImageDecoding(const std::filesystem::path& filename, const unsigned char* data, int data_size) {
     // File sanity chek
     if(!filename.empty()) {
-        std::cout << "Input file name: " << filename << std::endl;
+        // std::cout << "Input file name: " << filename << std::endl;
         if(!std::filesystem::exists(filename)) {
             std::cerr << "Invalid or missing file: " << filename << std::endl;
+            return EXIT_FAILURE;
         }
     }
     // Read file data if no data sent
@@ -142,15 +143,21 @@ int CodeStream::PrepareStreamForOneImageDecoding(const std::filesystem::path& fi
     }    
     if(data == nullptr) {
         int ret = EXIT_SUCCESS;
-        if((ret = ReadImageFromDiskFile(filename, file_data, file_size)) != EXIT_SUCCESS)
+        if((ret = ReadImageFromDiskFile(filename, file_data, file_size)) != EXIT_SUCCESS) {
             return ret;
+        }
     }
 
     // Create Stream
-    PY_CHECK_ROCJPEG(rocJpegStreamCreate(&stream_handle));
+    RocJpegStatus rocjpeg_status = ROCJPEG_STATUS_NOT_INITIALIZED;
+    rocjpeg_status = rocJpegStreamCreate(&stream_handle);
+    if (rocjpeg_status != ROCJPEG_STATUS_SUCCESS) {
+        std::cerr << "ERROR: Failed to create stream with " << rocJpegGetErrorName(rocjpeg_status) << std::endl;
+        return EXIT_FAILURE;
+    }
 
     // Stream Parse
-    RocJpegStatus rocjpeg_status = rocJpegStreamParse(reinterpret_cast<uint8_t*>(file_data.data()), file_size, stream_handle);
+    rocjpeg_status = rocJpegStreamParse(reinterpret_cast<uint8_t*>(file_data.data()), file_size, stream_handle);
     if (rocjpeg_status != ROCJPEG_STATUS_SUCCESS) {
         std::cerr << "ERROR: Failed to parse the input jpeg stream with " << rocJpegGetErrorName(rocjpeg_status) << std::endl;
         return EXIT_FAILURE;
@@ -159,15 +166,20 @@ int CodeStream::PrepareStreamForOneImageDecoding(const std::filesystem::path& fi
     // Get Image Info
     uint8_t num_components = 0;
     subsampling = ROCJPEG_CSS_UNKNOWN;
-    PY_CHECK_ROCJPEG(rocJpegGetImageInfo(rocjpeg_handle, stream_handle, &num_components, &subsampling, widths, heights));
+    rocjpeg_status = rocJpegGetImageInfo(rocjpeg_handle, stream_handle, &num_components, &subsampling, widths, heights);
+
+    if (rocjpeg_status != ROCJPEG_STATUS_SUCCESS) {
+        std::cerr << "ERROR: Failed to  get image info with " << rocJpegGetErrorName(rocjpeg_status) << std::endl;
+        return EXIT_FAILURE;
+    }
 
     // Check limits of w/h & subsampling
     PyRocJpegUtils rocjpeg_utils;
     std::string chroma_sub_sampling = "";
     rocjpeg_utils.GetChromaSubsamplingStr(subsampling, chroma_sub_sampling);
-    std::cout << "Input image resolution: " << widths[0] << "x" << heights[0] << std::endl;
-    std::cout << "Chroma subsampling STR: " + chroma_sub_sampling  << std::endl;
-    std::cout << "Chroma subsampling INT: " << static_cast<int>(subsampling)  << std::endl;
+    // std::cout << "Input image resolution: " << widths[0] << "x" << heights[0] << std::endl;
+    // std::cout << "Chroma subsampling STR: " + chroma_sub_sampling  << std::endl;
+    // std::cout << "Chroma subsampling INT: " << static_cast<int>(subsampling)  << std::endl;
     if (widths[0] < 64 || heights[0] < 64) {
         std::cerr << "The image resolution is not supported by VCN Hardware" << std::endl;
         return EXIT_FAILURE;
@@ -177,7 +189,7 @@ int CodeStream::PrepareStreamForOneImageDecoding(const std::filesystem::path& fi
         return EXIT_FAILURE;
     }    
 
-    // save to inner store
+    // save the output w/h to the inner store
     m_width = widths[0];
     m_height = heights[0];
 
@@ -190,26 +202,35 @@ int CodeStream::PrepareStreamForOneImageDecoding(const std::filesystem::path& fi
     }
 
     // allocate memory for each channel
+    hipError_t hip_status = hipSuccess;
     for (int i = 0; i < num_channels; i++) {
             if (output_image.channel[i] != nullptr) {
-                PY_CHECK_HIP(hipFree((void *)output_image.channel[i]));
+                hip_status = hipFree((void *)output_image.channel[i]);
+                if (hip_status != hipSuccess)
+                    return EXIT_FAILURE;
                 output_image.channel[i] = nullptr;
             }
-            PY_CHECK_HIP(hipMalloc(&output_image.channel[i], channel_sizes[i]));
+            hip_status = hipMalloc(&output_image.channel[i], channel_sizes[i]);
+            if (hip_status != hipSuccess)
+                return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;
 }
 
 CodeStream::CodeStream(const std::filesystem::path& filename) {
     PY_CHECK_DECODER();
-    // code stream from one file
-    PrepareStreamForOneImageDecoding(filename, nullptr, 0);
+    set_valid(false);
+    if( PrepareStreamForOneImageDecoding(filename, nullptr, 0) == EXIT_SUCCESS) {
+        set_valid(true); // this code_stream instance is OK to use
+    }
 }
 
 CodeStream::CodeStream(const unsigned char* data, size_t length) {
     PY_CHECK_DECODER();
-    // code stream from one file
-    PrepareStreamForOneImageDecoding(static_cast<const std::filesystem::path>(""), data, length);
+    set_valid(false);
+    if( PrepareStreamForOneImageDecoding(static_cast<const std::filesystem::path>(""), data, length) == EXIT_SUCCESS) {
+        set_valid(true); // this code_stream instance is OK to use
+    }
 }
 
 CodeStream::CodeStream(py::bytes data) {
@@ -217,8 +238,10 @@ CodeStream::CodeStream(py::bytes data) {
     data_ref_bytes_ = data;
     auto data_view = static_cast<std::string_view>(data_ref_bytes_);
     py::gil_scoped_release release;
-    // code stream from one file
-    PrepareStreamForOneImageDecoding(static_cast<const std::filesystem::path>(""), reinterpret_cast<const unsigned char*>(data_view.data()), data_view.size());
+    set_valid(false);
+    if( PrepareStreamForOneImageDecoding(static_cast<const std::filesystem::path>(""), reinterpret_cast<const unsigned char*>(data_view.data()), data_view.size()) == EXIT_SUCCESS) {
+        set_valid(true); // this code_stream instance is OK to use
+    }
 }
 
 CodeStream::CodeStream(py::array_t<uint8_t> arr) {
@@ -226,8 +249,10 @@ CodeStream::CodeStream(py::array_t<uint8_t> arr) {
     data_ref_arr_ = arr;
     auto data = data_ref_arr_.unchecked<1>();
     py::gil_scoped_release release;
-    // code stream from one file
-    PrepareStreamForOneImageDecoding(static_cast<const std::filesystem::path>(""), data.data(0), data.size());
+    set_valid(false);
+    if( PrepareStreamForOneImageDecoding(static_cast<const std::filesystem::path>(""), data.data(0), data.size()) == EXIT_SUCCESS) {
+        set_valid(true); // this code_stream instance is OK to use
+    }
 }
 
 CodeStream::CodeStream() {

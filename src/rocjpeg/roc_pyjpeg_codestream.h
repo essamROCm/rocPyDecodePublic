@@ -61,6 +61,15 @@ public:
     uint32_t channel_sizes[ROCJPEG_MAX_COMPONENT] = {};
     uint32_t num_channels = 0;
 
+    void set_valid(bool state) {valid = state;};
+    bool is_valid() {return valid;};
+
+    // flag indicates this instance of the code_stream is valid to use
+    // when false means the file/data associated with it to be decoded
+    // found invalid, corrupted or has issues prevent from decoding it properly
+protected:
+    bool valid;
+
 private:
     // to keep a reference to the argument data, so that they are kept alive throughout the lifetime of the object
     py::bytes data_ref_bytes_;

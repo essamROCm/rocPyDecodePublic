@@ -68,6 +68,9 @@ public:
         }
     };
 
+    void set_valid(bool state) {valid = state;};
+    bool is_valid() {return valid;};
+
     // to export as GPU MEM (dlpack)
     std::vector<std::shared_ptr<BufferInterface>> ext_buf;
 
@@ -89,6 +92,12 @@ public:
             strides.push_back(item.cast<ssize_t>());
         return py::array_t<uint8_t>(shape, strides, cpu_data_temp_8bits, py::cast(buf));
     }
+
+    // flag indicates this instance of the PyJpegImages is valid to use
+    // when false means the file/data associated with it to be decoded
+    // found invalid, corrupted or has issues prevent from decoding it properly
+protected:
+    bool valid = false;
 };
 
 #endif // PY_ROC_JPEG_PYBIND11_HEADER

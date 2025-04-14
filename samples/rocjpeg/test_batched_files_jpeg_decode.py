@@ -23,6 +23,9 @@ import pyRocJpegDecode.decoder as jdec
 import numpy as np
 
 def printout_tensor_info(image):
+    if(not image.is_valid()):
+        print("INVALID Image.")
+        return    
     # print GPU tensor details
     print("\n", type(image))
     print("Tensor Shape:   ", image.ext_buf[0].shape)
