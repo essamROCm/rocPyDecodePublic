@@ -84,13 +84,12 @@ public:
         auto& buf = ext_buf[index];
         uint8_t* data_ptr = static_cast<uint8_t*>(buf->data());
         py::tuple py_shape = buf->shape();
-        py::tuple py_strides = buf->strides();
-        std::vector<ssize_t> shape, strides;
-        for (auto item : py_shape)
-            shape.push_back(item.cast<ssize_t>());
-        for (auto item : py_strides)
-            strides.push_back(item.cast<ssize_t>());
-        return py::array_t<uint8_t>(shape, strides, cpu_data_temp_8bits, py::cast(buf));
+        const ssize_t height   = py_shape[0].cast<ssize_t>();
+        const ssize_t width    = py_shape[1].cast<ssize_t>();
+        const ssize_t channels = py_shape[2].cast<ssize_t>();
+        std::vector<ssize_t> shape   = { height, width, channels };
+        std::vector<ssize_t> strides = { width * channels, channels, 1 };
+        return py::array_t<uint8_t>(shape, strides, data_ptr, py::cast(buf));
     }
 
     // flag indicates this instance of the PyJpegImages is valid to use

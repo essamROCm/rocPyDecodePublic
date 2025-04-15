@@ -141,82 +141,52 @@ Decoder::Decoder(int device_id, int backend) {
 }
 
 PyJpegImages Decoder::decode(DecodeSource* data) {
-     // keep code stream ptr in class (alive)
-     assert(data);
+    // keep code stream ptr in class (alive)
+    assert(data);
 
-     // to return at least an empty/invalid one image record
-     PyJpegImages img;
-     img.set_valid(false);
-     image.push_back(img);  // Push default/empty/invalid PyJpegImages
+    // to return at least an empty/invalid one image record
+    PyJpegImages img;
+    img.set_valid(false);
+    image.push_back(img);  // Push default/empty/invalid PyJpegImages
 
-     // get current data/file associated code_stream instance
-     code_stream.push_back(*data->code_stream()->handle());
+    // get current data/file associated code_stream instance
+    code_stream.push_back(*data->code_stream()->handle());
 
-     // runtime sanity check
-     if(!code_stream.back().is_valid()) {
-         return image.back(); // last item is this instance
-     }
+    // runtime sanity check
+    if(!code_stream.back().is_valid()) {
+        return image.back(); // last item is this instance
+    }
 
-     // Here call to DECODE one single JPEG image
-     // >>>>>> do not forget to set to RGB output format <<<<<<<<<
-     RocJpegStatus status = rocJpegDecode(rocjpeg_handle, code_stream.back().stream_handle, &code_stream.back().decode_params, &code_stream.back().output_image);
+    // Here call to DECODE one single JPEG image
+    RocJpegStatus status = rocJpegDecode(rocjpeg_handle, code_stream.back().stream_handle, &code_stream.back().decode_params, &code_stream.back().output_image);
 
-     if (status != ROCJPEG_STATUS_SUCCESS) {
-         std::cerr << "ERROR: Failed to decode image. Status code: " << status << std::endl;
-         return image.back();
-     }
+    if (status != ROCJPEG_STATUS_SUCCESS) {
+        std::cerr << "ERROR: Failed to decode image. Status code: " << status << std::endl;
+        return image.back();
+    }
 
-     //
-     // to export to python (use dlpack(GPU MEM) {and numpy host array})
-     //
-     if(code_stream.back().output_image.channel[0]) {
-         uint32_t width = code_stream.back().width();
-         uint32_t height = code_stream.back().height();
-         uint32_t surf_stride = width;
-         uint32_t bit_depth = 8;
-         std::string type_str;
-         std::vector<size_t> stride;
-         // 8 bits
-         type_str = static_cast<const char*>("|u1");
-         stride.push_back(static_cast<size_t>(surf_stride));
-         stride.push_back(sizeof(uint8_t));
+    // to export to python (use dlpack(GPU MEM) {and numpy host array})
 
-         // Assuming NV12: need to add specific cases with 'switch' for RGB and planar (not yet)
+    // GPU Tensor
+    AsGPUTensor_dlpack_8bits(&code_stream.back(), &image.back());
+    // numpy - (CPU mem)
+    if(AsNumpyHostTensor_8bits(&code_stream.back(), &image.back()) == true)
+        image.back().set_valid(true);// mark it as valid
 
-         // use dlpack to export as GPU Tensor
-         std::vector<size_t> shape{ static_cast<size_t>(height * 1.5f), static_cast<size_t>(width)};
-
-         // dlpack - GPU MEM
-         image.back().ext_buf[0]->LoadDLPack(shape, stride, bit_depth, type_str, (void *)code_stream.back().output_image.channel[0], m_device_id);
-
-         // numpy - (CPU mem)
-         AsNumpyHostTensor_8bits(&code_stream.back(), &image.back());
-
-         // mark it as valid
-         image.back().set_valid(true);
-     }
-     return image.back(); // return one image
+    return image.back(); // return one image
 }
 
 std::vector<std::shared_ptr<PyJpegImages>> Decoder::decode(std::vector<DecodeSource*>& decode_source_arg) {
-
+    int count_of_valid_instances = 0;
     std::vector<RocJpegStreamHandle> stream_handles;
     std::vector<RocJpegDecodeParams> decode_params_list;
     std::vector<RocJpegImage> destinations;
 
-    std::cout << "code_stream STORE actual size now: " << static_cast<int>(code_stream.size()) << std::endl;
-    std::cout << "image       STORE actual size now: " << static_cast<int>(image.size()) << std::endl;
-
     int batch_size = decode_source_arg.size();
-    std::cout << "Batch Size: " << static_cast<int>(batch_size) << std::endl;
 
     // save current index at the main store
     int ndx = code_stream.size();
     int start_index = (ndx<=0) ? 0 : ndx;
-
-    std::cout << "Index: " << static_cast<int>(start_index) << std::endl;
-
-    // The image store is parallel with the code_stream store, same indexing
 
     // we return a list of images anyway, create empty count of batch_size
     PyJpegImages img;
@@ -225,13 +195,8 @@ std::vector<std::shared_ptr<PyJpegImages>> Decoder::decode(std::vector<DecodeSou
         image.push_back(img);
     }
 
-    int count_of_valid_instances = 0;
-
-    //---------------------------
     // loop the whole list length
-    //---------------------------
     for (auto* data : decode_source_arg) {
-
         if (!data) {
             std::cerr << "Warning: Null DecodeSource* skipped." << std::endl;
             // push empty/invalid record
@@ -256,8 +221,6 @@ std::vector<std::shared_ptr<PyJpegImages>> Decoder::decode(std::vector<DecodeSou
         }
     }
 
-    std::cout << "count_of_valid_instances: " << static_cast<int>(count_of_valid_instances) << std::endl;
-
     // at least one
     RocJpegStatus status = ROCJPEG_STATUS_SUCCESS;
     if(count_of_valid_instances) {
@@ -273,76 +236,34 @@ std::vector<std::shared_ptr<PyJpegImages>> Decoder::decode(std::vector<DecodeSou
         }
     }
 
-    std::cout << "code_stream STORE actual size now: " << static_cast<int>(code_stream.size()) << std::endl;
-    std::cout << "image       STORE actual size now: " << static_cast<int>(image.size()) << std::endl;
-
-    //
     // to export to python (use dlpack(GPU MEM) {and numpy host array})
-    //
-    int valid_images = 0;
+
     if (status == ROCJPEG_STATUS_SUCCESS) {
-
-        std::cout << "start_index: " << static_cast<int>(start_index) << std::endl;
-        std::cout << "start_index+batch_size: " << static_cast<int>(start_index+batch_size) << std::endl;
-
         for(int i=start_index; i<(start_index+batch_size); i++) {
-
             // is it an OK instance?
             image[i].set_valid(false);
             if(!code_stream[i].is_valid()) {
                 continue;
             }
-
-            if(code_stream[i].output_image.channel[0]) {
-                uint32_t width = code_stream[i].width();
-                uint32_t height = code_stream[i].height();
-                uint32_t surf_stride = width;
-                uint32_t bit_depth = 8;
-                std::string type_str;
-                std::vector<size_t> stride;
-                // 8 bits
-                type_str = static_cast<const char*>("|u1");
-                stride.push_back(static_cast<size_t>(surf_stride));
-                stride.push_back(sizeof(uint8_t));
-
-                // use dlpack to export as GPU Tensor
-                std::vector<size_t> shape{ static_cast<size_t>(height * 1.5f), static_cast<size_t>(width)};
-
-                // dlpack - GPU MEM
-                image[i].ext_buf[0]->LoadDLPack(shape, stride, bit_depth, type_str, (void *)code_stream[i].output_image.channel[0], m_device_id);
-
-                // numpy - (CPU mem)
-                AsNumpyHostTensor_8bits(&code_stream[i], &image[i]); // [i] is the index of the 'OK' image record
-
-                // mark it as OK
-                image[i].set_valid(true);
-                valid_images ++;
-            }
+            // GPU Tensor
+            AsGPUTensor_dlpack_8bits(&code_stream[i], &image[i]);
+            // numpy - (CPU mem)
+            if(AsNumpyHostTensor_8bits(&code_stream[i], &image[i]) == false) // [i] is the index of the 'OK' image record
+                continue;
+            // mark it as OK
+            image[i].set_valid(true);
         }
     }
-
-    std::cout << "valid_images: " << static_cast<int>(valid_images) << std::endl;
 
     image_list.clear();  // Ensure the output list is empty
     size_t end_index = std::min( static_cast<size_t>(start_index + batch_size), static_cast<size_t>(image.size()));
     for (size_t i = start_index; i < end_index; ++i) {
         image_list.push_back(std::make_shared<PyJpegImages>(image[i]));
     }
-
     return image_list; // return the image list
 }
 
-void Decoder::AsNumpyHostTensor_8bits(CodeStream* code_stream, PyJpegImages* image) {
-    // use current stream info
-    RocJpegImage *output_image = &code_stream->output_image;
-    uint32_t img_width = code_stream->width();
-    uint32_t img_height = code_stream->height();
-    RocJpegChromaSubsampling subsampling = code_stream->subsampling;
-    RocJpegOutputFormat output_format = code_stream->decode_params.output_format;
-    hipError_t hip_status = hipSuccess;
-    uint32_t widths[ROCJPEG_MAX_COMPONENT] = {}; // not used for now
-    uint32_t heights[ROCJPEG_MAX_COMPONENT] = {};
-
+bool Decoder::get_widths_heights_from_output_format(std::vector<uint32_t>& widths, std::vector<uint32_t>& heights, uint32_t img_width, uint32_t img_height, RocJpegOutputFormat output_format, RocJpegChromaSubsampling subsampling) {
     switch (output_format) {
         case ROCJPEG_OUTPUT_NATIVE:
             switch (subsampling) {
@@ -370,7 +291,7 @@ void Decoder::AsNumpyHostTensor_8bits(CodeStream* code_stream, PyJpegImages* ima
                     break;
                 default:
                     std::cout << "Unknown chroma subsampling!" << std::endl;
-                    return;
+                    return false;
             }
             break;
         case ROCJPEG_OUTPUT_YUV_PLANAR:
@@ -401,7 +322,7 @@ void Decoder::AsNumpyHostTensor_8bits(CodeStream* code_stream, PyJpegImages* ima
                     break;
                 default:
                     std::cout << "Unknown chroma subsampling!" << std::endl;
-                    return;
+                    return false;
             }
             break;
         case ROCJPEG_OUTPUT_Y:
@@ -418,8 +339,49 @@ void Decoder::AsNumpyHostTensor_8bits(CodeStream* code_stream, PyJpegImages* ima
             break;
         default:
             std::cout << "Unknown output format!" << std::endl;
-            return;
+            return false;
     }
+    return true;
+}
+
+bool Decoder::AsGPUTensor_dlpack_8bits(CodeStream* code_stream, PyJpegImages* image) {
+    uint32_t img_width = code_stream->width();
+    uint32_t img_height = code_stream->height();
+    RocJpegChromaSubsampling subsampling = code_stream->subsampling;
+    RocJpegOutputFormat output_format = code_stream->decode_params.output_format;
+    std::vector<uint32_t> widths;
+    std::vector<uint32_t> heights;
+    widths.resize(ROCJPEG_MAX_COMPONENT);
+    heights.resize(ROCJPEG_MAX_COMPONENT);
+     if( get_widths_heights_from_output_format(widths, heights, img_width, img_height, output_format, subsampling) == false)
+        return false;
+    // 8 bits - Assuming output_format = ROCJPEG_OUTPUT_RGB (interleaved RGB)
+    uint32_t bit_depth = 8;
+    std::string type_str(static_cast<const char*>("|u1"));
+    uint32_t surf_stride = widths[0]; // ROCJPEG_OUTPUT_RGB width is * 3 for RGB interleaved
+    std::vector<size_t> shape{ static_cast<size_t>(heights[0]), static_cast<size_t>(widths[0]/3), 3};
+    std::vector<size_t> stride{ static_cast<size_t>(surf_stride), 1, 0}; // python assumes same dim for both shape & strides
+    // interleaved RGB using VCN JPEG decoder written to first channel of RocJpegImage
+    image->ext_buf[0]->LoadDLPack(shape, stride, bit_depth, type_str, (void *)code_stream->output_image.channel[0], m_device_id);
+    return true;
+}
+
+bool Decoder::AsNumpyHostTensor_8bits(CodeStream* code_stream, PyJpegImages* image) {
+    // use current stream info
+    RocJpegImage *output_image = &code_stream->output_image;
+    uint32_t img_width = code_stream->width();
+    uint32_t img_height = code_stream->height();
+    RocJpegChromaSubsampling subsampling = code_stream->subsampling;
+    RocJpegOutputFormat output_format = code_stream->decode_params.output_format;
+    hipError_t hip_status = hipSuccess;
+    std::vector<uint32_t> widths;
+    std::vector<uint32_t> heights;
+
+    widths.resize(ROCJPEG_MAX_COMPONENT);
+    heights.resize(ROCJPEG_MAX_COMPONENT);
+
+    if( get_widths_heights_from_output_format(widths, heights, img_width, img_height, output_format, subsampling) == false)
+        return false;
 
     uint32_t channel0_size = output_image->pitch[0] * heights[0];
     uint32_t channel1_size = output_image->pitch[1] * heights[1];
@@ -430,20 +392,27 @@ void Decoder::AsNumpyHostTensor_8bits(CodeStream* code_stream, PyJpegImages* ima
         image->cpu_data_temp_8bits = new uint8_t[output_image_size];
     }
 
-    // copy channel0
+    // copy channel0 (interleaved RGB)
     if (channel0_size != 0 && output_image->channel[0] != nullptr) {
-        PY_CHECK_HIP(hipMemcpyDtoH((void *)image->cpu_data_temp_8bits, output_image->channel[0], channel0_size));
+        hip_status = hipMemcpyDtoH((void *)image->cpu_data_temp_8bits, output_image->channel[0], channel0_size);
+        if (hip_status != hipSuccess)
+            return false;
     }
     // copy channel1
     if (channel1_size != 0 && output_image->channel[1] != nullptr) {
         uint8_t *channel1_hst_ptr = image->cpu_data_temp_8bits + channel0_size;
-        PY_CHECK_HIP(hipMemcpyDtoH((void *)channel1_hst_ptr, output_image->channel[1], channel1_size));
+        hip_status = hipMemcpyDtoH((void *)channel1_hst_ptr, output_image->channel[1], channel1_size);
+        if (hip_status != hipSuccess)
+            return false;
     }
     // copy channel2
     if (channel2_size != 0 && output_image->channel[2] != nullptr) {
         uint8_t *channel2_hst_ptr = image->cpu_data_temp_8bits + channel0_size + channel1_size;
-        PY_CHECK_HIP(hipMemcpyDtoH((void *)channel2_hst_ptr, output_image->channel[2], channel2_size));
+        hip_status = hipMemcpyDtoH((void *)channel2_hst_ptr, output_image->channel[2], channel2_size);
+        if (hip_status != hipSuccess)
+        return false;
     }
+    return true;
 }
 
 void Decoder::reset_code_stream_store() {

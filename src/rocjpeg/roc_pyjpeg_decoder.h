@@ -42,9 +42,7 @@ public:
 
     // reset what was allocated and filled before
     void reset_code_stream_store();
-    void reset_code_streams_store();
     void reset_image_store();
-    void reset_images_store();
 
     // set batch size for batch process
     void set_batch_size(int batch_size);
@@ -59,7 +57,9 @@ public:
 private:    
     int m_device_id;
     RocJpegBackend m_backend;
-    void AsNumpyHostTensor_8bits(CodeStream* code_stream, PyJpegImages* image);
+    bool AsGPUTensor_dlpack_8bits(CodeStream* code_stream, PyJpegImages* image);
+    bool AsNumpyHostTensor_8bits(CodeStream* code_stream, PyJpegImages* image);
+    bool get_widths_heights_from_output_format(std::vector<uint32_t>& widths, std::vector<uint32_t>& heights, uint32_t img_width, uint32_t img_height, RocJpegOutputFormat output_format, RocJpegChromaSubsampling subsampling);
     int m_batch_size = 2; // default, not used for now
 };
 

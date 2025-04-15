@@ -71,6 +71,15 @@ decoder = jdec.decoder(device_id, backend)
 print(line, "TEST (1) decode single file", line)
 image = decoder.read(img_full_path)
 printout_tensor_info(image)
+# test shape:
+if len(image.shape) == 3:
+    height, width, channels = image.shape
+    print(f"Width = {width}, Height = {height}, Channels = {channels}")
+elif len(image.shape) == 2:
+    height, width = image.shape
+    print(f"Width = {width}, Height = {height} (grayscale image)")
+else:
+    print("Unexpected shape:", image.shape)
 
 # --------------------------------------------------
 # TEST (2) data (from file)

@@ -195,7 +195,8 @@ int CodeStream::PrepareStreamForOneImageDecoding(const std::filesystem::path& fi
 
     // Get Channel Pitch And Sizes
     memset(&decode_params, 0, sizeof(RocJpegDecodeParams));
-    memset(&output_image, 0, sizeof(RocJpegImage));    
+    memset(&output_image, 0, sizeof(RocJpegImage));
+    decode_params.output_format = ROCJPEG_OUTPUT_RGB; // width will be * 3
     if (rocjpeg_utils.GetChannelPitchAndSizes(decode_params, subsampling, widths, heights, num_channels, output_image, channel_sizes)) {
         std::cerr << "ERROR: Failed to get the channel pitch and sizes" << std::endl;
         return EXIT_FAILURE;
