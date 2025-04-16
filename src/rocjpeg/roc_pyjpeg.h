@@ -58,16 +58,9 @@ public:
         ext_buf.push_back(std::make_shared<BufferInterface>());
         ext_buf.push_back(std::make_shared<BufferInterface>());
         ext_buf.push_back(std::make_shared<BufferInterface>());
-        // init CPU mem -python buffer
-        cpu_data_temp_8bits = nullptr;
     }
 
-    ~PyJpegImages(){
-        if(cpu_data_temp_8bits) {
-            hipError_t hip_status = hipFree((void *)cpu_data_temp_8bits);
-            cpu_data_temp_8bits = nullptr;
-        }
-    };
+    ~PyJpegImages() {};
 
     void set_valid(bool state) {valid = state;};
     bool is_valid() {return valid;};
@@ -75,10 +68,6 @@ public:
     // to export as GPU MEM (dlpack)
     std::vector<std::shared_ptr<BufferInterface>> ext_buf;
 
-    // to export as numpy array (HOST MEM)
-    uint8_t* cpu_data_temp_8bits = nullptr;
-
-    // export numpy 8 bits array (HOST MEM)
     py::array_t<uint8_t> to_numpy(int index = 0) {
         if (index < 0 || index >= static_cast<int>(ext_buf.size()))
             throw std::out_of_range("Invalid channel index");

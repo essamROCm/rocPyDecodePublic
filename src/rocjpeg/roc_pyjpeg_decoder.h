@@ -36,7 +36,7 @@ public:
     ~Decoder();
 
     PyJpegImages decode(DecodeSource* data);
-    std::vector<std::shared_ptr<PyJpegImages>> decode(std::vector<DecodeSource*>& data_list);
+    std::vector<PyJpegImages> decode(std::vector<DecodeSource*>& data_list);
 
     static void exportToPython(py::module& m);
 
@@ -52,13 +52,12 @@ public:
 
     // STORE: to export IMAGE/IMAGES-BATCH to python
     std::vector<PyJpegImages> image;                        // all live instance
-    std::vector<std::shared_ptr<PyJpegImages>> image_list;  // only this instance batch images addresses
+    std::vector<PyJpegImages> image_list;  // only this instance batch images addresses
 
 private:    
     int m_device_id;
     RocJpegBackend m_backend;
     bool to_dlpack_tensor(CodeStream* code_stream, PyJpegImages* image);
-    bool to_numpy_tensor(CodeStream* code_stream, PyJpegImages* image);
     bool get_widths_heights_from_output_format(std::vector<uint32_t>& widths, std::vector<uint32_t>& heights, uint32_t img_width, uint32_t img_height, RocJpegOutputFormat output_format, RocJpegChromaSubsampling subsampling);
     int m_batch_size = 2; // default, not used for now
 };

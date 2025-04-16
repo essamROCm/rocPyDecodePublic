@@ -174,14 +174,11 @@ PyJpegImages Decoder::decode(DecodeSource* data) {
 
     // GPU Tensor
     to_dlpack_tensor(&code_stream.back(), &image.back());
-    // numpy - (CPU mem)
-    if(to_numpy_tensor(&code_stream.back(), &image.back()) == true)
-        image.back().set_valid(true);// mark it as valid
 
     return image.back(); // return one image
 }
 
-std::vector<std::shared_ptr<PyJpegImages>> Decoder::decode(std::vector<DecodeSource*>& decode_source_arg) {
+std::vector<PyJpegImages> Decoder::decode(std::vector<DecodeSource*>& decode_source_arg) {
     int count_of_valid_instances = 0;
     std::vector<RocJpegStreamHandle> stream_handles;
     std::vector<RocJpegDecodeParams> decode_params_list;
@@ -191,15 +188,12 @@ std::vector<std::shared_ptr<PyJpegImages>> Decoder::decode(std::vector<DecodeSou
     reset_image_store();
 
     int batch_size = decode_source_arg.size();
-
-    // save current index at the main store
-    int ndx = code_stream.size();
-    int start_index = (ndx<=0) ? 0 : ndx;
+    std::cout << "Batch Size: " << static_cast<int>(batch_size) << std::endl;
 
     // we return a list of images anyway, create empty count of batch_size
     PyJpegImages img;
     img.set_valid(false);
-    for (int x = start_index; x < start_index + batch_size; ++x) {
+    for (int x = 0; x <batch_size; ++x) {
         image.push_back(img);
     }
 
@@ -220,7 +214,7 @@ std::vector<std::shared_ptr<PyJpegImages>> Decoder::decode(std::vector<DecodeSou
         CodeStream& c_stream = code_stream.back();
 
         // only the valid instances
-        if(c_stream.is_valid()) {
+        if(c_stream.is_valid() && (c_stream.stream_handle!=nullptr)) {
             // prepare a list for 'rocJpegDecodeBatched()'
             stream_handles.push_back(c_stream.stream_handle);
             decode_params_list.push_back(c_stream.decode_params);
@@ -231,7 +225,7 @@ std::vector<std::shared_ptr<PyJpegImages>> Decoder::decode(std::vector<DecodeSou
 
     // at least one
     RocJpegStatus status = ROCJPEG_STATUS_SUCCESS;
-    if(count_of_valid_instances) {
+    if(count_of_valid_instances > 0) {
         // Here call to DECODE ALL in the batch one time
         status = rocJpegDecodeBatched(  rocjpeg_handle,
                                         stream_handles.data(),
@@ -241,13 +235,13 @@ std::vector<std::shared_ptr<PyJpegImages>> Decoder::decode(std::vector<DecodeSou
                                         );
         if (status != ROCJPEG_STATUS_SUCCESS) {
             std::cerr << "ERROR: Failed to decode the image batch . Status code: " << status << std::endl;
+            return image; // return the image list
         }
     }
 
     // to export to python (use dlpack(GPU MEM) {and numpy host array})
-
     if (status == ROCJPEG_STATUS_SUCCESS) {
-        for(int i=start_index; i<(start_index+batch_size); i++) {
+        for(int i=0; i<batch_size; i++) {
             // is it an OK instance?
             image[i].set_valid(false);
             if(!code_stream[i].is_valid()) {
@@ -255,20 +249,34 @@ std::vector<std::shared_ptr<PyJpegImages>> Decoder::decode(std::vector<DecodeSou
             }
             // GPU Tensor
             to_dlpack_tensor(&code_stream[i], &image[i]);
-            // numpy - (CPU mem)
-            if(to_numpy_tensor(&code_stream[i], &image[i]) == false) // [i] is the index of the 'OK' image record
-                continue;
-            // mark it as OK
+            // mark it as OK image to use
             image[i].set_valid(true);
         }
     }
+    return image; // return the image list
+}
 
-    image_list.clear();  // Ensure the output list is empty
-    size_t end_index = std::min( static_cast<size_t>(start_index + batch_size), static_cast<size_t>(image.size()));
-    for (size_t i = start_index; i < end_index; ++i) {
-        image_list.push_back(std::make_shared<PyJpegImages>(image[i]));
-    }
-    return image_list; // return the image list
+bool Decoder::to_dlpack_tensor(CodeStream* code_stream, PyJpegImages* image) {
+    uint32_t img_width = code_stream->width();
+    uint32_t img_height = code_stream->height();
+    RocJpegChromaSubsampling subsampling = code_stream->subsampling;
+    RocJpegOutputFormat output_format = code_stream->decode_params.output_format;
+    std::vector<uint32_t> widths;
+    std::vector<uint32_t> heights;
+    widths.resize(ROCJPEG_MAX_COMPONENT);
+    heights.resize(ROCJPEG_MAX_COMPONENT);
+     if( get_widths_heights_from_output_format(widths, heights, img_width, img_height, output_format, subsampling) == false)
+        return false;
+    // 8 bits - Assuming output_format = ROCJPEG_OUTPUT_RGB (interleaved RGB)
+    // TODO: add the PLANAR in switch case
+    uint32_t bit_depth = 8;
+    std::string type_str(static_cast<const char*>("|u1"));
+    uint32_t surf_stride = widths[0]; // ROCJPEG_OUTPUT_RGB width is * 3 for RGB interleaved
+    std::vector<size_t> shape{ static_cast<size_t>(heights[0]), static_cast<size_t>(widths[0]/3), 3}; // /3 because of the ROCJPEG_OUTPUT_RGB it will be/1 if PLANAR
+    std::vector<size_t> stride{ static_cast<size_t>(surf_stride), 1, 0}; // python assumes same dim for both shape & strides
+    // interleaved RGB using VCN JPEG decoder written to first channel of RocJpegImage
+    image->ext_buf[0]->LoadDLPack(shape, stride, bit_depth, type_str, (void *)code_stream->output_image.channel[0], m_device_id); // m_device_id was set at the constructor
+    return true;
 }
 
 bool Decoder::get_widths_heights_from_output_format(std::vector<uint32_t>& widths, std::vector<uint32_t>& heights, uint32_t img_width, uint32_t img_height, RocJpegOutputFormat output_format, RocJpegChromaSubsampling subsampling) {
@@ -352,77 +360,6 @@ bool Decoder::get_widths_heights_from_output_format(std::vector<uint32_t>& width
     return true;
 }
 
-bool Decoder::to_dlpack_tensor(CodeStream* code_stream, PyJpegImages* image) {
-    uint32_t img_width = code_stream->width();
-    uint32_t img_height = code_stream->height();
-    RocJpegChromaSubsampling subsampling = code_stream->subsampling;
-    RocJpegOutputFormat output_format = code_stream->decode_params.output_format;
-    std::vector<uint32_t> widths;
-    std::vector<uint32_t> heights;
-    widths.resize(ROCJPEG_MAX_COMPONENT);
-    heights.resize(ROCJPEG_MAX_COMPONENT);
-     if( get_widths_heights_from_output_format(widths, heights, img_width, img_height, output_format, subsampling) == false)
-        return false;
-    // 8 bits - Assuming output_format = ROCJPEG_OUTPUT_RGB (interleaved RGB)
-    uint32_t bit_depth = 8;
-    std::string type_str(static_cast<const char*>("|u1"));
-    uint32_t surf_stride = widths[0]; // ROCJPEG_OUTPUT_RGB width is * 3 for RGB interleaved
-    std::vector<size_t> shape{ static_cast<size_t>(heights[0]), static_cast<size_t>(widths[0]/3), 3};
-    std::vector<size_t> stride{ static_cast<size_t>(surf_stride), 1, 0}; // python assumes same dim for both shape & strides
-    // interleaved RGB using VCN JPEG decoder written to first channel of RocJpegImage
-    image->ext_buf[0]->LoadDLPack(shape, stride, bit_depth, type_str, (void *)code_stream->output_image.channel[0], m_device_id);
-    return true;
-}
-
-bool Decoder::to_numpy_tensor(CodeStream* code_stream, PyJpegImages* image) {
-    // use current stream info
-    RocJpegImage *output_image = &code_stream->output_image;
-    uint32_t img_width = code_stream->width();
-    uint32_t img_height = code_stream->height();
-    RocJpegChromaSubsampling subsampling = code_stream->subsampling;
-    RocJpegOutputFormat output_format = code_stream->decode_params.output_format;
-    hipError_t hip_status = hipSuccess;
-    std::vector<uint32_t> widths;
-    std::vector<uint32_t> heights;
-
-    widths.resize(ROCJPEG_MAX_COMPONENT);
-    heights.resize(ROCJPEG_MAX_COMPONENT);
-
-    if( get_widths_heights_from_output_format(widths, heights, img_width, img_height, output_format, subsampling) == false)
-        return false;
-
-    uint32_t channel0_size = output_image->pitch[0] * heights[0];
-    uint32_t channel1_size = output_image->pitch[1] * heights[1];
-    uint32_t channel2_size = output_image->pitch[2] * heights[2];
-    uint32_t output_image_size = channel0_size + channel1_size + channel2_size;
-
-    if (image->cpu_data_temp_8bits == nullptr) {
-        image->cpu_data_temp_8bits = new uint8_t[output_image_size];
-    }
-
-    // copy channel0 (interleaved RGB)
-    if (channel0_size != 0 && output_image->channel[0] != nullptr) {
-        hip_status = hipMemcpyDtoH((void *)image->cpu_data_temp_8bits, output_image->channel[0], channel0_size);
-        if (hip_status != hipSuccess)
-            return false;
-    }
-    // copy channel1
-    if (channel1_size != 0 && output_image->channel[1] != nullptr) {
-        uint8_t *channel1_hst_ptr = image->cpu_data_temp_8bits + channel0_size;
-        hip_status = hipMemcpyDtoH((void *)channel1_hst_ptr, output_image->channel[1], channel1_size);
-        if (hip_status != hipSuccess)
-            return false;
-    }
-    // copy channel2
-    if (channel2_size != 0 && output_image->channel[2] != nullptr) {
-        uint8_t *channel2_hst_ptr = image->cpu_data_temp_8bits + channel0_size + channel1_size;
-        hip_status = hipMemcpyDtoH((void *)channel2_hst_ptr, output_image->channel[2], channel2_size);
-        if (hip_status != hipSuccess)
-        return false;
-    }
-    return true;
-}
-
 void Decoder::reset_code_stream_store() {
     if (!code_stream.empty()) {
         // std::cout << "Cleaning up batch image code_stream store (" << code_stream.size() << " instances.)" << std::endl;
@@ -443,7 +380,6 @@ void Decoder::reset_code_stream_store() {
         }
         // clear the vector after cleanup
         code_stream.clear();
-        code_stream.shrink_to_fit();
     }
 }
 
@@ -452,10 +388,6 @@ void Decoder::reset_image_store() {
         // std::cout << "Cleaning up batch image store (" << image.size() << " instances.)" << std::endl;
         for (auto& img : image) {
             if(img.is_valid()) {
-                if (img.cpu_data_temp_8bits) {
-                    free(img.cpu_data_temp_8bits);
-                    img.cpu_data_temp_8bits = nullptr;
-                }
                 for (auto& buf : img.ext_buf) {
                     buf = std::make_shared<BufferInterface>();
                 }
@@ -463,7 +395,6 @@ void Decoder::reset_image_store() {
         }
         // clear the vector after cleanup
         image.clear();
-        image.shrink_to_fit();
     }
 }
 
