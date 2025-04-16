@@ -66,7 +66,7 @@ decoder = jdec.decoder(device_id, backend)
 # TEST (1) DecodeSource() - single file
 # --------------------------------------------------
 print(line, "TEST (1) DecodeSource() single file", line)
-cs = jdec.DecodeSource(img_full_path).cs()
+cs = jdec.DecodeSource(img_full_path).code_stream()
 width = cs.width
 height = cs.height
 image = decoder.read(cs)
@@ -79,7 +79,7 @@ print(line, "TEST (2) DecodeSource() Batch of files", line)
 image_paths = ["/opt/rocm/share/rocjpeg/images/mug_400.jpg", "/opt/rocm/share/rocjpeg/images/mug_420.jpg", "/opt/rocm/share/rocjpeg/images/mug_422.jpg"]
 batch_size = len(image_paths)
 
-cs_list = [jdec.DecodeSource(path).cs() for path in image_paths]
+cs_list = [jdec.DecodeSource(path).code_stream() for path in image_paths]
 for i, cs in enumerate(cs_list):
     print(f"\nimage [{i}] width: {width}\nimage[{i}] height: {height}")
 images = decoder.read(cs_list)

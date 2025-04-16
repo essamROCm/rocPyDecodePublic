@@ -32,7 +32,7 @@ class Decoder {
 
 public:
 
-    Decoder(int device_id, int backend);
+    Decoder(int device_id, int backend, RocJpegOutputFormat output_format = ROCJPEG_OUTPUT_RGB);
     ~Decoder();
 
     PyJpegImages decode(DecodeSource* data);
@@ -45,7 +45,7 @@ public:
     void reset_image_store();
 
     // set batch size for batch process
-    void set_batch_size(int batch_size);
+    void set_output_format(RocJpegOutputFormat output_format);
 
     // STORE: keep code_stream(s) info here
     std::vector<CodeStream> code_stream; // add all live instance
@@ -57,8 +57,8 @@ public:
 private:    
     int m_device_id;
     RocJpegBackend m_backend;
-    bool AsGPUTensor_dlpack_8bits(CodeStream* code_stream, PyJpegImages* image);
-    bool AsNumpyHostTensor_8bits(CodeStream* code_stream, PyJpegImages* image);
+    bool to_dlpack_tensor(CodeStream* code_stream, PyJpegImages* image);
+    bool to_numpy_tensor(CodeStream* code_stream, PyJpegImages* image);
     bool get_widths_heights_from_output_format(std::vector<uint32_t>& widths, std::vector<uint32_t>& heights, uint32_t img_width, uint32_t img_height, RocJpegOutputFormat output_format, RocJpegChromaSubsampling subsampling);
     int m_batch_size = 2; // default, not used for now
 };

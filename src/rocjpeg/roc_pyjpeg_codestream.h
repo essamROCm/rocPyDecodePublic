@@ -78,7 +78,7 @@ private:
     int m_width;
     int m_height;
 
-    void PrepareStreamForImageDecoding();
+    int clean_up_return_fail();
     int ReadImageFromDiskFile(const std::filesystem::path& filename, std::vector<char>& file_data, int& file_size); 
     int PrepareStreamForOneImageDecoding(const std::filesystem::path& filename, const unsigned char* data, int data_size);
 };

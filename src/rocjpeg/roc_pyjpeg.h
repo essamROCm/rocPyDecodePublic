@@ -39,6 +39,7 @@ namespace py = pybind11;
 using namespace py::literals;
 
 extern RocJpegHandle rocjpeg_handle;
+extern RocJpegOutputFormat user_output_format;
 
 #define PY_CHECK_DECODER() {        \
     if (!rocjpeg_handle) {          \
@@ -78,7 +79,7 @@ public:
     uint8_t* cpu_data_temp_8bits = nullptr;
 
     // export numpy 8 bits array (HOST MEM)
-    py::array_t<uint8_t> to_numpy_8bits(int index = 0) {
+    py::array_t<uint8_t> to_numpy(int index = 0) {
         if (index < 0 || index >= static_cast<int>(ext_buf.size()))
             throw std::out_of_range("Invalid channel index");
         auto& buf = ext_buf[index];

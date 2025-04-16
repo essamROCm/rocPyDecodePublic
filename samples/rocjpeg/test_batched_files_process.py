@@ -34,12 +34,15 @@ def decode_batch(decoder, folder_full_path, batch_size):
         raise NotADirectoryError(f"'{folder_full_path}' is not a valid directory.")       
     files_full_path_list = [os.path.join(root, f) for root, _, files in os.walk(folder_full_path) for f in files]
     total = len(files_full_path_list)
-    img_list = []
+    total_valid_images_processed = 0
     print(f"Decoding Starting for {total} files with batch size = {batch_size}.")
     for i in range(0, total, batch_size):
         current_batch = files_full_path_list[i:i + batch_size]
-        img_list += decoder.decode(current_batch)
-    total_valid_images_processed = sum(1 for img in img_list if img.is_valid())
+        img_list = decoder.decode(current_batch)
+        # consum this batch now, it will not be freed if new batch is decoded
+        for img in img_list:
+            if img.is_valid():
+                total_valid_images_processed += 1
     print(f"Total files processed : {total_valid_images_processed}")
     print(f"Total Bad files found : {total-total_valid_images_processed}")
 
@@ -50,14 +53,15 @@ def decode_batch(decoder, folder_full_path, batch_size):
 
 def decode_single(decoder, folder_full_path):
     if not os.path.isdir(folder_full_path):
-        raise NotADirectoryError(f"'{folder_full_path}' is not a valid directory.")       
+        raise NotADirectoryError(f"'{folder_full_path}' is not a valid directory.")
     files_full_path_list = [os.path.join(root, f) for root, _, files in os.walk(folder_full_path) for f in files]
     total = len(files_full_path_list)
-    img_list = []
-    append = img_list.append
+    total_valid_images_processed = 0
     for file_path in files_full_path_list:
-        append(decoder.decode(file_path))
-    total_valid_images_processed = sum(1 for img in img_list if img.is_valid())
+        one_image = decoder.decode(file_path)
+        # consum the image now before new one is decoded
+        if one_image.is_valid():
+            total_valid_images_processed += 1
     print(f"Total files processed : {total_valid_images_processed}")
     print(f"Total Bad files found : {total-total_valid_images_processed}")
 
@@ -66,14 +70,15 @@ def decode_single(decoder, folder_full_path):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def jpeg_decode(input_file_path, single, batch):
 
-    device_id = 0
-    backend = 0
+    device_id = 0   # example, change it to your system GPU index
+    backend = 0     # 0 for GPU 1 for CPU
 
+    # create the decode instance
     decoder = jdec.decoder(device_id, backend)
 
     line = '\n' + '-' * 60 + '\n'
-    root_folder = input_file_path
-    batch_size = batch
+    root_folder = input_file_path   # user input
+    batch_size = batch              # user input
 
     if(single >= 1):
         # ---------------------------------------------------------------

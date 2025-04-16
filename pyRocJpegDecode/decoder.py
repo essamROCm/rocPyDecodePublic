@@ -20,25 +20,25 @@
 
 import rocpyjpegdecode as rocpyjpeg
 import rocpyjpegdecode.jpegTypes as jpegt
-import numpy as np
+
 
 class DecodeSource(object):
     def __init__(
             self,
             param):
-        self.DS = rocpyjpeg.DecodeSource(param)
+        self.decode_source = rocpyjpeg.DecodeSource(param)
 
     # return the code stream
-    def cs(self):
-        return self.DS.code_stream
+    def code_stream(self):
+        return self.decode_source.code_stream
 
     # return the width of the decoded image
     def width(self):
-        return self.DS.width()
+        return self.decode_source.width()
 
     # return the height of the decoded image
     def height(self):
-        return self.DS.height()
+        return self.decode_source.height()
 
 
 class decoder(object):
@@ -47,13 +47,15 @@ class decoder(object):
             device_id = 0, 
             backend = 0):
         self.jpegdec = rocpyjpeg.Decoder(device_id, backend)
+        self.device_id = device_id
+        self.backend = backend
 
     # read image or batch of images
-    def read(self, img_full_bath):
-        self.img = self.jpegdec.read(img_full_bath)
+    def read(self, jpeg_item_to_decode):
+        self.img = self.jpegdec.read(jpeg_item_to_decode)
         return self.img        
 
     # decode image or batch of images
-    def decode(self, img_full_bath):
-        self.img = self.jpegdec.decode(img_full_bath)
+    def decode(self, jpeg_item_to_decode):
+        self.img = self.jpegdec.decode(jpeg_item_to_decode)
         return self.img

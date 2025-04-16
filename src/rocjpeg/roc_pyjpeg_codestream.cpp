@@ -126,6 +126,11 @@ int CodeStream::ReadImageFromDiskFile(const std::filesystem::path& filename, std
 
 // Use the dat and its size if valid, otherwise use the file to load the data
 int CodeStream::PrepareStreamForOneImageDecoding(const std::filesystem::path& filename, const unsigned char* data, int data_size) {
+    // default, reset
+    memset(&decode_params, 0, sizeof(RocJpegDecodeParams));
+    memset(&output_image, 0, sizeof(RocJpegImage));
+    decode_params.output_format = user_output_format;
+    num_channels = 0;
     // File sanity chek
     if(!filename.empty()) {
         // std::cout << "Input file name: " << filename << std::endl;
@@ -160,7 +165,7 @@ int CodeStream::PrepareStreamForOneImageDecoding(const std::filesystem::path& fi
     rocjpeg_status = rocJpegStreamParse(reinterpret_cast<uint8_t*>(file_data.data()), file_size, stream_handle);
     if (rocjpeg_status != ROCJPEG_STATUS_SUCCESS) {
         std::cerr << "ERROR: Failed to parse the input jpeg stream with " << rocJpegGetErrorName(rocjpeg_status) << std::endl;
-        return EXIT_FAILURE;
+        return clean_up_return_fail();
     }
 
     // Get Image Info
@@ -170,7 +175,7 @@ int CodeStream::PrepareStreamForOneImageDecoding(const std::filesystem::path& fi
 
     if (rocjpeg_status != ROCJPEG_STATUS_SUCCESS) {
         std::cerr << "ERROR: Failed to  get image info with " << rocJpegGetErrorName(rocjpeg_status) << std::endl;
-        return EXIT_FAILURE;
+        return clean_up_return_fail();
     }
 
     // Check limits of w/h & subsampling
@@ -182,11 +187,11 @@ int CodeStream::PrepareStreamForOneImageDecoding(const std::filesystem::path& fi
     // std::cout << "Chroma subsampling INT: " << static_cast<int>(subsampling)  << std::endl;
     if (widths[0] < 64 || heights[0] < 64) {
         std::cerr << "The image resolution is not supported by VCN Hardware" << std::endl;
-        return EXIT_FAILURE;
+        return clean_up_return_fail();
     }
     if (subsampling == ROCJPEG_CSS_411 || subsampling == ROCJPEG_CSS_UNKNOWN) {
         std::cerr << "The chroma sub-sampling is not supported by VCN Hardware" << std::endl;
-        return EXIT_FAILURE;
+        return clean_up_return_fail();
     }    
 
     // save the output w/h to the inner store
@@ -194,29 +199,41 @@ int CodeStream::PrepareStreamForOneImageDecoding(const std::filesystem::path& fi
     m_height = heights[0];
 
     // Get Channel Pitch And Sizes
-    memset(&decode_params, 0, sizeof(RocJpegDecodeParams));
-    memset(&output_image, 0, sizeof(RocJpegImage));
-    decode_params.output_format = ROCJPEG_OUTPUT_RGB; // width will be * 3
     if (rocjpeg_utils.GetChannelPitchAndSizes(decode_params, subsampling, widths, heights, num_channels, output_image, channel_sizes)) {
         std::cerr << "ERROR: Failed to get the channel pitch and sizes" << std::endl;
-        return EXIT_FAILURE;
+        return clean_up_return_fail();
     }
 
     // allocate memory for each channel
     hipError_t hip_status = hipSuccess;
     for (int i = 0; i < num_channels; i++) {
-            if (output_image.channel[i] != nullptr) {
-                hip_status = hipFree((void *)output_image.channel[i]);
-                if (hip_status != hipSuccess)
-                    return EXIT_FAILURE;
-                output_image.channel[i] = nullptr;
-            }
-            hip_status = hipMalloc(&output_image.channel[i], channel_sizes[i]);
+        if (output_image.channel[i] != nullptr) {
+            hip_status = hipFree((void *)output_image.channel[i]);
             if (hip_status != hipSuccess)
-                return EXIT_FAILURE;
+                return clean_up_return_fail();
+            output_image.channel[i] = nullptr;
+        }
+        hip_status = hipMalloc(&output_image.channel[i], channel_sizes[i]);
+        if (hip_status != hipSuccess)
+            return clean_up_return_fail();
     }
     return EXIT_SUCCESS;
 }
+
+int CodeStream::clean_up_return_fail() {
+    hipError_t hip_status = hipSuccess;
+    if(stream_handle) {
+        RocJpegStatus rocjpeg_status = rocJpegStreamDestroy(stream_handle);
+    }
+    for (int i = 0; i < num_channels; i++) {
+        if (output_image.channel[i] != nullptr) {
+            hip_status = hipFree((void *)output_image.channel[i]);
+            output_image.channel[i] = nullptr;
+        }
+    }
+    return EXIT_FAILURE;
+}
+
 
 CodeStream::CodeStream(const std::filesystem::path& filename) {
     PY_CHECK_DECODER();

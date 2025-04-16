@@ -41,7 +41,7 @@ def printout_tensor_info(image):
     # ------------
     #  CPU Tensor
     # ------------
-    tensor = torch.from_numpy(image.to_numpy_8bits())
+    tensor = torch.from_numpy(image.to_numpy())
     print(f"Tensor tensor: {tensor.device}")  # Should output: cpu
     print(f"Tensor CPU MEM address:\t {hex(tensor.data_ptr())}\n")
     print("Shape:", tensor.shape)
