@@ -188,7 +188,6 @@ std::vector<PyJpegImages> Decoder::decode(std::vector<DecodeSource*>& decode_sou
     reset_image_store();
 
     int batch_size = decode_source_arg.size();
-    std::cout << "Batch Size: " << static_cast<int>(batch_size) << std::endl;
 
     // we return a list of images anyway, create empty count of batch_size
     PyJpegImages img;
