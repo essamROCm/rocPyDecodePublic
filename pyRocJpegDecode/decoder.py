@@ -46,9 +46,9 @@ class decoder(object):
             self, 
             device_id = 0, 
             backend = 0):
-        self.jpegdec = rocpyjpeg.Decoder(device_id, backend)
         self.device_id = device_id
         self.backend = backend
+        self.jpegdec = rocpyjpeg.Decoder(self.device_id, self.backend)
 
     # read image or batch of images
     def read(self, jpeg_item_to_decode):
