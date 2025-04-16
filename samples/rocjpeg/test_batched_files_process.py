@@ -19,6 +19,7 @@
 # THE SOFTWARE.
 
 import pyRocJpegDecode.decoder as jdec
+import rocpyjpegdecode.jpegTypes as jpegt
 import argparse
 import os
 import sys
@@ -68,13 +69,16 @@ def decode_single(decoder, folder_full_path):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Example of multiple images decoding process
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def jpeg_decode(input_file_path, single, batch):
+def jpeg_decode(input_file_path, single, batch, output_format):
 
     device_id = 0   # example, change it to your system GPU index
     backend = 0     # 0 for GPU 1 for CPU
 
     # create the decode instance
     decoder = jdec.decoder(device_id, backend)
+    decoder.set_output_image_format(output_format)  # set the output image to the desired format
+
+    print(f"Image output format set to: {jpegt.RocJpegOutputFormat(output_format)}")
 
     line = '\n' + '-' * 60 + '\n'
     root_folder = input_file_path   # user input
@@ -87,7 +91,7 @@ def jpeg_decode(input_file_path, single, batch):
         print(line, "TEST (1) Decode ALL files under Folder/SubFolders ONE by ONE", line)
         decode_single(decoder, root_folder)
     else:
-        print("No batch decoding with single files requested, send -s 1 to perfrom it.")
+        print("No batch decoding with single files requested, you can pass -s 1 to perfrom it.")
 
     if(batch>=1):
         # ---------------------------------------------------------------
@@ -96,7 +100,7 @@ def jpeg_decode(input_file_path, single, batch):
         print(line, "TEST (2) Decode ALL files under Folder/SubFolders in batches", line)
         decode_batch(decoder, root_folder, batch_size)
     else:
-        print("No batch decoding with with batch size requested, send -b x where 'x' is > 0.")
+        print("No batch decoding with batch size requested, you can pass -b x where 'x' is > 0.")
 
 
 if __name__ == "__main__":
@@ -124,7 +128,15 @@ if __name__ == "__main__":
         default=0,
         help='batch size > 0 process the batch of files with this batch size, if 0 means do not process as batch',
         required=False)
-    
+    parser.add_argument(
+        '-fmt',
+        '--output_format',
+        type=int,
+        choices=[3, 4],
+        default=3,
+        help='Set output image format: 3 for ROCJPEG_OUTPUT_RGB (interleaved), 4 for ROCJPEG_OUTPUT_RGB_PLANAR. Optional, default is 3.',
+        required=False)
+
     try:
         args = parser.parse_args()
     except BaseException:
@@ -134,9 +146,10 @@ if __name__ == "__main__":
     input_file_path = args.input
     single = args.single
     batch = args.batch
+    output_format = args.output_format
 
     if not os.path.exists(input_file_path):  # Input file (must exist)
         print("ERROR: input file doesn't exist.")
         exit()
 
-    jpeg_decode(input_file_path, single, batch)
+    jpeg_decode(input_file_path, single, batch, output_format)

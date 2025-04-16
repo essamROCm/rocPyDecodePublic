@@ -140,10 +140,6 @@ Decoder::Decoder(int device_id, int backend, RocJpegOutputFormat output_format) 
     }
     // create decode obj
     PY_CHECK_ROCJPEG(rocJpegCreate(m_backend, m_device_id, &rocjpeg_handle));
-
-    std::cout << "USER output_format: " << static_cast<int>(user_output_format) << std::endl;
-    std::cout << "m_device_id: " << static_cast<int>(m_device_id) << std::endl;
-    std::cout << "m_backend :" << static_cast<int>(m_backend) << std::endl;
 }
 
 PyJpegImages Decoder::decode(DecodeSource* data) {
