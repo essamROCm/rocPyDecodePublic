@@ -269,14 +269,29 @@ bool Decoder::to_dlpack_tensor(CodeStream* code_stream, PyJpegImages* image) {
      if( get_widths_heights_from_output_format(widths, heights, img_width, img_height, output_format, subsampling) == false)
         return false;
     // 8 bits - Assuming output_format = ROCJPEG_OUTPUT_RGB (interleaved RGB)
-    // TODO: add the PLANAR in switch case
     uint32_t bit_depth = 8;
     std::string type_str(static_cast<const char*>("|u1"));
-    uint32_t surf_stride = widths[0]; // ROCJPEG_OUTPUT_RGB width is * 3 for RGB interleaved
-    std::vector<size_t> shape{ static_cast<size_t>(heights[0]), static_cast<size_t>(widths[0]/3), 3}; // /3 because of the ROCJPEG_OUTPUT_RGB it will be/1 if PLANAR
-    std::vector<size_t> stride{ static_cast<size_t>(surf_stride), 1, 0}; // python assumes same dim for both shape & strides
-    // interleaved RGB using VCN JPEG decoder written to first channel of RocJpegImage
-    image->ext_buf[0]->LoadDLPack(shape, stride, bit_depth, type_str, (void *)code_stream->output_image.channel[0], m_device_id); // m_device_id was set at the constructor
+    switch(output_format) {
+        case ROCJPEG_OUTPUT_RGB_PLANAR: { // each color plane in a channel separately R[0], G[1], and B[2]
+            uint32_t surf_stride[3] = {widths[0], widths[1], widths[2]}; // ROCJPEG_OUTPUT_RGB_PLANAR
+            for(int i=0; i<3; i++) {
+                std::vector<size_t> shape{ static_cast<size_t>(heights[i]), static_cast<size_t>(widths[i]), 3}; // depend on get_widths_heights_from_output_format()
+                std::vector<size_t> stride{ static_cast<size_t>(surf_stride[i]), 1, 0};
+                // RGB PLANAR using VCN JPEG decoder @ first, second, and third channel of RocJpegImage
+                image->ext_buf[i]->LoadDLPack(shape, stride, bit_depth, type_str, (void *)code_stream->output_image.channel[i], m_device_id); // m_device_id was set at the constructor
+            }
+        }
+        break;
+        case ROCJPEG_OUTPUT_RGB: // all the image RGB interleaved in one channel [0]
+        default: {
+            uint32_t surf_stride = widths[0]; // ROCJPEG_OUTPUT_RGB width is * 3 for RGB interleaved
+            std::vector<size_t> shape{ static_cast<size_t>(heights[0]), static_cast<size_t>(widths[0]/3), 3}; // /3 because of the ROCJPEG_OUTPUT_RGB it will be/1 if PLANAR
+            std::vector<size_t> stride{ static_cast<size_t>(surf_stride), 1, 0}; // python assumes same dim for both shape & strides
+            // interleaved RGB using VCN JPEG decoder written to first channel of RocJpegImage
+            image->ext_buf[0]->LoadDLPack(shape, stride, bit_depth, type_str, (void *)code_stream->output_image.channel[0], m_device_id); // m_device_id was set at the constructor
+        }
+        break;
+    }
     return true;
 }
 
@@ -385,15 +400,6 @@ void Decoder::reset_code_stream_store() {
 
 void Decoder::reset_image_store() {
     if (!image.empty()) {
-        // // std::cout << "Cleaning up batch image store (" << image.size() << " instances.)" << std::endl;
-        // for (auto& img : image) {
-        //     if(img.is_valid()) {
-        //         for (auto& buf : img.ext_buf) {
-        //             buf = std::make_shared<BufferInterface>();
-        //         }
-        //     }
-        // }
-        // clear the vector after cleanup
         image.clear();
     }
 }
