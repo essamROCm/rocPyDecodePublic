@@ -69,10 +69,10 @@ def decode_single(decoder, folder_full_path):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Example of multiple images decoding process
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def jpeg_decode(input_file_path, single, batch, output_format):
+def jpeg_decode(input_file_path, single, batch, output_format, device_id_in):
 
-    device_id = 0   # example, change it to your system GPU index
-    backend = 0     # 0 for GPU 1 for CPU
+    device_id = device_id_in    # example, change it to your system GPU index
+    backend = 0                 # 0 for GPU 1 for CPU
 
     # create the decode instance
     decoder = jdec.decoder(device_id, backend)
@@ -136,6 +136,13 @@ if __name__ == "__main__":
         default=3,
         help='Set output image format: 3 for ROCJPEG_OUTPUT_RGB (interleaved), 4 for ROCJPEG_OUTPUT_RGB_PLANAR. Optional, default is 3.',
         required=False)
+    parser.add_argument(
+        '-d',
+        '--device',
+        type=int,
+        default=0,
+        help='GPU device ID - optional, default 0',
+        required=False)
 
     try:
         args = parser.parse_args()
@@ -147,9 +154,10 @@ if __name__ == "__main__":
     single = args.single
     batch = args.batch
     output_format = args.output_format
+    device_id = args.device
 
     if not os.path.exists(input_file_path):  # Input file (must exist)
         print("ERROR: input file doesn't exist.")
         exit()
 
-    jpeg_decode(input_file_path, single, batch, output_format)
+    jpeg_decode(input_file_path, single, batch, output_format, device_id)

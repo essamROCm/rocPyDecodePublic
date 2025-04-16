@@ -207,12 +207,6 @@ int CodeStream::PrepareStreamForOneImageDecoding(const std::filesystem::path& fi
     // allocate memory for each channel
     hipError_t hip_status = hipSuccess;
     for (int i = 0; i < num_channels; i++) {
-        if (output_image.channel[i] != nullptr) {
-            hip_status = hipFree((void *)output_image.channel[i]);
-            if (hip_status != hipSuccess)
-                return clean_up_return_fail();
-            output_image.channel[i] = nullptr;
-        }
         hip_status = hipMalloc(&output_image.channel[i], channel_sizes[i]);
         if (hip_status != hipSuccess)
             return clean_up_return_fail();

@@ -137,6 +137,8 @@ Decoder::Decoder(int device_id, int backend, RocJpegOutputFormat output_format) 
     if (!rocjpeg_utils.InitHipDevice(m_device_id)) {
         std::cerr << "ERROR: Failed to initialize HIP!" << std::endl;
         status = ROCJPEG_STATUS_RUNTIME_ERROR;
+        rocjpeg_handle = nullptr;
+        return;
     }
     // create decode obj
     PY_CHECK_ROCJPEG(rocJpegCreate(m_backend, m_device_id, &rocjpeg_handle));
@@ -372,9 +374,8 @@ void Decoder::reset_code_stream_store() {
                     }
                 }
                 // Destroy stream
-                if(cs.stream_handle) {
-                    PY_CHECK_ROCJPEG(rocJpegStreamDestroy(cs.stream_handle));
-                }
+                PY_CHECK_ROCJPEG(rocJpegStreamDestroy(cs.stream_handle));
+                cs.stream_handle = nullptr;
             }
         }
         // clear the vector after cleanup
@@ -384,14 +385,14 @@ void Decoder::reset_code_stream_store() {
 
 void Decoder::reset_image_store() {
     if (!image.empty()) {
-        // std::cout << "Cleaning up batch image store (" << image.size() << " instances.)" << std::endl;
-        for (auto& img : image) {
-            if(img.is_valid()) {
-                for (auto& buf : img.ext_buf) {
-                    buf = std::make_shared<BufferInterface>();
-                }
-            }
-        }
+        // // std::cout << "Cleaning up batch image store (" << image.size() << " instances.)" << std::endl;
+        // for (auto& img : image) {
+        //     if(img.is_valid()) {
+        //         for (auto& buf : img.ext_buf) {
+        //             buf = std::make_shared<BufferInterface>();
+        //         }
+        //     }
+        // }
         // clear the vector after cleanup
         image.clear();
     }
@@ -413,7 +414,7 @@ Decoder::~Decoder() {
     reset_image_store();
 
     // delete/destroy MAIN decode obj
-    if(rocjpeg_handle) {
+    if(rocjpeg_handle != nullptr) {
         PY_CHECK_ROCJPEG(rocJpegDestroy(rocjpeg_handle));
         rocjpeg_handle = nullptr;
     }
