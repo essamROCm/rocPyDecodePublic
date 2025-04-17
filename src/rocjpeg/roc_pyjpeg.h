@@ -50,6 +50,8 @@ extern RocJpegOutputFormat user_output_format;
 
 #include <pybind11/numpy.h>
 
+// TODO: need to impllement a case for YUV (currently covers RGB and RGB Planar)
+
 class PyJpegImages {
 
 public:
