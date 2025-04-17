@@ -45,10 +45,13 @@ class decoder(object):
     def __init__(
             self, 
             device_id = 0, 
-            backend = 0):
+            backend = 0,
+            output_format = jpegt.ROCJPEG_OUTPUT_RGB):
         self.device_id = device_id
         self.backend = backend
-        self.jpegdec = rocpyjpeg.Decoder(self.device_id, self.backend)
+        self.output_format = output_format
+        self.jpegdec = rocpyjpeg.Decoder(self.device_id, self.backend, self.output_format)
+
 
     # read image or batch of images
     def read(self, jpeg_item_to_decode):

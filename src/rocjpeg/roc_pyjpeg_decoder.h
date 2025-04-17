@@ -51,8 +51,7 @@ public:
     std::vector<CodeStream> code_stream; // add all live instance
 
     // STORE: to export IMAGE/IMAGES-BATCH to python
-    std::vector<PyJpegImages> image;                        // all live instance
-    std::vector<PyJpegImages> image_list;  // only this instance batch images addresses
+    std::vector<PyJpegImages> images_;        // all live instance
 
 private:    
     int m_device_id;

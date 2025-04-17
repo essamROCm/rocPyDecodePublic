@@ -65,23 +65,35 @@ public:
     void set_valid(bool state) {valid = state;};
     bool is_valid() {return valid;};
 
-    // to export as GPU MEM (dlpack)
-    std::vector<std::shared_ptr<BufferInterface>> ext_buf;
+    // The image in the GPU MEM represented with dlpack via this ext_buf (for external buffer)
+    std::vector<std::shared_ptr<BufferInterface>> ext_buf; // external buffer, a view on the GPU MEM of the decoded image
 
     py::array_t<uint8_t> to_numpy(int index = 0) {
+        py::array_t<uint8_t> ret;
         if (index < 0 || index >= static_cast<int>(ext_buf.size()))
             throw std::out_of_range("Invalid channel index");
         auto& buf = ext_buf[index];
         uint8_t* data_ptr = static_cast<uint8_t*>(buf->data());
         py::tuple py_shape = buf->shape();
-        const ssize_t height   = py_shape[0].cast<ssize_t>();
-        const ssize_t width    = py_shape[1].cast<ssize_t>();
-        const ssize_t channels = py_shape[2].cast<ssize_t>();
-        std::vector<ssize_t> shape   = { height, width, channels };
-        std::vector<ssize_t> strides = { width * channels, channels, 1 };
-        return py::array_t<uint8_t>(shape, strides, data_ptr, py::cast(buf));
+        if (py_shape.size() == 3) {
+            const ssize_t height   = py_shape[0].cast<ssize_t>();
+            const ssize_t width    = py_shape[1].cast<ssize_t>();
+            const ssize_t channels = py_shape[2].cast<ssize_t>();
+            std::vector<ssize_t> shape   = { height, width, channels };
+            std::vector<ssize_t> strides = { width * channels, channels, 1 };
+            ret = py::array_t<uint8_t>(shape, strides, data_ptr, py::cast(buf));
+        } else if (py_shape.size() == 2) {
+            const ssize_t height = py_shape[0].cast<ssize_t>();
+            const ssize_t width  = py_shape[1].cast<ssize_t>();
+            const ssize_t row_stride = buf->strides()[0].cast<ssize_t>();
+            std::vector<ssize_t> shape   = { height, width };
+            std::vector<ssize_t> strides = { row_stride, 1 };
+            ret = py::array_t<uint8_t>(shape, strides, data_ptr, py::cast(buf));
+        } else {
+            throw std::runtime_error("Unsupported shape: only 2D or 3D supported");
+        }
+        return ret;
     }
-
     // flag indicates this instance of the PyJpegImages is valid to use
     // when false means the file/data associated with it to be decoded
     // found invalid, corrupted or has issues prevent from decoding it properly

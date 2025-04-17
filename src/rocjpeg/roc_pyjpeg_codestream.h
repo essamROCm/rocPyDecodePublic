@@ -60,7 +60,6 @@ public:
     uint32_t heights[ROCJPEG_MAX_COMPONENT] = {};    
     uint32_t channel_sizes[ROCJPEG_MAX_COMPONENT] = {};
     uint32_t num_channels = 0;
-
     void set_valid(bool state) {valid = state;};
     bool is_valid() {return valid;};
 
@@ -78,9 +77,9 @@ private:
     int m_width;
     int m_height;
 
-    int clean_up_return_fail();
-    int ReadImageFromDiskFile(const std::filesystem::path& filename, std::vector<char>& file_data, int& file_size); 
-    int PrepareStreamForOneImageDecoding(const std::filesystem::path& filename, const unsigned char* data, int data_size);
+    int release();
+    int ReadFromFile(const std::filesystem::path& filename, std::vector<char>& file_data, int& file_size); 
+    int InitializeSingleImage(const std::filesystem::path& filename, const unsigned char* data, int data_size);
 };
 
 #endif // PY_ROC_JPEG_CODE_STREAM_HEADER

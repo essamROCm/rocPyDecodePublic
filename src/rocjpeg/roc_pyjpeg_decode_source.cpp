@@ -60,7 +60,7 @@ void DecodeSource::exportToPython(py::module& m) {
         .def(py::init([](py::bytes bytes) {
                 return new DecodeSource(std::make_unique<CodeStream>(bytes));
             }),
-            "Constructor initializing DecodeSource with byte data and an optional region to decode specific parts of the image.",
+            "Constructor initializing DecodeSource with byte data.",
             "bytes"_a, py::keep_alive<1, 2>())
         .def(py::init([](const std::string& filename) {
                 return new DecodeSource(std::make_unique<CodeStream>(std::filesystem::path(filename)));
