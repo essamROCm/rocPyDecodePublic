@@ -166,7 +166,7 @@ int CodeStream::InitializeSingleImage(const std::filesystem::path& filename, con
     // Stream Parse
     rocjpeg_status = rocJpegStreamParse(reinterpret_cast<uint8_t*>(file_data.data()), data_size, stream_handle);
     if (rocjpeg_status != ROCJPEG_STATUS_SUCCESS) {
-        std::cerr << "ERROR: Failed to parse the input jpeg stream with " << rocJpegGetErrorName(rocjpeg_status) << std::endl;
+        std::cerr << "ERROR: Failed to parse the input jpeg stream with " << rocJpegGetErrorName(rocjpeg_status) << "Input File : " << (!filename.empty() ? filename : "") << std::endl;
         return release();
     }
 
@@ -186,11 +186,11 @@ int CodeStream::InitializeSingleImage(const std::filesystem::path& filename, con
     std::string chroma_sub_sampling = "";
     rocjpeg_utils.GetChromaSubsamplingStr(subsampling, chroma_sub_sampling);
     if (widths[0] < 64 || heights[0] < 64) {
-        std::cerr << "The image resolution is not supported by VCN Hardware" << std::endl;
+        std::cerr << "The image resolution is not supported by VCN Hardware: " << (!filename.empty() ? filename : "") << std::endl;
         return release();
     }
     if (subsampling == ROCJPEG_CSS_411 || subsampling == ROCJPEG_CSS_UNKNOWN) {
-        std::cerr << "The chroma sub-sampling is not supported by VCN Hardware" << std::endl;
+        std::cerr << "The image resolution is not supported by VCN Hardware: " << (!filename.empty() ? filename : "") << std::endl;
         return release();
     }    
 
@@ -225,6 +225,7 @@ int CodeStream::release() {
     hipError_t hip_status = hipSuccess;
     if(stream_handle) {
         RocJpegStatus rocjpeg_status = rocJpegStreamDestroy(stream_handle);
+        stream_handle = nullptr;
     }
     for (int i = 0; i < num_channels; i++) {
         if (output_image.channel[i] != nullptr) {

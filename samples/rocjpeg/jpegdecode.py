@@ -94,8 +94,8 @@ if __name__ == "__main__":
     device_id = args.device
     backend = args.backend
 
-    if not os.path.exists(input_file_path):  # Input file or folder (must exist)
-        print("ERROR: input file doesn't exist.")
+    if not os.path.isfile(input_file_path):  # Input must be a file
+        print("ERROR: input passed with -i must be an existing file.")
         exit()
 
     jpeg_decode(input_file_path, output_format, device_id, backend)
