@@ -39,20 +39,11 @@ def jpeg_decode(
     decoder.set_output_image_format(output_format)  # set the output image to the desired format
 
     print(f"Image output format set to: {jpegt.RocJpegOutputFormat(output_format)}")
-
     print(f"\nDecoding file: {input_file_path} on Device: {'CPU' if backend else 'GPU'} with Device ID: {device_id}")
 
     img = decoder.decode(input_file_path)
 
-    if(img.is_valid()):
-        yuv_tensor = torch.from_dlpack(img.ext_buf[0].__dlpack__(img))
-        print(f"Device:\t\t\t {yuv_tensor.device}")
-        print(f"Tensor GPU MEM address:\t {hex(yuv_tensor.data_ptr())}\n")
-        tensor = torch.from_numpy(img.to_numpy())
-        print("Shape:", tensor.shape)
-        print("Dtype:", tensor.dtype)
-        print(tensor[:5, :5], "\n")
-    else:
+    if(img.is_valid() == False):
         print("Invalid image returned..")    
     print(f"Decoding file: {input_file_path} is complete.\n")
 

@@ -127,6 +127,9 @@ void Decoder::exportToPython(py::module& m) {
     // clang-format on
 }
 
+RocJpegHandle Decoder::rocjpeg_handle = nullptr;                         // main session
+RocJpegOutputFormat Decoder::user_output_format = ROCJPEG_OUTPUT_RGB;    // dynamically adjusted by the user
+
 Decoder::Decoder(int device_id, int backend, RocJpegOutputFormat output_format) {
     set_output_format(output_format);   // save user choice if sent for output format
     m_device_id = device_id;            // save user device id
@@ -137,17 +140,21 @@ Decoder::Decoder(int device_id, int backend, RocJpegOutputFormat output_format) 
     if (!rocjpeg_utils.InitHipDevice(m_device_id)) {
         std::cerr << "ERROR: Failed to initialize HIP!" << std::endl;
         status = ROCJPEG_STATUS_RUNTIME_ERROR;
-        rocjpeg_handle = nullptr;
+        set_handle(nullptr);
         return;
     }
     // create decode obj
     PY_CHECK_ROCJPEG(rocJpegCreate(m_backend, m_device_id, &rocjpeg_handle));
+    // init
+    set_handle(rocjpeg_handle);
+    set_format(output_format);
 }
+
 PyJpegImages Decoder::decode(DecodeSource* data) {
     // keep code stream ptr in class (alive)
     assert(data);
-    reset_code_stream_store();
-    reset_image_store();
+    reset_code_stream();
+    reset_image();
 
     // to return at least an empty/invalid one image record
     PyJpegImages img;
@@ -181,8 +188,8 @@ std::vector<PyJpegImages> Decoder::decode(std::vector<DecodeSource*>& decode_sou
     std::vector<RocJpegDecodeParams> decode_params_list;
     std::vector<RocJpegImage> destinations;
 
-    reset_code_stream_store();
-    reset_image_store();
+    reset_code_stream();
+    reset_image();
 
     int batch_size = decode_source_arg.size();
 
@@ -260,7 +267,7 @@ bool Decoder::to_dlpack_tensor(CodeStream* code_stream, PyJpegImages* image) {
     std::vector<uint32_t> heights;
     widths.resize(ROCJPEG_MAX_COMPONENT);
     heights.resize(ROCJPEG_MAX_COMPONENT);
-     if( get_widths_heights_from_output_format(widths, heights, img_width, img_height, output_format, subsampling) == false)
+     if(get_output_dims(widths, heights, img_width, img_height, output_format, subsampling) == false)
         return false;
     // 8 bits - Assuming output_format = ROCJPEG_OUTPUT_RGB (interleaved RGB)
     uint32_t bit_depth = 8;
@@ -269,7 +276,7 @@ bool Decoder::to_dlpack_tensor(CodeStream* code_stream, PyJpegImages* image) {
         case ROCJPEG_OUTPUT_RGB_PLANAR: { // each color plane in a channel separately R[0], G[1], and B[2]
             uint32_t surf_stride[3] = {widths[0], widths[1], widths[2]}; // ROCJPEG_OUTPUT_RGB_PLANAR all same width = img_width
             for(int i=0; i<3; i++) {
-                std::vector<size_t> shape{ static_cast<size_t>(heights[i]), static_cast<size_t>(widths[i])}; // depend on get_widths_heights_from_output_format()
+                std::vector<size_t> shape{ static_cast<size_t>(heights[i]), static_cast<size_t>(widths[i])}; // depend on get_output_dims()
                 std::vector<size_t> stride{ static_cast<size_t>(surf_stride[i]), 1, 0};
                 // RGB PLANAR using VCN JPEG decoder @ first, second, and third channel of RocJpegImage
                 image->ext_buf[i]->LoadDLPack(shape, stride, bit_depth, type_str, (void *)code_stream->output_image.channel[i], m_device_id); // m_device_id was set at the constructor
@@ -289,7 +296,7 @@ bool Decoder::to_dlpack_tensor(CodeStream* code_stream, PyJpegImages* image) {
     return true;
 }
 
-bool Decoder::get_widths_heights_from_output_format(std::vector<uint32_t>& widths, std::vector<uint32_t>& heights, uint32_t img_width, uint32_t img_height, RocJpegOutputFormat output_format, RocJpegChromaSubsampling subsampling) {
+bool Decoder::get_output_dims(std::vector<uint32_t>& widths, std::vector<uint32_t>& heights, uint32_t img_width, uint32_t img_height, RocJpegOutputFormat output_format, RocJpegChromaSubsampling subsampling) {
     switch (output_format) {
         case ROCJPEG_OUTPUT_NATIVE:
             switch (subsampling) {
@@ -370,7 +377,7 @@ bool Decoder::get_widths_heights_from_output_format(std::vector<uint32_t>& width
     return true;
 }
 
-void Decoder::reset_code_stream_store() {
+void Decoder::reset_code_stream() {
     if (!code_stream.empty()) {
         // std::cout << "Cleaning up batch image code_stream store (" << code_stream.size() << " instances.)" << std::endl;
         for (auto& cs : code_stream) {
@@ -392,7 +399,7 @@ void Decoder::reset_code_stream_store() {
     }
 }
 
-void Decoder::reset_image_store() {
+void Decoder::reset_image() {
     if (!images_.empty()) {
         // std::cout << "Cleaning up batch image store (" << image.size() << " instances.)" << std::endl;
         for (auto& img : images_) {
@@ -419,8 +426,8 @@ void Decoder::set_output_format(RocJpegOutputFormat output_format) {
 
 Decoder::~Decoder() {
     // de-alloc, clean all about code_stream
-    reset_code_stream_store();
-    reset_image_store();
+    reset_code_stream();
+    reset_image();
     // delete/destroy MAIN decode obj
     if(rocjpeg_handle != nullptr) {
         PY_CHECK_ROCJPEG(rocJpegDestroy(rocjpeg_handle));

@@ -22,9 +22,6 @@ THE SOFTWARE.
 
 #pragma once
 
-#include <filesystem>
-// namespace fs = std::filesystem;
-
 #include "roc_pyjpeg.h"
 #include "roc_pyjpeg_codestream.h"
 

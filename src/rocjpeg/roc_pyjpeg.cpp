@@ -27,9 +27,6 @@ THE SOFTWARE.
 
 using namespace std;
 
-RocJpegHandle rocjpeg_handle = nullptr;     // main session
-RocJpegOutputFormat user_output_format = ROCJPEG_OUTPUT_RGB;    // dynamically adjusted by the user
-
 PYBIND11_MODULE(rocpyjpegdecode, m) {
  
     m.doc() = "Python bindings for the C++ portions of rocJPEG ..";

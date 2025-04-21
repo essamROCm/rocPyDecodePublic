@@ -26,12 +26,6 @@ import sys
  
 
 def decode_batch(decoder, folder_full_path, batch_size):
-    if not isinstance(batch_size, int) or batch_size <= 0:
-        print(f"Args Error: batch_size must be a positive integer, got {batch_size}\n")
-        return
-    if not os.path.isdir(folder_full_path):
-        print(f"Args Error: '{folder_full_path}' is not a directory.\n")
-        return
     files_full_path_list = [os.path.join(root, f) for root, _, files in os.walk(folder_full_path) for f in files]
     total = len(files_full_path_list)
     total_valid_images_processed = 0
@@ -45,7 +39,7 @@ def decode_batch(decoder, folder_full_path, batch_size):
                 total_valid_images_processed += 1
     print(f"Total files processed : {total_valid_images_processed}")
     print(f"Total Bad files found : {total-total_valid_images_processed}")
- 
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Example of decoding whole folder and sub-folders containing jpeg images
@@ -115,13 +109,19 @@ if __name__ == "__main__":
 
     # get params
     input_file_path = args.input
-    batch = args.batch
+    batch_size = args.batch
     output_format = args.output_format
     device_id = args.device
     backend = args.backend
 
+    if not isinstance(batch_size, int) or batch_size <= 0:
+        print(f"Args Error: batch_size must be a positive integer, got {batch_size}\n")
+        exit()
+    if not os.path.isdir(input_file_path):
+        print(f"Args Error: '{input_file_path}' is not a directory.\n")
+        exit()
     if not os.path.exists(input_file_path):  # Input file or folder (must exist)
         print("ERROR: input folder doesn't exist.")
         exit()
 
-    jpeg_decode(input_file_path, batch, output_format, device_id, backend)
+    jpeg_decode(input_file_path, batch_size, output_format, device_id, backend)

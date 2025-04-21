@@ -38,19 +38,9 @@ THE SOFTWARE.
 namespace py = pybind11;
 using namespace py::literals;
 
-extern RocJpegHandle rocjpeg_handle;
-extern RocJpegOutputFormat user_output_format;
-
-#define PY_CHECK_DECODER() {        \
-    if (!rocjpeg_handle) {          \
-        std::cerr << "ERROR: Decoder is not instantiated. Please create/instantiate the Decoder class first." << std::endl; \
-        std::exit(EXIT_FAILURE);    \
-    }                               \
-}
-
 #include <pybind11/numpy.h>
 
-// TODO: need to impllement a case for YUV (currently covers RGB and RGB Planar)
+// TODO: need to impllement a case for YUV to add to the RGB and RGB-Planar
 
 class PyJpegImages {
 

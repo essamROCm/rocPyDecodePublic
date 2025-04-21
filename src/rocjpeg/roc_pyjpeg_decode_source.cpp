@@ -27,13 +27,11 @@ THE SOFTWARE.
 DecodeSource::DecodeSource(CodeStream* code_stream_ptr)
     : code_stream_{}
     , code_stream_ptr_(code_stream_ptr) {
-    PY_CHECK_DECODER();
 }
 
 DecodeSource::DecodeSource(std::unique_ptr<CodeStream> code_stream)
     : code_stream_(std::move(code_stream))
     , code_stream_ptr_(code_stream_.get()) {
-    PY_CHECK_DECODER();
 }
 
 DecodeSource::~DecodeSource() {

@@ -41,8 +41,8 @@ public:
     static void exportToPython(py::module& m);
 
     // reset what was allocated and filled before
-    void reset_code_stream_store();
-    void reset_image_store();
+    void reset_code_stream();
+    void reset_image();
 
     // set batch size for batch process
     void set_output_format(RocJpegOutputFormat output_format);
@@ -53,12 +53,20 @@ public:
     // STORE: to export IMAGE/IMAGES-BATCH to python
     std::vector<PyJpegImages> images_;        // all live instance
 
-private:    
+    static RocJpegHandle get_handle() {return rocjpeg_handle;};
+    static void set_handle(RocJpegHandle h) { rocjpeg_handle = h;};
+    static RocJpegOutputFormat get_format() {return user_output_format;};
+    static void set_format(RocJpegOutputFormat fmt) { user_output_format = fmt;};
+
+private:
     int m_device_id;
     RocJpegBackend m_backend;
-    bool to_dlpack_tensor(CodeStream* code_stream, PyJpegImages* image);
-    bool get_widths_heights_from_output_format(std::vector<uint32_t>& widths, std::vector<uint32_t>& heights, uint32_t img_width, uint32_t img_height, RocJpegOutputFormat output_format, RocJpegChromaSubsampling subsampling);
     int m_batch_size = 2; // default, not used for now
+    static RocJpegHandle rocjpeg_handle;     // main session
+    static RocJpegOutputFormat user_output_format;    // dynamically adjusted by the user
+
+    bool to_dlpack_tensor(CodeStream* code_stream, PyJpegImages* image);
+    bool get_output_dims(std::vector<uint32_t>& widths, std::vector<uint32_t>& heights, uint32_t img_width, uint32_t img_height, RocJpegOutputFormat output_format, RocJpegChromaSubsampling subsampling);
 };
 
 #endif // PY_ROC_JPEG_HEADER

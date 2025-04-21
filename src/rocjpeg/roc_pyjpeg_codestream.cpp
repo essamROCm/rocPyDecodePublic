@@ -94,7 +94,7 @@ CodeStream& CodeStream::operator=(const CodeStream& other) {
     std::copy(std::begin(other.heights), std::end(other.heights), std::begin(heights));
     std::copy(std::begin(other.channel_sizes), std::end(other.channel_sizes), std::begin(channel_sizes));
     num_channels = other.num_channels;
-    code_stream_ = other.code_stream_;  // raw pointer copy (or convert to shared_ptr if needed)
+    code_stream_ = other.code_stream_;
     // Copy private members
     data_ref_bytes_ = other.data_ref_bytes_;
     data_ref_arr_ = other.data_ref_arr_;
@@ -129,7 +129,7 @@ int CodeStream::InitializeSingleImage(const std::filesystem::path& filename, con
     // default, reset
     memset(&decode_params, 0, sizeof(RocJpegDecodeParams));
     memset(&output_image, 0, sizeof(RocJpegImage));
-    decode_params.output_format = user_output_format;
+    decode_params.output_format = Decoder::get_format();
     num_channels = 0;
     // File sanity chek
     if(!filename.empty()) {
@@ -140,19 +140,22 @@ int CodeStream::InitializeSingleImage(const std::filesystem::path& filename, con
     }
     // Read file data if no data sent
     std::vector<char> file_data;
-    int file_size = data_size;
     if (data != nullptr && data_size > 0) {
         file_data.resize(data_size);
         file_data.assign(reinterpret_cast<const char*>(data), reinterpret_cast<const char*>(data) + data_size);
-    }    
-    if(data == nullptr) {
+    } else if(data == nullptr) {
         int ret = EXIT_SUCCESS;
-        if((ret = ReadFromFile(filename, file_data, file_size)) != EXIT_SUCCESS) {
+        if((ret = ReadFromFile(filename, file_data, data_size)) != EXIT_SUCCESS) {
             return ret;
         }
     }
 
     // Create Stream
+    // check and release/de-alloc if previously used
+    if(stream_handle != nullptr) {
+        PY_CHECK_ROCJPEG(rocJpegStreamDestroy(stream_handle));
+        stream_handle = nullptr;
+    }
     RocJpegStatus rocjpeg_status = ROCJPEG_STATUS_NOT_INITIALIZED;
     rocjpeg_status = rocJpegStreamCreate(&stream_handle);
     if (rocjpeg_status != ROCJPEG_STATUS_SUCCESS) {
@@ -161,7 +164,7 @@ int CodeStream::InitializeSingleImage(const std::filesystem::path& filename, con
     }
 
     // Stream Parse
-    rocjpeg_status = rocJpegStreamParse(reinterpret_cast<uint8_t*>(file_data.data()), file_size, stream_handle);
+    rocjpeg_status = rocJpegStreamParse(reinterpret_cast<uint8_t*>(file_data.data()), data_size, stream_handle);
     if (rocjpeg_status != ROCJPEG_STATUS_SUCCESS) {
         std::cerr << "ERROR: Failed to parse the input jpeg stream with " << rocJpegGetErrorName(rocjpeg_status) << std::endl;
         return release();
@@ -170,7 +173,8 @@ int CodeStream::InitializeSingleImage(const std::filesystem::path& filename, con
     // Get Image Info
     uint8_t num_components = 0;
     subsampling = ROCJPEG_CSS_UNKNOWN;
-    rocjpeg_status = rocJpegGetImageInfo(rocjpeg_handle, stream_handle, &num_components, &subsampling, widths, heights);
+    RocJpegHandle jpeg_handle = Decoder::get_handle();
+    rocjpeg_status = rocJpegGetImageInfo(jpeg_handle, stream_handle, &num_components, &subsampling, widths, heights);
 
     if (rocjpeg_status != ROCJPEG_STATUS_SUCCESS) {
         std::cerr << "ERROR: Failed to  get image info with " << rocJpegGetErrorName(rocjpeg_status) << std::endl;
@@ -232,39 +236,35 @@ int CodeStream::release() {
 }
 
 CodeStream::CodeStream(const std::filesystem::path& filename) {
-    PY_CHECK_DECODER();
     set_valid(false);
-    if( InitializeSingleImage(filename, nullptr, 0) == EXIT_SUCCESS) {
+    if(InitializeSingleImage(filename, nullptr, 0) == EXIT_SUCCESS) {
         set_valid(true); // this code_stream instance is OK to use
     }
 }
 
 CodeStream::CodeStream(const unsigned char* data, size_t length) {
-    PY_CHECK_DECODER();
     set_valid(false);
-    if( InitializeSingleImage(static_cast<const std::filesystem::path>(""), data, length) == EXIT_SUCCESS) {
+    if(InitializeSingleImage(static_cast<const std::filesystem::path>(""), data, length) == EXIT_SUCCESS) {
         set_valid(true); // this code_stream instance is OK to use
     }
 }
 
 CodeStream::CodeStream(py::bytes data) {
-    PY_CHECK_DECODER();
     data_ref_bytes_ = data;
     auto data_view = static_cast<std::string_view>(data_ref_bytes_);
     py::gil_scoped_release release;
     set_valid(false);
-    if( InitializeSingleImage(static_cast<const std::filesystem::path>(""), reinterpret_cast<const unsigned char*>(data_view.data()), data_view.size()) == EXIT_SUCCESS) {
+    if(InitializeSingleImage(static_cast<const std::filesystem::path>(""), reinterpret_cast<const unsigned char*>(data_view.data()), data_view.size()) == EXIT_SUCCESS) {
         set_valid(true); // this code_stream instance is OK to use
     }
 }
 
 CodeStream::CodeStream(py::array_t<uint8_t> arr) {
-    PY_CHECK_DECODER();
     data_ref_arr_ = arr;
     auto data = data_ref_arr_.unchecked<1>();
     py::gil_scoped_release release;
     set_valid(false);
-    if( InitializeSingleImage(static_cast<const std::filesystem::path>(""), data.data(0), data.size()) == EXIT_SUCCESS) {
+    if(InitializeSingleImage(static_cast<const std::filesystem::path>(""), data.data(0), data.size()) == EXIT_SUCCESS) {
         set_valid(true); // this code_stream instance is OK to use
     }
 }

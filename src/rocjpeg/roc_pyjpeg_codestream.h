@@ -49,7 +49,7 @@ public:
     int width();
     int height();
     
-    CodeStream* code_stream_;
+    std::shared_ptr<CodeStream> code_stream_;
 
     // related descriptor of 'this' image
     RocJpegStreamHandle stream_handle = nullptr;
