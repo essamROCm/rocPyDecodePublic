@@ -153,33 +153,37 @@ Decoder::Decoder(int device_id, int backend, RocJpegOutputFormat output_format) 
 PyJpegImages Decoder::decode(DecodeSource* data) {
     // keep code stream ptr in class (alive)
     assert(data);
-    reset_code_stream();
-    reset_image();
+
+    // do not exceed the MAX allowed of stored decoded images
+    if(code_stream_single.size()>=MAX_SINGLE_DECODE) {
+        std::cerr << "ERROR: Maximum limit of " << static_cast<int>(MAX_SINGLE_DECODE) << " has been reached. Use batched decode instead." << std::endl;
+        return images_single.back();        
+    }
 
     // to return at least an empty/invalid one image record
     PyJpegImages img;
     img.set_valid(false);
-    images_.push_back(img);  // Push default/empty/invalid PyJpegImages
+    images_single.push_back(img);
 
     // get current data/file associated code_stream instance
-    code_stream.push_back(*data->code_stream()->handle());
+    code_stream_single.push_back(*data->code_stream()->handle());
 
     // runtime sanity check
-    if(!code_stream.back().is_valid()) {
-        return images_.back(); // last item is this instance
+    if(!code_stream_single.back().is_valid()) {
+        return images_single.back(); // last item is this instance
     }
 
     // Here call to DECODE one single JPEG image
-    RocJpegStatus status = rocJpegDecode(rocjpeg_handle, code_stream.back().stream_handle, &code_stream.back().decode_params, &code_stream.back().output_image);
+    RocJpegStatus status = rocJpegDecode(rocjpeg_handle, code_stream_single.back().stream_handle, &code_stream_single.back().decode_params, &code_stream_single.back().output_image);
     if (status != ROCJPEG_STATUS_SUCCESS) {
         std::cerr << "ERROR: Failed to decode image. Status code: " << status << std::endl;
-        return images_.back();
+        return images_single.back();
     }
 
     // to export to python (use dlpack(GPU MEM) {and numpy host array}) -- GPU Tensor
-    to_dlpack_tensor(&code_stream.back(), &images_.back());
-    images_.back().set_valid(true);
-    return images_.back(); // return one image
+    to_dlpack_tensor(&code_stream_single.back(), &images_single.back());
+    images_single.back().set_valid(true);
+    return images_single.back(); // return one image
 }
 
 std::vector<PyJpegImages> Decoder::decode(std::vector<DecodeSource*>& decode_source_arg) {
@@ -188,8 +192,9 @@ std::vector<PyJpegImages> Decoder::decode(std::vector<DecodeSource*>& decode_sou
     std::vector<RocJpegDecodeParams> decode_params_list;
     std::vector<RocJpegImage> destinations;
 
-    reset_code_stream();
-    reset_image();
+    // reset prev batch store if used (to re-use it)
+    reset_code_streams(code_stream);
+    reset_images(images_);
 
     int batch_size = decode_source_arg.size();
 
@@ -377,10 +382,9 @@ bool Decoder::get_output_dims(std::vector<uint32_t>& widths, std::vector<uint32_
     return true;
 }
 
-void Decoder::reset_code_stream() {
-    if (!code_stream.empty()) {
-        // std::cout << "Cleaning up batch image code_stream store (" << code_stream.size() << " instances.)" << std::endl;
-        for (auto& cs : code_stream) {
+void Decoder::reset_code_streams(std::vector<CodeStream>& cs) {
+    if (!cs.empty()) {
+        for (auto& cs : cs) {
             if (cs.stream_handle != nullptr && cs.is_valid()) {
                 // Destroy any allocated MEM
                 for (int i = 0; i < cs.num_channels; i++) {
@@ -395,14 +399,14 @@ void Decoder::reset_code_stream() {
             }
         }
         // clear the vector after cleanup
-        code_stream.clear();
+        cs.clear();
     }
 }
 
-void Decoder::reset_image() {
-    if (!images_.empty()) {
+void Decoder::reset_images(std::vector<PyJpegImages>& imgs) {
+    if (!imgs.empty()) {
         // std::cout << "Cleaning up batch image store (" << image.size() << " instances.)" << std::endl;
-        for (auto& img : images_) {
+        for (auto& img : imgs) {
             if(img.is_valid()) {
                 for (auto& buf : img.ext_buf) {
                     buf = std::make_shared<BufferInterface>();
@@ -410,7 +414,7 @@ void Decoder::reset_image() {
             }
         }
         // clear the vector after cleanup
-        images_.clear();
+        imgs.clear();
     }
 }
 
@@ -425,9 +429,12 @@ void Decoder::set_output_format(RocJpegOutputFormat output_format) {
 }
 
 Decoder::~Decoder() {
-    // de-alloc, clean all about code_stream
-    reset_code_stream();
-    reset_image();
+    // de-alloc, clean all about BATCHES code_stream/images
+    reset_code_streams(code_stream);
+    reset_images(images_);
+    // clean single code_stream/images
+    reset_code_streams(code_stream_single);
+    reset_images(images_single);
     // delete/destroy MAIN decode obj
     if(rocjpeg_handle != nullptr) {
         PY_CHECK_ROCJPEG(rocJpegDestroy(rocjpeg_handle));

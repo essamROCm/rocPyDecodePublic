@@ -22,7 +22,7 @@ THE SOFTWARE.
 
 #include "roc_pyjpeg.h"
 #include "roc_pyjpeg_decoder.h"
-#include "roc_pyjpeg_buffer.h"
+#include "common/roc_pybuffer.h"
 #include "roc_pyjpeg_codestream.h"
 #include <algorithm>     // for std::copy
 
@@ -40,7 +40,7 @@ void CodeStream::exportToPython(py::module& m) {
         .def(py::init([](py::bytes bytes) {
             return new CodeStream(bytes);
             }),
-            "bytes"_a, py::keep_alive<1, 2>(),
+            "bytes"_a,
             R"pbdoc(
             Initialize a CodeStream using bytes as input.
 
@@ -50,7 +50,7 @@ void CodeStream::exportToPython(py::module& m) {
         .def(py::init([](py::array_t<uint8_t> arr) {
             return new CodeStream(arr);
             }),
-            "array"_a, py::keep_alive<1, 2>(),
+            "array"_a,
             R"pbdoc(
             Initialize a CodeStream using a numpy array of uint8 as input.
 
@@ -60,7 +60,7 @@ void CodeStream::exportToPython(py::module& m) {
         .def(py::init([](const std::filesystem::path& filename) {
             return new CodeStream(filename);
             }),
-            "filename"_a, py::keep_alive<1, 2>(),
+            "filename"_a,
             R"pbdoc(
             Initialize a CodeStream using a file path as input.
 
@@ -238,6 +238,7 @@ int CodeStream::release() {
 
 CodeStream::CodeStream(const std::filesystem::path& filename) {
     set_valid(false);
+    py::gil_scoped_release release;
     if(InitializeSingleImage(filename, nullptr, 0) == EXIT_SUCCESS) {
         set_valid(true); // this code_stream instance is OK to use
     }
@@ -245,6 +246,7 @@ CodeStream::CodeStream(const std::filesystem::path& filename) {
 
 CodeStream::CodeStream(const unsigned char* data, size_t length) {
     set_valid(false);
+    py::gil_scoped_release release;
     if(InitializeSingleImage(static_cast<const std::filesystem::path>(""), data, length) == EXIT_SUCCESS) {
         set_valid(true); // this code_stream instance is OK to use
     }

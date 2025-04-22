@@ -27,7 +27,7 @@ THE SOFTWARE.
 
 #include <filesystem>
 #include "roc_pyjpeg.h"
-#include "roc_pyjpeg_buffer.h"
+#include "common/roc_pybuffer.h"
 
 // instantiat ONE class object for decoding ONE image file
 

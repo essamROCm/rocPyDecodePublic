@@ -20,6 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
+#include "common/roc_pybuffer.h"
 #include "roc_pyvideodecode.h"
 
 using namespace std;
@@ -41,8 +42,6 @@ PYBIND11_MODULE(rocpydecode, m) {
         packet->bitstream_adrs = reinterpret_cast<uintptr_t>(buffer_info.ptr);
         return packet;
     }, "Convert packet info from user to rocpydecode's PyPacketData");
-
-
 
     // ------
     // Types:
@@ -90,7 +89,7 @@ PYBIND11_MODULE(rocpydecode, m) {
     // ---------
     // PyExport
     // ---------
-    PyExportInitializer(m);
+    BufferInterface::exportToPython(m);
 
     // -----------------------------
     // User Demuxer 'PyVideoDemuxer'

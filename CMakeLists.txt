@@ -243,8 +243,8 @@ if(BUILD_ROCPYDECODE)
     # rocPyDecode 
     include_directories(src)  
     file(GLOB pyfiles pyRocVideoDecode/*.py pyRocVideoDecode/*.pyi )
-    file(GLOB include src/*.h ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.h ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.h)
-    file(GLOB sources src/*.cpp  ${ROCM_PATH}/share/rocdecode/utils/*.cpp ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.cpp ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.cpp)
+    file(GLOB include src/rocdecode/*.h src/common/*.h ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.h ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.h)
+    file(GLOB sources src/rocdecode/*.cpp src/common/*.cpp ${ROCM_PATH}/share/rocdecode/utils/*.cpp ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.cpp ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.cpp)
 
     # rocJPEG
     if(ROCJPEG_FOUND AND ENABLE_ROCPYJPEG)
@@ -252,8 +252,8 @@ if(BUILD_ROCPYDECODE)
             ${ROCM_PATH}/share/rocjpeg/samples)
         set(LINK_LIBRARY_LIST ${LINK_LIBRARY_LIST} ${ROCJPEG_LIBRARY})
         file(GLOB pyfiles_jpeg pyRocJpegDecode/*.py pyRocJpegDecode/*.pyi)
-        file(GLOB include_jpeg src/rocjpeg/*.h ${ROCM_PATH}/share/rocjpeg/samples/rocjpeg_samples_utils.h)
-        file(GLOB sources_jpeg src/rocjpeg/*.cpp)
+        file(GLOB include_jpeg src/rocjpeg/*.h src/common/*.h)
+        file(GLOB sources_jpeg src/rocjpeg/*.cpp src/common/*.cpp)
     endif()
 
     message("-- ${White}rocPyDecode -- Link Libraries: ${LINK_LIBRARY_LIST}${ColourReset}")
@@ -395,7 +395,7 @@ if(BUILD_ROCPYDECODE)
 
     #install rocpyjpegdecode API folder -and- samples folder
     install(DIRECTORY pyRocJpegDecode DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime)
-    install(DIRECTORY samples/rocjpeg DESTINATION ${CMAKE_INSTALL_LIBDIR}/pyRocJpegDecode COMPONENT runtime)
+    install(DIRECTORY samples DESTINATION ${CMAKE_INSTALL_LIBDIR}/pyRocJpegDecode COMPONENT runtime)
 
     # Test - Installed -rocpydecode
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/tests DESTINATION ${CMAKE_INSTALL_DATADIR}/rocpydecode COMPONENT test)

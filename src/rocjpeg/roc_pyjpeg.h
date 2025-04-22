@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include <iostream>
 #include "rocjpeg/rocjpeg.h"
-#include "roc_pyjpeg_buffer.h"
+#include "common/roc_pybuffer.h"
 
 #include <pybind11/pybind11.h>	 
 #include <pybind11/functional.h>

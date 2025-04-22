@@ -20,8 +20,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-#include "roc_pyjpeg.h"
-#include "roc_pyjpeg_buffer.h"
+// #include "roc_pyjpeg.h"
+#include "roc_pybuffer.h"
 #include <iostream>
 
 #include <pybind11/numpy.h>

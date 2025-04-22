@@ -23,7 +23,7 @@ THE SOFTWARE.
 #ifndef EXT_BUFFER_HEADER
 #define EXT_BUFFER_HEADER
 
-#include "roc_pyjpeg_dlpack.h"
+#include "roc_pydlpack.h"
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>

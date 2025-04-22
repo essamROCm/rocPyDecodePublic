@@ -49,22 +49,22 @@ void DecodeSource::exportToPython(py::module& m) {
                 return new DecodeSource(code_stream);
             }),
             "Constructor initializing DecodeSource with a code stream of the image to decode.",
-            "code_stream"_a, py::keep_alive<1, 2>())
+            "code_stream"_a)
         .def(py::init([](py::array_t<uint8_t> arr) {
                 return new DecodeSource(std::make_unique<CodeStream>(arr));
             }),
             "Constructor initializing DecodeSource with a numpy array.",
-            "array"_a, py::keep_alive<1, 2>())
+            "array"_a)
         .def(py::init([](py::bytes bytes) {
                 return new DecodeSource(std::make_unique<CodeStream>(bytes));
             }),
             "Constructor initializing DecodeSource with byte data.",
-            "bytes"_a, py::keep_alive<1, 2>())
+            "bytes"_a)
         .def(py::init([](const std::string& filename) {
                 return new DecodeSource(std::make_unique<CodeStream>(std::filesystem::path(filename)));
             }),
             "Constructor initializing DecodeSource with filename pointing to the file with image.",
-            "filename"_a, py::keep_alive<1, 2>())
+            "filename"_a)
         .def_property_readonly("code_stream", &DecodeSource::code_stream,
             "Returns the code stream to be decoded into an image.")
         ;

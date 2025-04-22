@@ -28,6 +28,8 @@ THE SOFTWARE.
 #include "roc_pyjpeg_utils.h"
 #include "roc_pyjpeg_decode_source.h"
 
+#define MAX_SINGLE_DECODE   16  // keep records up to this count of decoded single images, higher means user need to use Batched decode instead
+
 class Decoder {
 
 public:
@@ -41,17 +43,19 @@ public:
     static void exportToPython(py::module& m);
 
     // reset what was allocated and filled before
-    void reset_code_stream();
-    void reset_image();
+    void reset_code_streams(std::vector<CodeStream>& cs);
+    void reset_images(std::vector<PyJpegImages>& imgs);
 
     // set batch size for batch process
     void set_output_format(RocJpegOutputFormat output_format);
 
     // STORE: keep code_stream(s) info here
-    std::vector<CodeStream> code_stream; // add all live instance
+    std::vector<CodeStream> code_stream;        // one batch instances
+    std::vector<CodeStream> code_stream_single; // for single decode instances (up to MAX_SINGLE_DECODE)
 
     // STORE: to export IMAGE/IMAGES-BATCH to python
-    std::vector<PyJpegImages> images_;        // all live instance
+    std::vector<PyJpegImages> images_;          // one batch instance
+    std::vector<PyJpegImages> images_single;    // for single decode instances (up to MAX_SINGLE_DECODE)
 
     static RocJpegHandle get_handle() {return rocjpeg_handle;};
     static void set_handle(RocJpegHandle h) { rocjpeg_handle = h;};

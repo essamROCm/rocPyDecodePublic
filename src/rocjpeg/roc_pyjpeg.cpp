@@ -20,6 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
+#include "common/roc_pybuffer.h"
 #include "roc_pyjpeg.h"
 #include "roc_pyjpeg_decoder.h"
 #include "roc_pyjpeg_codestream.h"
@@ -96,5 +97,5 @@ PYBIND11_MODULE(rocpyjpegdecode, m) {
     Decoder::exportToPython(m);
     CodeStream::exportToPython(m);
     DecodeSource::exportToPython(m);
-    BufferInterface::exportToPython(m);   
+    BufferInterface::exportToPython(m);
 }
