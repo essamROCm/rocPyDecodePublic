@@ -50,7 +50,7 @@ public:
     void set_output_format(RocJpegOutputFormat output_format);
 
     // STORE: keep code_stream(s) info here
-    std::vector<CodeStream> code_stream;        // one batch instances
+    std::vector<CodeStream> code_stream;        // one image instance
     std::vector<CodeStream> code_stream_single; // for single decode instances (up to MAX_SINGLE_DECODE)
 
     // STORE: to export IMAGE/IMAGES-BATCH to python
@@ -65,7 +65,6 @@ public:
 private:
     int m_device_id;
     RocJpegBackend m_backend;
-    int m_batch_size = 2; // default, not used for now
     static RocJpegHandle rocjpeg_handle;     // main session
     static RocJpegOutputFormat user_output_format;    // dynamically adjusted by the user
 

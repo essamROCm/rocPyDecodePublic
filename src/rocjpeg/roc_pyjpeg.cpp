@@ -32,9 +32,7 @@ PYBIND11_MODULE(rocpyjpegdecode, m) {
  
     m.doc() = "Python bindings for the C++ portions of rocJPEG ..";
 
-    // ------
     // Types:
-    // ------
     py::module types_m = m.def_submodule("jpegTypes");
     types_m.doc() = R"pbdoc(
 

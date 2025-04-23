@@ -33,7 +33,7 @@ def decode_batch(decoder, folder_full_path, batch_size):
     for i in range(0, total, batch_size):
         current_batch = files_full_path_list[i:i + batch_size]
         img_list = decoder.decode(current_batch)
-        # consum this batch now, it will not be freed if new batch is decoded
+        # consum this batch now, it will be freed if new batch is decoded
         for img in img_list:
             if img.is_valid():
                 total_valid_images_processed += 1

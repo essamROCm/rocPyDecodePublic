@@ -20,13 +20,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-#include <filesystem>
+#include <iostream>
 #include "roc_pyjpeg.h"
 #include "roc_pyjpeg_decode_source.h"
 
-DecodeSource::DecodeSource(CodeStream* code_stream_ptr)
-    : code_stream_{}
-    , code_stream_ptr_(code_stream_ptr) {
+DecodeSource::DecodeSource(const CodeStream* code_stream_ptr)
+    : code_stream_(std::make_unique<CodeStream>(*code_stream_ptr))  // make a copy
+    , code_stream_ptr_(code_stream_.get()) {
 }
 
 DecodeSource::DecodeSource(std::unique_ptr<CodeStream> code_stream)
@@ -34,28 +34,27 @@ DecodeSource::DecodeSource(std::unique_ptr<CodeStream> code_stream)
     , code_stream_ptr_(code_stream_.get()) {
 }
 
-DecodeSource::~DecodeSource() {
-}
-
-CodeStream* DecodeSource::code_stream() {
+const CodeStream* DecodeSource::code_stream() const {
     return code_stream_ptr_;
 }
 
+DecodeSource::~DecodeSource() {
+}
+
 void DecodeSource::exportToPython(py::module& m) {
-    // clang-format off
     py::class_<DecodeSource>(m, "DecodeSource",
         "Class representing a source for decoding, which includes the image code stream to decode.")        
-        .def(py::init([](CodeStream* code_stream) {
+        .def(py::init([](const CodeStream* code_stream) {
                 return new DecodeSource(code_stream);
             }),
             "Constructor initializing DecodeSource with a code stream of the image to decode.",
             "code_stream"_a)
-        .def(py::init([](py::array_t<uint8_t> arr) {
+        .def(py::init([](const py::array_t<uint8_t> arr) {
                 return new DecodeSource(std::make_unique<CodeStream>(arr));
             }),
             "Constructor initializing DecodeSource with a numpy array.",
             "array"_a)
-        .def(py::init([](py::bytes bytes) {
+        .def(py::init([](const py::bytes bytes) {
                 return new DecodeSource(std::make_unique<CodeStream>(bytes));
             }),
             "Constructor initializing DecodeSource with byte data.",
@@ -66,10 +65,7 @@ void DecodeSource::exportToPython(py::module& m) {
             "Constructor initializing DecodeSource with filename pointing to the file with image.",
             "filename"_a)
         .def_property_readonly("code_stream", &DecodeSource::code_stream,
-            "Returns the code stream to be decoded into an image.")
-        ;
-
-    // clang-format on
+            "Returns the code stream to be decoded into an image.");
     py::implicitly_convertible<py::bytes, DecodeSource>();
     py::implicitly_convertible<py::array_t<uint8_t>, DecodeSource>();
     py::implicitly_convertible<std::string, DecodeSource>();

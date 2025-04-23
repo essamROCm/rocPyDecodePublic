@@ -28,13 +28,6 @@ THE SOFTWARE.
 #include "rocjpeg/rocjpeg.h"
 #include "common/roc_pybuffer.h"
 
-#include <pybind11/pybind11.h>	 
-#include <pybind11/functional.h>
-#include <pybind11/stl.h>
-#include <pybind11/numpy.h>
-#include <pybind11/complex.h>
-#include <pybind11/chrono.h>
-
 namespace py = pybind11;
 using namespace py::literals;
 
@@ -86,9 +79,8 @@ public:
         }
         return ret;
     }
-    // flag indicates this instance of the PyJpegImages is valid to use
-    // when false means the file/data associated with it to be decoded
-    // found invalid, corrupted or has issues prevent from decoding it properly
+    // flag indicates this instance of the PyJpegImages is valid to use if true
+    // when false means the image invalid or not created/decoded, do not use
 protected:
     bool valid = false;
 };

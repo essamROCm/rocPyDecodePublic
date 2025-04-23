@@ -55,15 +55,15 @@ class decoder(object):
 
     # read image or batch of images
     def read(self, jpeg_item_to_decode):
-        self.img = self.jpegdec.read(jpeg_item_to_decode)
-        return self.img        
+        img = self.jpegdec.read(jpeg_item_to_decode)
+        return img
 
     # decode image or batch of images
     def decode(self, jpeg_item_to_decode):
-        self.img = self.jpegdec.decode(jpeg_item_to_decode)
-        return self.img
+        img = self.jpegdec.decode(jpeg_item_to_decode)
+        return img
 
     def set_output_image_format(self, output_format):
         self.output_format = jpegt.RocJpegOutputFormat(output_format)
-        self.img = self.jpegdec.set_output_format(self.output_format)
+        self.jpegdec.set_output_format(self.output_format)
         return

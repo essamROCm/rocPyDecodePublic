@@ -24,12 +24,13 @@ THE SOFTWARE.
 #include "roc_pyjpeg_decoder.h"
 #include "common/roc_pybuffer.h"
 #include "roc_pyjpeg_codestream.h"
-#include <algorithm>     // for std::copy
+#include <algorithm>
+#include <vector>
+#include <functional>
 
 using namespace std;
 
 void CodeStream::exportToPython(py::module& m) {
-    // clang-format off
     py::class_<CodeStream>(m, "CodeStream",
         R"pbdoc(
         Class representing a coded stream of image data.
@@ -78,46 +79,47 @@ void CodeStream::exportToPython(py::module& m) {
             ;
 }
 
-CodeStream* CodeStream::handle() {
-    return this;
-}
-
 CodeStream& CodeStream::operator=(const CodeStream& other) {
     if (this == &other)
-        return *this;  // self-assignment guard
-    // Copy public members
-    stream_handle = other.stream_handle;
-    decode_params = other.decode_params;
-    output_image = other.output_image;
+        return *this; // handle self-assignment
+    // decoder members
+    m_width = other.m_width;
+    m_height = other.m_height;
+    valid = other.valid;
+    num_channels = other.num_channels;
     subsampling = other.subsampling;
+    // w/h arrays
     std::copy(std::begin(other.widths), std::end(other.widths), std::begin(widths));
     std::copy(std::begin(other.heights), std::end(other.heights), std::begin(heights));
     std::copy(std::begin(other.channel_sizes), std::end(other.channel_sizes), std::begin(channel_sizes));
-    num_channels = other.num_channels;
-    code_stream_ = other.code_stream_;
-    // Copy private members
+    // Shared data buffer (shared_ptr)
+    file_data = other.file_data;
+    // Pybind11 refs
     data_ref_bytes_ = other.data_ref_bytes_;
     data_ref_arr_ = other.data_ref_arr_;
-    m_width = other.m_width;
-    m_height = other.m_height;
+    // GPU handles - decoder
+    stream_handle = other.stream_handle;
+    decode_params = other.decode_params;
+    output_image = other.output_image;
     return *this;
 }
 
-int CodeStream::ReadFromFile(const std::filesystem::path& filename, std::vector<char>& file_data, int& file_size) {
-    // Read an image from disk.
-    std::ifstream input(filename.c_str(), std::ios::in | std::ios::binary | std::ios::ate);
-    if (!(input.is_open())) {
+int CodeStream::ReadFromFile(const std::filesystem::path& filename, std::shared_ptr<std::vector<char>>& file_data, int& file_size) {
+    // Open image file in binary mode and go to the end to get file size
+    std::ifstream input(filename, std::ios::in | std::ios::binary | std::ios::ate);
+    if (!input.is_open()) {
         std::cerr << "ERROR: Cannot open image: " << filename << std::endl;
         return EXIT_FAILURE;
     }
     // Get the size
-    file_size = input.tellg();
+    file_size = static_cast<int>(input.tellg());
     input.seekg(0, std::ios::beg);
-    // resize if buffer is too small
-    if (file_data.size() < file_size) {
-        file_data.resize(file_size);
+    // Allocate shared buffer if not already allocated or too small
+    if (!file_data || file_data->size() < static_cast<size_t>(file_size)) {
+        file_data = std::make_shared<std::vector<char>>(file_size);
     }
-    if (!input.read(file_data.data(), file_size)) {
+    // Read the file into the buffer
+    if (!input.read(file_data->data(), file_size)) {
         std::cerr << "ERROR: Cannot read from file: " << filename << std::endl;
         return EXIT_FAILURE;
     }
@@ -131,27 +133,23 @@ int CodeStream::InitializeSingleImage(const std::filesystem::path& filename, con
     memset(&output_image, 0, sizeof(RocJpegImage));
     decode_params.output_format = Decoder::get_format();
     num_channels = 0;
-    // File sanity chek
+    // File sanity check
     if(!filename.empty()) {
         if(!std::filesystem::exists(filename)) {
             std::cerr << "Invalid or missing file: " << filename << std::endl;
             return EXIT_FAILURE;
         }
     }
-    // Read file data if no data sent
-    std::vector<char> file_data;
+    // Read file data, if no data sent
     if (data != nullptr && data_size > 0) {
-        file_data.resize(data_size);
-        file_data.assign(reinterpret_cast<const char*>(data), reinterpret_cast<const char*>(data) + data_size);
+        file_data = std::make_shared<std::vector<char>>(reinterpret_cast<const char*>(data), reinterpret_cast<const char*>(data) + data_size);
     } else if(data == nullptr) {
         int ret = EXIT_SUCCESS;
         if((ret = ReadFromFile(filename, file_data, data_size)) != EXIT_SUCCESS) {
             return ret;
         }
     }
-
-    // Create Stream
-    // check and release/de-alloc if previously used
+    // Create Stream - release/de-alloc if previously used
     if(stream_handle != nullptr) {
         PY_CHECK_ROCJPEG(rocJpegStreamDestroy(stream_handle));
         stream_handle = nullptr;
@@ -162,66 +160,56 @@ int CodeStream::InitializeSingleImage(const std::filesystem::path& filename, con
         std::cerr << "ERROR: Failed to create stream with " << rocJpegGetErrorName(rocjpeg_status) << std::endl;
         return EXIT_FAILURE;
     }
-
     // Stream Parse
-    rocjpeg_status = rocJpegStreamParse(reinterpret_cast<uint8_t*>(file_data.data()), data_size, stream_handle);
+    rocjpeg_status = rocJpegStreamParse(reinterpret_cast<uint8_t*>(file_data->data()), data_size, stream_handle);
     if (rocjpeg_status != ROCJPEG_STATUS_SUCCESS) {
         std::cerr << "ERROR: Failed to parse the input jpeg stream with " << rocJpegGetErrorName(rocjpeg_status) << "Input File : " << (!filename.empty() ? filename : "") << std::endl;
-        return release();
+        return Release();
     }
-
     // Get Image Info
     uint8_t num_components = 0;
     subsampling = ROCJPEG_CSS_UNKNOWN;
     RocJpegHandle jpeg_handle = Decoder::get_handle();
     rocjpeg_status = rocJpegGetImageInfo(jpeg_handle, stream_handle, &num_components, &subsampling, widths, heights);
-
     if (rocjpeg_status != ROCJPEG_STATUS_SUCCESS) {
         std::cerr << "ERROR: Failed to  get image info with " << rocJpegGetErrorName(rocjpeg_status) << std::endl;
-        return release();
+        return Release();
     }
-
     // Check limits of w/h & subsampling
     PyRocJpegUtils rocjpeg_utils;
-    std::string chroma_sub_sampling = "";
-    rocjpeg_utils.GetChromaSubsamplingStr(subsampling, chroma_sub_sampling);
     if (widths[0] < 64 || heights[0] < 64) {
         std::cerr << "The image resolution is not supported by VCN Hardware: " << (!filename.empty() ? filename : "") << std::endl;
-        return release();
+        return Release();
     }
     if (subsampling == ROCJPEG_CSS_411 || subsampling == ROCJPEG_CSS_UNKNOWN) {
         std::cerr << "The image resolution is not supported by VCN Hardware: " << (!filename.empty() ? filename : "") << std::endl;
-        return release();
+        return Release();
     }    
-
     // save the output w/h to the inner store
     m_width = widths[0];
     m_height = heights[0];
-
     // Get Channel Pitch And Sizes
     if (rocjpeg_utils.GetChannelPitchAndSizes(decode_params, subsampling, widths, heights, num_channels, output_image, channel_sizes)) {
         std::cerr << "ERROR: Failed to get the channel pitch and sizes" << std::endl;
-        return release();
+        return Release();
     }
-
     // allocate memory for each channel
     hipError_t hip_status = hipSuccess;
     for (int i = 0; i < num_channels; i++) {
         if (output_image.channel[i] != nullptr) {
             hip_status = hipFree((void *)output_image.channel[i]);
             if (hip_status != hipSuccess)
-                return release();
+                return Release();
             output_image.channel[i] = nullptr;
         }
         hip_status = hipMalloc(&output_image.channel[i], channel_sizes[i]);
         if (hip_status != hipSuccess)
-            return release();
+            return Release();
     }
-
     return EXIT_SUCCESS;
 }
 
-int CodeStream::release() {
+int CodeStream::Release() {
     hipError_t hip_status = hipSuccess;
     if(stream_handle) {
         RocJpegStatus rocjpeg_status = rocJpegStreamDestroy(stream_handle);

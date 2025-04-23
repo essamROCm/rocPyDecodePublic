@@ -29,8 +29,6 @@ THE SOFTWARE.
 #include "roc_pyjpeg.h"
 #include "common/roc_pybuffer.h"
 
-// instantiat ONE class object for decoding ONE image file
-
 class CodeStream {
 
 public:    
@@ -40,22 +38,19 @@ public:
     CodeStream(py::array_t<uint8_t>);
     ~CodeStream();
     CodeStream();
-
     CodeStream& operator=(const CodeStream& other);
-
     static void exportToPython(py::module& m);
-    CodeStream* handle();
 
     int width();
     int height();
     
-    std::shared_ptr<CodeStream> code_stream_;
-
     // related descriptor of 'this' image
     RocJpegStreamHandle stream_handle = nullptr;
     RocJpegDecodeParams decode_params;
     RocJpegImage output_image;
     RocJpegChromaSubsampling subsampling;
+    std::shared_ptr<std::vector<char>> file_data;
+    int file_size;
     uint32_t widths[ROCJPEG_MAX_COMPONENT] = {};
     uint32_t heights[ROCJPEG_MAX_COMPONENT] = {};    
     uint32_t channel_sizes[ROCJPEG_MAX_COMPONENT] = {};
@@ -63,22 +58,18 @@ public:
     void set_valid(bool state) {valid = state;};
     bool is_valid() {return valid;};
 
-    // flag indicates this instance of the code_stream is valid to use
-    // when false means the file/data associated with it to be decoded
-    // found invalid, corrupted or has issues prevent from decoding it properly
+    // flag = true indicates this instance of the code_stream is valid to use
+    // when = false means the file/data associated with it found invalid
 protected:
     bool valid;
 
 private:
-    // to keep a reference to the argument data, so that they are kept alive throughout the lifetime of the object
     py::bytes data_ref_bytes_;
     py::array_t<uint8_t> data_ref_arr_;
-
     int m_width;
     int m_height;
-
-    int release();
-    int ReadFromFile(const std::filesystem::path& filename, std::vector<char>& file_data, int& file_size); 
+    int Release();
+    int ReadFromFile(const std::filesystem::path& filename, std::shared_ptr<std::vector<char>>& file_data, int& file_size);
     int InitializeSingleImage(const std::filesystem::path& filename, const unsigned char* data, int data_size);
 };
 

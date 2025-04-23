@@ -31,7 +31,7 @@ using namespace py::literals;
 class DecodeSource {
   public:
     DecodeSource(std::unique_ptr<CodeStream> code_stream);
-    DecodeSource(CodeStream* code_stream_ptr);
+    DecodeSource(const CodeStream* code_stream_ptr);
     ~DecodeSource();
 
     DecodeSource(DecodeSource&&) = default;
@@ -40,13 +40,11 @@ class DecodeSource {
     DecodeSource(const DecodeSource&) = delete;
     DecodeSource& operator=(DecodeSource const&) = delete;
 
-    CodeStream* code_stream();
+    const CodeStream* code_stream() const;
 
     static void exportToPython(py::module& m);
 
-    std::optional<RocJpegHandle> roc_jpeg_handle;
-
   private:
     std::unique_ptr<CodeStream> code_stream_;  // owned by this instance
-    CodeStream* code_stream_ptr_ = nullptr;  // externally provided
+    const CodeStream* code_stream_ptr_ = nullptr;  // externally provided
 };

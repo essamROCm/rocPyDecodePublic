@@ -20,6 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
+#include "roc_pyjpeg.h"
 #include "roc_pyjpeg_decoder.h"
 #include "roc_pyjpeg_utils.h"
 #include "roc_pyjpeg_codestream.h"
@@ -27,7 +28,6 @@ THE SOFTWARE.
 using namespace std;
 
 void Decoder::exportToPython(py::module& m) {
-
     // PyJpegImages
     py::class_<PyJpegImages, shared_ptr<PyJpegImages>>(m, "PyJpegImages", py::module_local())
         .def(py::init<>())
@@ -62,7 +62,7 @@ void Decoder::exportToPython(py::module& m) {
         .def("__dlpack_device__", [](std::shared_ptr<PyJpegImages>& self) {
                 return py::make_tuple(py::int_(static_cast<int>(DLDeviceType::kDLROCM)), py::int_(static_cast<int>(0)));
             }, "Get the device associated with the buffer");
-
+    // Decoder Class
     py::class_<Decoder>(m, "Decoder", "Decoder for image decoding operations. "
         "It provides methods to decode images from various sources such as files or data streams. ")
         .def(py::init(
@@ -124,7 +124,6 @@ void Decoder::exportToPython(py::module& m) {
                 List of decoded rocPyJpeg.Image's. There is None in returned list on positions which could not be decoded.
             )pbdoc",
             "srcs"_a);
-    // clang-format on
 }
 
 RocJpegHandle Decoder::rocjpeg_handle = nullptr;                         // main session
@@ -150,76 +149,74 @@ Decoder::Decoder(int device_id, int backend, RocJpegOutputFormat output_format) 
     set_format(output_format);
 }
 
+// receiving single code_stream
 PyJpegImages Decoder::decode(DecodeSource* data) {
     // keep code stream ptr in class (alive)
     assert(data);
-
     // do not exceed the MAX allowed of stored decoded images
     if(code_stream_single.size()>=MAX_SINGLE_DECODE) {
         std::cerr << "ERROR: Maximum limit of " << static_cast<int>(MAX_SINGLE_DECODE) << " has been reached. Use batched decode instead." << std::endl;
         return images_single.back();        
     }
-
     // to return at least an empty/invalid one image record
     PyJpegImages img;
     img.set_valid(false);
     images_single.push_back(img);
-
     // get current data/file associated code_stream instance
-    code_stream_single.push_back(*data->code_stream()->handle());
-
+    const CodeStream& c_stream = *data->code_stream();
+    code_stream_single.push_back(c_stream);
     // runtime sanity check
     if(!code_stream_single.back().is_valid()) {
         return images_single.back(); // last item is this instance
     }
-
     // Here call to DECODE one single JPEG image
     RocJpegStatus status = rocJpegDecode(rocjpeg_handle, code_stream_single.back().stream_handle, &code_stream_single.back().decode_params, &code_stream_single.back().output_image);
     if (status != ROCJPEG_STATUS_SUCCESS) {
         std::cerr << "ERROR: Failed to decode image. Status code: " << status << std::endl;
         return images_single.back();
     }
-
     // to export to python (use dlpack(GPU MEM) {and numpy host array}) -- GPU Tensor
     to_dlpack_tensor(&code_stream_single.back(), &images_single.back());
     images_single.back().set_valid(true);
     return images_single.back(); // return one image
 }
 
+// receiving multiple code_streams
 std::vector<PyJpegImages> Decoder::decode(std::vector<DecodeSource*>& decode_source_arg) {
+    int batch_size = decode_source_arg.size();
     int count_of_valid_instances = 0;
     std::vector<RocJpegStreamHandle> stream_handles;
     std::vector<RocJpegDecodeParams> decode_params_list;
     std::vector<RocJpegImage> destinations;
-
     // reset prev batch store if used (to re-use it)
     reset_code_streams(code_stream);
     reset_images(images_);
-
-    int batch_size = decode_source_arg.size();
-
     // we return a list of images anyway, create empty count of batch_size
     PyJpegImages img;
     img.set_valid(false);
     for (int x = 0; x <batch_size; ++x) {
         images_.push_back(img);
     }
-
+    CodeStream empty_code_stream;
+    empty_code_stream.set_valid(false);
     // loop the whole list length
     for (auto* data : decode_source_arg) {
         if (!data) {
             std::cerr << "Warning: Null DecodeSource* skipped." << std::endl;
-            // push empty/invalid record
-            CodeStream empty_code_stream;
-            empty_code_stream.set_valid(false);
             code_stream.push_back(empty_code_stream);
             continue;
+        } else {
+            if (data->code_stream()) {
+                const CodeStream& cs = *data->code_stream();
+                code_stream.push_back(cs);
+            } else {
+                code_stream.push_back(empty_code_stream);
+            }
         }
-
-        // Add one by one
-        code_stream.push_back(*data->code_stream()->handle());
-        CodeStream& c_stream = code_stream.back();
-
+    }
+    RocJpegStatus status = ROCJPEG_STATUS_SUCCESS;
+    // Process as BATCH
+    for (auto& c_stream : code_stream) {
         // only the valid instances
         if(c_stream.is_valid() && (c_stream.stream_handle!=nullptr)) {
             // prepare a list for 'rocJpegDecodeBatched()'
@@ -229,9 +226,7 @@ std::vector<PyJpegImages> Decoder::decode(std::vector<DecodeSource*>& decode_sou
             count_of_valid_instances++;
         }
     }
-
-    // at least one
-    RocJpegStatus status = ROCJPEG_STATUS_SUCCESS;
+    // at least one valid image data to do the process
     if(count_of_valid_instances > 0) {
         // Here call to DECODE ALL in the batch one time
         status = rocJpegDecodeBatched(  rocjpeg_handle,
@@ -241,23 +236,19 @@ std::vector<PyJpegImages> Decoder::decode(std::vector<DecodeSource*>& decode_sou
                                         destinations.data()
                                         );
         if (status != ROCJPEG_STATUS_SUCCESS) {
-            std::cerr << "ERROR: Failed to decode the image batch . Status code: " << status << std::endl;
+            std::cerr << "ERROR: Failed to decode the image batch. Status code: " << status << std::endl;
             return images_; // return the image list
         }
     }
-
     // to export to python (use dlpack(GPU MEM) {and numpy host array})
     if (status == ROCJPEG_STATUS_SUCCESS) {
         for(int i=0; i<batch_size; i++) {
-            // is it an OK instance?
-            images_[i].set_valid(false);
-            if(!code_stream[i].is_valid()) {
+            images_[i].set_valid(false); 
+            if(!code_stream[i].is_valid()) { // is it an OK instance?
                 continue;
             }
-            // GPU Tensor
-            to_dlpack_tensor(&code_stream[i], &images_[i]);
-            // mark it as OK image to use
-            images_[i].set_valid(true);
+            to_dlpack_tensor(&code_stream[i], &images_[i]); // GPU Tensor
+            images_[i].set_valid(true); // mark it as OK image to use
         }
     }
     return images_; // return the image list
@@ -398,14 +389,12 @@ void Decoder::reset_code_streams(std::vector<CodeStream>& cs) {
                 cs.stream_handle = nullptr;
             }
         }
-        // clear the vector after cleanup
-        cs.clear();
+        cs.clear(); // clear the vector
     }
 }
 
 void Decoder::reset_images(std::vector<PyJpegImages>& imgs) {
     if (!imgs.empty()) {
-        // std::cout << "Cleaning up batch image store (" << image.size() << " instances.)" << std::endl;
         for (auto& img : imgs) {
             if(img.is_valid()) {
                 for (auto& buf : img.ext_buf) {
@@ -413,8 +402,7 @@ void Decoder::reset_images(std::vector<PyJpegImages>& imgs) {
                 }
             }
         }
-        // clear the vector after cleanup
-        imgs.clear();
+        imgs.clear(); // clear the vector
     }
 }
 
