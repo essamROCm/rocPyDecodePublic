@@ -34,7 +34,7 @@ DecodeSource::DecodeSource(std::unique_ptr<CodeStream> code_stream)
     , code_stream_ptr_(code_stream_.get()) {
 }
 
-const CodeStream* DecodeSource::code_stream() const {
+const CodeStream* DecodeSource::CodeStreamInstance() const {
     return code_stream_ptr_;
 }
 
@@ -64,7 +64,7 @@ void DecodeSource::exportToPython(py::module& m) {
             }),
             "Constructor initializing DecodeSource with filename pointing to the file with image.",
             "filename"_a)
-        .def_property_readonly("code_stream", &DecodeSource::code_stream,
+        .def_property_readonly("code_stream", &DecodeSource::CodeStreamInstance,
             "Returns the code stream to be decoded into an image.");
     py::implicitly_convertible<py::bytes, DecodeSource>();
     py::implicitly_convertible<py::array_t<uint8_t>, DecodeSource>();

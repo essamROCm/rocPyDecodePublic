@@ -24,6 +24,8 @@ import rocpyjpegdecode.jpegTypes as jpegt
 import argparse
 import os
 import sys
+from PIL import Image
+import numpy as np
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Example of decoding jpeg image
@@ -32,7 +34,8 @@ def jpeg_decode(
         input_file_path, 
         output_format, 
         device_id,
-        backend):
+        backend,
+        output_file_path):
 
     # create the decode instance
     decoder = jdec.decoder(device_id, backend)
@@ -41,11 +44,21 @@ def jpeg_decode(
     print(f"Image output format set to: {jpegt.RocJpegOutputFormat(output_format)}")
     print(f"\nDecoding file: {input_file_path} on Device: {'CPU' if backend else 'GPU'} with Device ID: {device_id}")
 
-    img = decoder.decode(input_file_path)
+    img_tensor = decoder.decode(input_file_path)
 
-    if(img.is_valid() == False):
-        print("Invalid image returned..")    
+    if(img_tensor.is_valid() == False):
+        print("Invalid image returned..")
+
     print(f"Decoding file: {input_file_path} is complete.\n")
+
+    # example how to save the decoded image as a file
+    if (output_file_path is not None):
+        filename = output_file_path.strip() + ".png"
+        img1 = torch.from_numpy(img_tensor.to_numpy())
+        arr = img1.cpu().numpy()
+        img = Image.fromarray(arr.astype(np.uint8))
+        img.save(filename)
+        print(f"Image saved as: {filename}")
 
 
 if __name__ == "__main__":
@@ -82,6 +95,12 @@ if __name__ == "__main__":
         default=0,
         help='GPU device ID - optional, default 0',
         required=False)
+    parser.add_argument(
+        '-o',
+        '--output',
+        type=str,
+        help='Output File Name Path - optional',
+        required=False)
 
     try:
         args = parser.parse_args()
@@ -93,9 +112,10 @@ if __name__ == "__main__":
     output_format = args.output_format
     device_id = args.device
     backend = args.backend
+    output_file_path = args.output
 
     if not os.path.isfile(input_file_path):  # Input must be a file
         print("ERROR: input passed with -i must be an existing file.")
         exit()
 
-    jpeg_decode(input_file_path, output_format, device_id, backend)
+    jpeg_decode(input_file_path, output_format, device_id, backend, output_file_path)

@@ -47,8 +47,8 @@ public:
 
     ~PyJpegImages() {};
 
-    void set_valid(bool state) {valid = state;};
-    bool is_valid() {return valid;};
+    void SetValid(bool state) {valid = state;};
+    bool IsValid() {return valid;};
 
     // The image in the GPU MEM represented with dlpack via this ext_buf (for external buffer)
     std::vector<std::shared_ptr<BufferInterface>> ext_buf; // external buffer, a view on the GPU MEM of the decoded image

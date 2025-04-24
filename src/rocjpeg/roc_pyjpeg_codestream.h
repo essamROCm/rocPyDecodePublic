@@ -55,8 +55,8 @@ public:
     uint32_t heights[ROCJPEG_MAX_COMPONENT] = {};    
     uint32_t channel_sizes[ROCJPEG_MAX_COMPONENT] = {};
     uint32_t num_channels = 0;
-    void set_valid(bool state) {valid = state;};
-    bool is_valid() {return valid;};
+    void SetValid(bool state) {valid = state;};
+    bool IsValid() {return valid;};
 
     // flag = true indicates this instance of the code_stream is valid to use
     // when = false means the file/data associated with it found invalid

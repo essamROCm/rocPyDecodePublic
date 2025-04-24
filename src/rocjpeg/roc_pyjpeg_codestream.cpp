@@ -169,7 +169,7 @@ int CodeStream::InitializeSingleImage(const std::filesystem::path& filename, con
     // Get Image Info
     uint8_t num_components = 0;
     subsampling = ROCJPEG_CSS_UNKNOWN;
-    RocJpegHandle jpeg_handle = Decoder::get_handle();
+    RocJpegHandle jpeg_handle = Decoder::GetHandle();
     rocjpeg_status = rocJpegGetImageInfo(jpeg_handle, stream_handle, &num_components, &subsampling, widths, heights);
     if (rocjpeg_status != ROCJPEG_STATUS_SUCCESS) {
         std::cerr << "ERROR: Failed to  get image info with " << rocJpegGetErrorName(rocjpeg_status) << std::endl;
@@ -225,18 +225,18 @@ int CodeStream::Release() {
 }
 
 CodeStream::CodeStream(const std::filesystem::path& filename) {
-    set_valid(false);
+    SetValid(false);
     py::gil_scoped_release release;
     if(InitializeSingleImage(filename, nullptr, 0) == EXIT_SUCCESS) {
-        set_valid(true); // this code_stream instance is OK to use
+        SetValid(true); // this code_stream instance is OK to use
     }
 }
 
 CodeStream::CodeStream(const unsigned char* data, size_t length) {
-    set_valid(false);
+    SetValid(false);
     py::gil_scoped_release release;
     if(InitializeSingleImage(static_cast<const std::filesystem::path>(""), data, length) == EXIT_SUCCESS) {
-        set_valid(true); // this code_stream instance is OK to use
+        SetValid(true); // this code_stream instance is OK to use
     }
 }
 
@@ -244,9 +244,9 @@ CodeStream::CodeStream(py::bytes data) {
     data_ref_bytes_ = data;
     auto data_view = static_cast<std::string_view>(data_ref_bytes_);
     py::gil_scoped_release release;
-    set_valid(false);
+    SetValid(false);
     if(InitializeSingleImage(static_cast<const std::filesystem::path>(""), reinterpret_cast<const unsigned char*>(data_view.data()), data_view.size()) == EXIT_SUCCESS) {
-        set_valid(true); // this code_stream instance is OK to use
+        SetValid(true); // this code_stream instance is OK to use
     }
 }
 
@@ -254,9 +254,9 @@ CodeStream::CodeStream(py::array_t<uint8_t> arr) {
     data_ref_arr_ = arr;
     auto data = data_ref_arr_.unchecked<1>();
     py::gil_scoped_release release;
-    set_valid(false);
+    SetValid(false);
     if(InitializeSingleImage(static_cast<const std::filesystem::path>(""), data.data(0), data.size()) == EXIT_SUCCESS) {
-        set_valid(true); // this code_stream instance is OK to use
+        SetValid(true); // this code_stream instance is OK to use
     }
 }
 

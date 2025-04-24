@@ -40,7 +40,7 @@ class DecodeSource {
     DecodeSource(const DecodeSource&) = delete;
     DecodeSource& operator=(DecodeSource const&) = delete;
 
-    const CodeStream* code_stream() const;
+    const CodeStream* CodeStreamInstance() const;
 
     static void exportToPython(py::module& m);
 

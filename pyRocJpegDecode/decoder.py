@@ -65,5 +65,5 @@ class decoder(object):
 
     def set_output_image_format(self, output_format):
         self.output_format = jpegt.RocJpegOutputFormat(output_format)
-        self.jpegdec.set_output_format(self.output_format)
+        self.jpegdec.SetOutputFormat(self.output_format)
         return
