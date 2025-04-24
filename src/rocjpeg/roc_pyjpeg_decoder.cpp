@@ -146,7 +146,7 @@ Decoder::Decoder(int device_id, int backend, RocJpegOutputFormat output_format) 
     PY_CHECK_ROCJPEG(rocJpegCreate(m_backend, m_device_id, &rocjpeg_handle));
     // init
     SetHandle(rocjpeg_handle);
-    set_format(output_format);
+    SetFormat(output_format);
 }
 
 // receiving single code_stream

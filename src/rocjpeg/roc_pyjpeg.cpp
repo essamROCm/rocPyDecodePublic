@@ -38,7 +38,7 @@ PYBIND11_MODULE(rocpyjpegdecode, m) {
 
         rocPyJpegDecode Python API reference
 
-        This is the Python API reference for the AMD ROCm rocJEPEG library.
+        This is the Python API reference for the AMD ROCm rocJPEG library.
     )pbdoc";
 
     // current version

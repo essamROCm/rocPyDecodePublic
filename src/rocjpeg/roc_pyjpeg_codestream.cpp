@@ -35,7 +35,7 @@ void CodeStream::exportToPython(py::module& m) {
         R"pbdoc(
         Class representing a coded stream of image data.
 
-        This class provides access to image informations such as dimensions.
+        This class provides access to image information such as dimensions.
         It supports initialization from bytes, numpy arrays, or file path.
         )pbdoc")
         .def(py::init([](py::bytes bytes) {
@@ -131,7 +131,7 @@ int CodeStream::InitializeSingleImage(const std::filesystem::path& filename, con
     // default, reset
     memset(&decode_params, 0, sizeof(RocJpegDecodeParams));
     memset(&output_image, 0, sizeof(RocJpegImage));
-    decode_params.output_format = Decoder::get_format();
+    decode_params.output_format = Decoder::GetFormat();
     num_channels = 0;
     // File sanity check
     if(!filename.empty()) {

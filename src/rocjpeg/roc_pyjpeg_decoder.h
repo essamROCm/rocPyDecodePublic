@@ -28,7 +28,7 @@ THE SOFTWARE.
 #include "roc_pyjpeg_utils.h"
 #include "roc_pyjpeg_decode_source.h"
 
-#define MAX_SINGLE_DECODE   16  // keep records up to this count of decoded single images, higher means user need to use Batched decode instead
+#define MAX_SINGLE_DECODE   16  // keep decoded single images up to this, higher means user need to use Batched decode instead
 
 class Decoder {
 
@@ -59,8 +59,8 @@ public:
 
     static RocJpegHandle GetHandle() {return rocjpeg_handle;};
     static void SetHandle(RocJpegHandle h) { rocjpeg_handle = h;};
-    static RocJpegOutputFormat get_format() {return user_output_format;};
-    static void set_format(RocJpegOutputFormat fmt) { user_output_format = fmt;};
+    static RocJpegOutputFormat GetFormat() {return user_output_format;};
+    static void SetFormat(RocJpegOutputFormat fmt) { user_output_format = fmt;};
 
 private:
     int m_device_id;

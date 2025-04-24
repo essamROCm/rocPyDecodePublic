@@ -33,7 +33,7 @@ using namespace py::literals;
 
 #include <pybind11/numpy.h>
 
-// TODO: need to impllement a case for YUV to add to the RGB and RGB-Planar
+// TODO: need to implement a case for YUV to add to the RGB and RGB-Planar
 
 class PyJpegImages {
 
