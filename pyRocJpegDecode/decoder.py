@@ -21,26 +21,6 @@
 import rocpyjpegdecode as rocpyjpeg
 import rocpyjpegdecode.jpegTypes as jpegt
 
-
-class DecodeSource(object):
-    def __init__(
-            self,
-            param):
-        self.decode_source = rocpyjpeg.DecodeSource(param)
-
-    # return the code stream
-    def code_stream(self):
-        return self.decode_source.code_stream
-
-    # return the width of the decoded image
-    def width(self):
-        return self.decode_source.width()
-
-    # return the height of the decoded image
-    def height(self):
-        return self.decode_source.height()
-
-
 class decoder(object):
     def __init__(
             self, 

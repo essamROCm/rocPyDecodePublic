@@ -22,7 +22,6 @@ THE SOFTWARE.
 
 #pragma once
 
-#include "roc_pyjpeg.h"
 #include "roc_pyjpeg_codestream.h"
 
 namespace py = pybind11;

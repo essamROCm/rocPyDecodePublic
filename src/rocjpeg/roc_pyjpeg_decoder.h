@@ -24,16 +24,13 @@ THE SOFTWARE.
 #define PY_ROC_JPEG_HEADER
 #pragma once
 
-#include "rocjpeg/roc_pyjpeg.h"
 #include "roc_pyjpeg_utils.h"
 #include "roc_pyjpeg_decode_source.h"
-
-#define MAX_SINGLE_DECODE   16  // keep decoded single images up to this, higher means user need to use Batched decode instead
+#include "roc_pyjpeg_images.h"
 
 class Decoder {
 
 public:
-
     Decoder(int device_id, int backend, RocJpegOutputFormat output_format = ROCJPEG_OUTPUT_RGB);
     ~Decoder();
 
@@ -42,34 +39,18 @@ public:
 
     static void exportToPython(py::module& m);
 
-    // reset what was allocated and filled before
-    void ResetCodeStreams(std::vector<CodeStream>& cs);
-    void ResetImages(std::vector<PyJpegImages>& imgs);
-
-    // set batch size for batch process
+    // set output image format
     void SetOutputFormat(RocJpegOutputFormat output_format);
 
-    // STORE: keep code_stream(s) info here
-    std::vector<CodeStream> code_stream;        // one image instance
-    std::vector<CodeStream> code_stream_single; // for single decode instances (up to MAX_SINGLE_DECODE)
-
-    // STORE: to export IMAGE/IMAGES-BATCH to python
-    std::vector<PyJpegImages> images_;          // one batch instance
-    std::vector<PyJpegImages> images_single;    // for single decode instances (up to MAX_SINGLE_DECODE)
-
-    static RocJpegHandle GetHandle() {return rocjpeg_handle;};
-    static void SetHandle(RocJpegHandle h) { rocjpeg_handle = h;};
-    static RocJpegOutputFormat GetFormat() {return user_output_format;};
-    static void SetFormat(RocJpegOutputFormat fmt) { user_output_format = fmt;};
+    RocJpegOutputFormat GetFormat() {return user_output_format;};
+    void SetFormat(RocJpegOutputFormat fmt) { user_output_format = fmt;};
 
 private:
     int m_device_id;
     RocJpegBackend m_backend;
-    static RocJpegHandle rocjpeg_handle;     // main session
-    static RocJpegOutputFormat user_output_format;    // dynamically adjusted by the user
-
-    bool ToDlpackTensor(CodeStream* code_stream, PyJpegImages* image);
-    bool GetOutputDims(std::vector<uint32_t>& widths, std::vector<uint32_t>& heights, uint32_t img_width, uint32_t img_height, RocJpegOutputFormat output_format, RocJpegChromaSubsampling subsampling);
+    RocJpegHandle rocjpeg_handle;               // main session
+    RocJpegOutputFormat user_output_format;     // user can adjust
+    int GetImageInfo(RocJpegStreamHandle stream_handle, PyJpegImages& img); // finalize the parsing job
 };
 
 #endif // PY_ROC_JPEG_HEADER

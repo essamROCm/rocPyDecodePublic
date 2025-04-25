@@ -21,7 +21,6 @@ THE SOFTWARE.
 */
 
 #include <iostream>
-#include "roc_pyjpeg.h"
 #include "roc_pyjpeg_decode_source.h"
 
 DecodeSource::DecodeSource(const CodeStream* code_stream_ptr)

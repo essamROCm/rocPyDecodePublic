@@ -20,13 +20,17 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-#include "common/roc_pybuffer.h"
 #include "roc_pyjpeg.h"
+#include "common/roc_pybuffer.h"
 #include "roc_pyjpeg_decoder.h"
 #include "roc_pyjpeg_codestream.h"
 #include "roc_pyjpeg_decode_source.h"
+#include "roc_pyjpeg_images.h"
 
 using namespace std;
+
+namespace py = pybind11;
+using namespace py::literals;
 
 PYBIND11_MODULE(rocpyjpegdecode, m) {
  
@@ -42,7 +46,7 @@ PYBIND11_MODULE(rocpyjpegdecode, m) {
     )pbdoc";
 
     // current version
-    // Todo: match version on CMakeLists for future version update
+    // TODO: match version on CMakeLists for future version update
     m.attr("__version__") = py::str("0.1.0");
 
     types_m.attr("ROCJPEG_MAX_COMPONENT") = ROCJPEG_MAX_COMPONENT;
@@ -96,4 +100,5 @@ PYBIND11_MODULE(rocpyjpegdecode, m) {
     CodeStream::exportToPython(m);
     DecodeSource::exportToPython(m);
     BufferInterface::exportToPython(m);
+    PyJpegImages::exportToPython(m);
 }
