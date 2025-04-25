@@ -49,5 +49,4 @@ class DLPackPyTensor final {
     private:
         DLManagedTensor m_tensor;
 };
-
 #endif // USE_DLPACK_HEADER
