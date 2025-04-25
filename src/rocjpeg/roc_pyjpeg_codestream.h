@@ -39,9 +39,9 @@ public:
     ~CodeStream();
     CodeStream();
 
-    static void exportToPython(py::module& m);
+    static void ExportToPython(py::module& m);
 
-    // related descriptor of 'this' image
+    // 'this' image info
     RocJpegStreamHandle stream_handle = nullptr;
     std::shared_ptr<std::vector<char>> file_data;
 

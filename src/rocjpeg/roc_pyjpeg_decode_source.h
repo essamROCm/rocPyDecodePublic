@@ -41,9 +41,9 @@ class DecodeSource {
 
     const CodeStream* CodeStreamInstance() const;
 
-    static void exportToPython(py::module& m);
+    static void ExportToPython(py::module& m);
 
   private:
-    std::unique_ptr<CodeStream> code_stream_;  // owned by this instance
-    const CodeStream* code_stream_ptr_ = nullptr;  // externally provided
+    std::unique_ptr<CodeStream> code_stream_;       // owned by this instance
+    const CodeStream* code_stream_ptr_ = nullptr;   // externally provided
 };

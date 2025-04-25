@@ -40,7 +40,7 @@ const CodeStream* DecodeSource::CodeStreamInstance() const {
 DecodeSource::~DecodeSource() {
 }
 
-void DecodeSource::exportToPython(py::module& m) {
+void DecodeSource::ExportToPython(py::module& m) {
     py::class_<DecodeSource>(m, "DecodeSource",
         "Class representing a source for decoding, which includes the image code stream to decode.")        
         .def(py::init([](const CodeStream* code_stream) {

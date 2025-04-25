@@ -122,7 +122,7 @@ const DLTensor &BufferInterface::dlTensor() const {
     return *m_dlTensor;
 }
 
-void BufferInterface::exportToPython(py::module &m) {
+void BufferInterface::ExportToPython(py::module &m) {
     py::class_<BufferInterface, std::shared_ptr<BufferInterface>>(m, "BufferInterface", py::dynamic_attr())
         .def_property_readonly("shape", &BufferInterface::shape, "Get the shape of the buffer as an array")
         .def_property_readonly("strides", &BufferInterface::strides, "Get the strides of the buffer")

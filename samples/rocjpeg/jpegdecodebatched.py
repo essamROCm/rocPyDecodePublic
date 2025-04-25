@@ -50,7 +50,6 @@ def jpeg_decode_batch(
     for i in range(0, total, batch_size):
         current_batch = files_full_path_list[i:i + batch_size]
         img_list = decoder.decode(current_batch)
-        # consum this batch now, it will be freed if new batch is decoded
         total_valid_images_processed += len(img_list)
 
     print(f"Total files processed : {total_valid_images_processed}")

@@ -29,7 +29,7 @@ THE SOFTWARE.
 
 using namespace std;
 
-void CodeStream::exportToPython(py::module& m) {
+void CodeStream::ExportToPython(py::module& m) {
     py::class_<CodeStream>(m, "CodeStream",
         R"pbdoc(
         Class representing a coded stream of image data.

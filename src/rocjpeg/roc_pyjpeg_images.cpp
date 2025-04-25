@@ -33,12 +33,12 @@ using namespace std;
 
 #include <pybind11/numpy.h>
 
-void PyJpegImages::exportToPython(py::module& m) {
+void PyJpegImages::ExportToPython(py::module& m) {
     // PyJpegImages
     py::class_<PyJpegImages, shared_ptr<PyJpegImages>>(m, "PyJpegImages", py::module_local())
         .def(py::init<>())
         .def_readwrite("ext_buf", &PyJpegImages::ext_buf)
-        .def("to_numpy", &PyJpegImages::to_numpy, py::arg("index") = 0, "Export a given plane (0=YUV default), or (0=Y, 1=U/UV, 2=V) as a NumPy uint 8 bits array")
+        .def("to_numpy", &PyJpegImages::to_numpy, py::arg("index") = 0, "Export a given plane as a 'numpy' uint 8 bits array")
         // DL Pack Tensor
         .def_property_readonly("shapeY", [](std::shared_ptr<PyJpegImages>& self) {
             return self->ext_buf[0]->shape();
@@ -196,7 +196,6 @@ bool PyJpegImages::ToDlpackTensor(RocJpegOutputFormat output_format, int device_
     heights.resize(ROCJPEG_MAX_COMPONENT);
      if(GetOutputDims(widths, heights, img_width, img_height, output_format, subsampling) == false)
         return false;
-    // 8 bits - Assuming output_format = ROCJPEG_OUTPUT_RGB (interleaved RGB)
     uint32_t bit_depth = 8;
     std::string type_str(static_cast<const char*>("|u1"));
     switch(output_format) {
@@ -206,7 +205,7 @@ bool PyJpegImages::ToDlpackTensor(RocJpegOutputFormat output_format, int device_
                 std::vector<size_t> shape{ static_cast<size_t>(heights[i]), static_cast<size_t>(widths[i])}; // depend on get_output_dims()
                 std::vector<size_t> stride{ static_cast<size_t>(surf_stride[i]), 1, 0};
                 // RGB PLANAR using VCN JPEG decoder @ first, second, and third channel of RocJpegImage
-                ext_buf[i]->LoadDLPack(shape, stride, bit_depth, type_str, (void *)output_image.channel[i], device_id); // m_device_id was set at the constructor
+                ext_buf[i]->LoadDLPack(shape, stride, bit_depth, type_str, (void *)output_image.channel[i], device_id); // device_id was set/saved at the constructor
             }
         }
         break;
@@ -216,7 +215,7 @@ bool PyJpegImages::ToDlpackTensor(RocJpegOutputFormat output_format, int device_
             std::vector<size_t> shape{ static_cast<size_t>(heights[0]), static_cast<size_t>(widths[0]/3), 3}; // widths[0]/3 for ROCJPEG_OUTPUT_RGB
             std::vector<size_t> stride{ static_cast<size_t>(surf_stride), 1, 0}; // python assumes same dim for both shape & strides
             // interleaved RGB using VCN JPEG decoder written to first channel of RocJpegImage
-            ext_buf[0]->LoadDLPack(shape, stride, bit_depth, type_str, (void *)output_image.channel[0], device_id); // m_device_id was set at the constructor
+            ext_buf[0]->LoadDLPack(shape, stride, bit_depth, type_str, (void *)output_image.channel[0], device_id); // device_id was set/saved at the constructor
         }
         break;
     }

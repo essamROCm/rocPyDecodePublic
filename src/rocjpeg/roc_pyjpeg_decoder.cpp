@@ -27,7 +27,7 @@ THE SOFTWARE.
 
 using namespace std;
 
-void Decoder::exportToPython(py::module& m) {
+void Decoder::ExportToPython(py::module& m) {
     // Decoder Class
     py::class_<Decoder>(m, "Decoder", "Decoder for image decoding operations. "
         "It provides methods to decode images from various sources such as files or data streams. ")
@@ -121,7 +121,7 @@ PyJpegImages Decoder::decode(DecodeSource* data) {
     if(!c_stream->stream_handle) {
         return img; // last item is this instance
     }
-    // Here call to DECODE one single JPEG image
+    // DECODE one single JPEG image
     if( GetImageInfo(c_stream->stream_handle, img) == EXIT_SUCCESS) {
         RocJpegStatus status = rocJpegDecode(rocjpeg_handle, c_stream->stream_handle, &img.decode_params, &img.output_image);
         if (status != ROCJPEG_STATUS_SUCCESS) {
@@ -138,10 +138,8 @@ PyJpegImages Decoder::decode(DecodeSource* data) {
 std::vector<PyJpegImages> Decoder::decode(std::vector<DecodeSource*>& decode_source_arg) {
 
     RocJpegStatus status = ROCJPEG_STATUS_SUCCESS;
-
     int batch_size = decode_source_arg.size();
     int count_of_valid_instances = 0;
-
     std::vector<RocJpegStreamHandle> stream_handles;
     std::vector<RocJpegDecodeParams> decode_params_list;
     std::vector<RocJpegImage> destinations;
@@ -176,10 +174,10 @@ std::vector<PyJpegImages> Decoder::decode(std::vector<DecodeSource*>& decode_sou
 
     // at least one image
     if(count_of_valid_instances > 0) {
-        // Here call to DECODE ALL in the batch one time
+        // DECODE ALL files/images in the batch one-time
         status = rocJpegDecodeBatched(  rocjpeg_handle,
                                         stream_handles.data(),
-                                        count_of_valid_instances, // <= the batch_size
+                                        count_of_valid_instances, // less or equal to the batch_size
                                         decode_params_list.data(),
                                         destinations.data()
                                         );
@@ -187,7 +185,7 @@ std::vector<PyJpegImages> Decoder::decode(std::vector<DecodeSource*>& decode_sou
             std::cerr << "ERROR: Failed to decode the image batch. Status code: " << status << std::endl;
             return images_; // return the image list
         }
-        // here images_ vector has only the count of 'valid' images
+        // here 'images_' vector carries the count of 'valid' images
         // to export to python (use dlpack(GPU MEM) {and numpy host array})
         if (status == ROCJPEG_STATUS_SUCCESS) {
             for(int i=0; i<count_of_valid_instances; i++) {
@@ -201,7 +199,7 @@ std::vector<PyJpegImages> Decoder::decode(std::vector<DecodeSource*>& decode_sou
 // set the user desired output_format
 void Decoder::SetOutputFormat(RocJpegOutputFormat output_format) {
     if(output_format != ROCJPEG_OUTPUT_RGB && output_format != ROCJPEG_OUTPUT_RGB_PLANAR) {
-        std::cerr << "ERROR: Unspported output format, defaulting to ROCJPEG_OUTPUT_RGB." << std::endl;
+        std::cerr << "ERROR: Unsupported output format, defaulting to ROCJPEG_OUTPUT_RGB." << std::endl;
         user_output_format = ROCJPEG_OUTPUT_RGB; // default
         return;
     }

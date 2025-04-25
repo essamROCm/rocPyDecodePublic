@@ -35,7 +35,7 @@ class PyJpegImages {
 
 public:
     PyJpegImages() {
-        // init GPU mem -python buffer
+        // init GPU mem -python access
         ext_buf.push_back(std::make_shared<BufferInterface>());
         ext_buf.push_back(std::make_shared<BufferInterface>());
         ext_buf.push_back(std::make_shared<BufferInterface>());
@@ -47,12 +47,12 @@ public:
     }
     ~PyJpegImages() {};
 
-    static void exportToPython(py::module& m);
+    static void ExportToPython(py::module& m);
  
     // The image in the GPU MEM represented with dlpack via this ext_buf (for external buffer)
     std::vector<std::shared_ptr<BufferInterface>> ext_buf; // external buffer, a view on the GPU MEM of the decoded image
 
-    // public to be accessed by python pybind (w/h of this image)
+    // public to be accessed by python pybind
     int m_width;
     int m_height;
     py::array_t<uint8_t> to_numpy(int index = 0);

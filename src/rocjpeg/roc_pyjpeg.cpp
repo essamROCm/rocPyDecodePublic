@@ -96,9 +96,9 @@ PYBIND11_MODULE(rocpyjpegdecode, m) {
         .export_values();
 
     // AMD JPEG Decoder exported classes
-    Decoder::exportToPython(m);
-    CodeStream::exportToPython(m);
-    DecodeSource::exportToPython(m);
-    BufferInterface::exportToPython(m);
-    PyJpegImages::exportToPython(m);
+    Decoder::ExportToPython(m);
+    CodeStream::ExportToPython(m);
+    DecodeSource::ExportToPython(m);
+    BufferInterface::ExportToPython(m);
+    PyJpegImages::ExportToPython(m);
 }

@@ -37,7 +37,7 @@ public:
     PyJpegImages decode(DecodeSource* data);
     std::vector<PyJpegImages> decode(std::vector<DecodeSource*>& data_list);
 
-    static void exportToPython(py::module& m);
+    static void ExportToPython(py::module& m);
 
     // set output image format
     void SetOutputFormat(RocJpegOutputFormat output_format);

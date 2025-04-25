@@ -89,7 +89,7 @@ PYBIND11_MODULE(rocpydecode, m) {
     // ---------
     // PyExport
     // ---------
-    BufferInterface::exportToPython(m);
+    BufferInterface::ExportToPython(m);
 
     // -----------------------------
     // User Demuxer 'PyVideoDemuxer'
