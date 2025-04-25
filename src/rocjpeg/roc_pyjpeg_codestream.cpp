@@ -134,39 +134,27 @@ int CodeStream::Release() {
 }
 
 CodeStream::CodeStream(const std::filesystem::path& filename) {
-    SetValid(false);
     py::gil_scoped_release release;
-    if(InitializeSingleImage(filename, nullptr, 0) == EXIT_SUCCESS) {
-        SetValid(true); // this code_stream instance is OK to use
-    }
+    InitializeSingleImage(filename, nullptr, 0);
 }
 
 CodeStream::CodeStream(const unsigned char* data, size_t length) {
-    SetValid(false);
     py::gil_scoped_release release;
-    if(InitializeSingleImage(static_cast<const std::filesystem::path>(""), data, length) == EXIT_SUCCESS) {
-        SetValid(true); // this code_stream instance is OK to use
-    }
+    InitializeSingleImage(static_cast<const std::filesystem::path>(""), data, length);
 }
 
 CodeStream::CodeStream(py::bytes data) {
     data_ref_bytes_ = data;
     auto data_view = static_cast<std::string_view>(data_ref_bytes_);
     py::gil_scoped_release release;
-    SetValid(false);
-    if(InitializeSingleImage(static_cast<const std::filesystem::path>(""), reinterpret_cast<const unsigned char*>(data_view.data()), data_view.size()) == EXIT_SUCCESS) {
-        SetValid(true); // this code_stream instance is OK to use
-    }
+    InitializeSingleImage(static_cast<const std::filesystem::path>(""), reinterpret_cast<const unsigned char*>(data_view.data()), data_view.size());
 }
 
 CodeStream::CodeStream(py::array_t<uint8_t> arr) {
     data_ref_arr_ = arr;
     auto data = data_ref_arr_.unchecked<1>();
     py::gil_scoped_release release;
-    SetValid(false);
-    if(InitializeSingleImage(static_cast<const std::filesystem::path>(""), data.data(0), data.size()) == EXIT_SUCCESS) {
-        SetValid(true); // this code_stream instance is OK to use
-    }
+    InitializeSingleImage(static_cast<const std::filesystem::path>(""), data.data(0), data.size());
 }
 
 CodeStream::CodeStream() {

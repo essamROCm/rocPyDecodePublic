@@ -44,14 +44,6 @@ public:
     // related descriptor of 'this' image
     RocJpegStreamHandle stream_handle = nullptr;
     std::shared_ptr<std::vector<char>> file_data;
-    
-    void SetValid(bool state) {valid = state;};
-    const bool IsValid() const {return valid;};
-
-    // flag = true code_stream is valid to use
-    // when = false means the file/data associated with it found invalid
-protected:
-    bool valid;
 
 private:
     py::bytes data_ref_bytes_;

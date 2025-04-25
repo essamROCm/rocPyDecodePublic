@@ -56,8 +56,6 @@ public:
     int m_width;
     int m_height;
     py::array_t<uint8_t> to_numpy(int index = 0);
-    void SetValid(bool state);    
-    bool IsValid();
     RocJpegChromaSubsampling subsampling;
 
     // not exposed to outside
@@ -68,11 +66,6 @@ public:
 
 private:
     bool GetOutputDims(std::vector<uint32_t>& widths, std::vector<uint32_t>& heights, uint32_t img_width, uint32_t img_height, RocJpegOutputFormat output_format, RocJpegChromaSubsampling subsampling);
-
-    // flag indicates this instance of the PyJpegImages is valid to use if true
-    // when false means the image invalid or not created/decoded, do not use
-protected:
-    bool valid = false;
 };
 
 #endif // PY_ROC_JPEG_IMAGES_HEADER

@@ -46,9 +46,6 @@ def jpeg_decode(
 
     img_tensor = decoder.decode(input_file_path)
 
-    if(img_tensor.is_valid() == False):
-        print("Invalid image returned..")
-
     print(f"Decoding file: {input_file_path} is complete.\n")
 
     # example how to save the decoded image as a file

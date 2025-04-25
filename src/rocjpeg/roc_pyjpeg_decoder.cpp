@@ -115,11 +115,10 @@ PyJpegImages Decoder::decode(DecodeSource* data) {
     assert(data);
     // img 'instance' to return
     PyJpegImages img;
-    img.SetValid(false);
     // get current data/file associated code_stream instance
     const CodeStream* c_stream = data->CodeStreamInstance();    
     // runtime sanity check
-    if(!c_stream->IsValid()) {
+    if(!c_stream->stream_handle) {
         return img; // last item is this instance
     }
     // Here call to DECODE one single JPEG image
@@ -131,7 +130,6 @@ PyJpegImages Decoder::decode(DecodeSource* data) {
         }
         // to export to python (use dlpack(GPU MEM) {and numpy host array}) -- GPU Tensor
         img.ToDlpackTensor(user_output_format, m_device_id);
-        img.SetValid(true);
     }
     return img; // return one image
 }
@@ -161,13 +159,10 @@ std::vector<PyJpegImages> Decoder::decode(std::vector<DecodeSource*>& decode_sou
         // get current data/file associated code_stream instance
         const CodeStream* c_stream = data->CodeStreamInstance();    
         // runtime sanity check
-        if(!c_stream->IsValid())
-            continue;
         if(!c_stream->stream_handle)
             continue;
         // one img 'instance'
         PyJpegImages img;
-        img.SetValid(false);
         // add to the list for 'rocJpegDecodeBatched()'
         if( GetImageInfo(c_stream->stream_handle, img) == EXIT_FAILURE) {
             continue;
@@ -179,7 +174,7 @@ std::vector<PyJpegImages> Decoder::decode(std::vector<DecodeSource*>& decode_sou
         images_.push_back(img);
     }
 
-    // at least one valid image data to decode
+    // at least one image
     if(count_of_valid_instances > 0) {
         // Here call to DECODE ALL in the batch one time
         status = rocJpegDecodeBatched(  rocjpeg_handle,
@@ -197,7 +192,6 @@ std::vector<PyJpegImages> Decoder::decode(std::vector<DecodeSource*>& decode_sou
         if (status == ROCJPEG_STATUS_SUCCESS) {
             for(int i=0; i<count_of_valid_instances; i++) {
                 images_[i].ToDlpackTensor(user_output_format, m_device_id); // GPU Tensor
-                images_[i].SetValid(true);
             }
         }
     }

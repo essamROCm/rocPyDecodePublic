@@ -39,7 +39,6 @@ void PyJpegImages::exportToPython(py::module& m) {
         .def(py::init<>())
         .def_readwrite("ext_buf", &PyJpegImages::ext_buf)
         .def("to_numpy", &PyJpegImages::to_numpy, py::arg("index") = 0, "Export a given plane (0=YUV default), or (0=Y, 1=U/UV, 2=V) as a NumPy uint 8 bits array")
-        .def("is_valid",&PyJpegImages::IsValid, "Indicates if the image is OK to use.")
         // DL Pack Tensor
         .def_property_readonly("shapeY", [](std::shared_ptr<PyJpegImages>& self) {
             return self->ext_buf[0]->shape();
@@ -76,14 +75,6 @@ void PyJpegImages::exportToPython(py::module& m) {
             R"pbdoc(
             The horizontal dimension of the entire image in pixels.
             )pbdoc");
-}
-
-void PyJpegImages::SetValid(bool state) {
-    valid = state;
-}
-
-bool PyJpegImages::IsValid() {
-    return valid;
 }
 
 py::array_t<uint8_t> PyJpegImages::to_numpy(int index) {
