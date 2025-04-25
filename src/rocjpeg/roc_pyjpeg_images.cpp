@@ -201,7 +201,7 @@ bool PyJpegImages::ToDlpackTensor(RocJpegOutputFormat output_format, int device_
     switch(output_format) {
         case ROCJPEG_OUTPUT_RGB_PLANAR: { // each color plane in a channel separately R[0], G[1], and B[2]
             uint32_t surf_stride[3] = {widths[0], widths[1], widths[2]}; // ROCJPEG_OUTPUT_RGB_PLANAR all same width = img_width
-            for(int i=0; i<3; i++) {
+            for(int i = 0; i < 3; i++) {
                 std::vector<size_t> shape{ static_cast<size_t>(heights[i]), static_cast<size_t>(widths[i])}; // depend on get_output_dims()
                 std::vector<size_t> stride{ static_cast<size_t>(surf_stride[i]), 1, 0};
                 // RGB PLANAR using VCN JPEG decoder @ first, second, and third channel of RocJpegImage

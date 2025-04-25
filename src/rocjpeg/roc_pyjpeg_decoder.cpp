@@ -147,7 +147,7 @@ std::vector<PyJpegImages> Decoder::decode(std::vector<DecodeSource*>& decode_sou
     // we return a list of images
     std::vector<PyJpegImages> images_;
 
-    if(batch_size<=0)
+    if(batch_size <= 0)
         return images_;
 
     // loop the whole list length - Process as one BATCH
@@ -188,7 +188,7 @@ std::vector<PyJpegImages> Decoder::decode(std::vector<DecodeSource*>& decode_sou
         // here 'images_' vector carries the count of 'valid' images
         // to export to python (use dlpack(GPU MEM) {and numpy host array})
         if (status == ROCJPEG_STATUS_SUCCESS) {
-            for(int i=0; i<count_of_valid_instances; i++) {
+            for(int i = 0; i < count_of_valid_instances; i++) {
                 images_[i].ToDlpackTensor(user_output_format, m_device_id); // GPU Tensor
             }
         }
