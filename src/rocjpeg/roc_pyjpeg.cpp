@@ -26,7 +26,6 @@ THE SOFTWARE.
 #include "roc_pyjpeg_codestream.h"
 #include "roc_pyjpeg_decode_source.h"
 #include "roc_pyjpeg_images.h"
-#include "roc_pyjpeg_test.h"
 
 using namespace std;
 
@@ -102,5 +101,4 @@ PYBIND11_MODULE(rocpyjpegdecode, m) {
     DecodeSource::ExportToPython(m);
     BufferInterface::ExportToPython(m);
     PyJpegImages::ExportToPython(m);
-    PyJpegTest::ExportToPython(m);
 }

@@ -156,11 +156,6 @@ if(Python3_FOUND AND ROCPYDECODE_PYBIND_SCRIPTS)
               -i ${ROCM_PATH}/share/rocjpeg/images/
               WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
         set_property(TEST jpeg_decode_batched_python PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
-        # 14 - jpeg_test
-        add_test(NAME jpeg_test_all
-              COMMAND ${Python3_EXECUTABLE} ${ROCM_PATH}/lib/pyRocVideoDecode/samples/rocjpeg/jpegtest.py
-              WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-        set_property(TEST jpeg_test_all PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
     endif()
   endif()
 else()
