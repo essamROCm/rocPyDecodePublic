@@ -127,9 +127,6 @@ class decodercpu(object):
     def GetNumOfFlushedFrames(self):
         return self.viddec.GetNumOfFlushedFrames()
 
-    def SetReconfigParams(self, flush_mode, out_file_name):
-        return self.viddec.SetReconfigParams(flush_mode, out_file_name)
-
     def AddDecoderSessionOverHead(self, session_id, duration):
         if(hasattr(self.viddec,"AddDecoderSessionOverHead")):
             return self.viddec.AddDecoderSessionOverHead(session_id, duration)
