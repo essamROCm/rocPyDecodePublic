@@ -43,8 +43,6 @@ PYBIND11_MODULE(rocpydecode, m) {
         return packet;
     }, "Convert packet info from user to rocpydecode's PyPacketData");
 
-
-
     // ------
     // Types:
     // ------
