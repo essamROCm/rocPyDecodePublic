@@ -20,7 +20,6 @@
 
 import rocpydecode as rocpydec
 import rocpydecode.decTypes as dectypes
-import numpy as np
 
 
 def GetOutputFormat(rgb_format) -> dectypes.OutputFormatEnum:

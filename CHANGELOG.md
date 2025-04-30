@@ -2,6 +2,22 @@
 
 Full documentation for for rocPyDecode is available at [https://rocm.docs.amd.com/projects/rocPyDecode/en/latest/](https://rocm.docs.amd.com/projects/rocPyDecode/en/latest/)
 
+## (Unreleased) rocPyDecode 0.5.0
+
+### Added
+
+* rocpyjpegdecode package
+* Added src/rocjpeg source new subfolder
+* Added samples/rocjpeg new subfolder
+
+### Changed
+
+### Removed
+
+### Optimized
+
+### Resolved issues
+
 ## (Unreleased) rocPyDecode 0.4.0
 
 ### Added
