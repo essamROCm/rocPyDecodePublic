@@ -18,6 +18,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+from inspect import getmembers, isfunction
+import numpy as np
+from pyRocVideoDecode.decoder import GetOutputFormat, GetRocDecCodecID, GetRectangle, GetDim, GetOutputSurfaceInfo, GetRocPyDecPacket
+import pyRocVideoDecode.demuxer as dmx
+import pyRocVideoDecode.decoder as dec
+import argparse
+
 import pyRocVideoDecode.decoder as decoders
 
 from inspect import getmembers, isfunction
@@ -26,3 +33,49 @@ print('rocPyDecode Decoders')
 rocpydecodeDecoders = getmembers(decoders, isfunction)
 for i in range(len(rocpydecodeDecoders)):
     print(rocpydecodeDecoders[i])
+
+
+parser = argparse.ArgumentParser(
+    description='PyRocDecode Video Decode Arguments')
+parser.add_argument(
+    '-i',
+    '--input',
+    type=str,
+    help='Input File Path - required',
+    required=True)
+
+try:
+    args = parser.parse_args()
+except BaseException:
+    exit()
+
+input_file_path = args.input
+
+# test all APIs
+codec_id = GetRocDecCodecID("h264")
+output_format = GetOutputFormat(0)
+crop_rect = GetRectangle((0, 0, 1920, 1080))
+resize_dim = GetDim((640, 360))
+surface_info = GetOutputSurfaceInfo()
+demuxer = dmx.demuxer(input_file_path)
+codec_id = dec.GetRocDecCodecID(demuxer.GetCodecId())
+decoder = dec.decoder(codec_id,0,1)
+gpu_info = decoder.GetGpuInfo()
+buffer = np.zeros((1080 * 1920 * 3,), dtype=np.uint8)
+packet = demuxer.DemuxFrame()
+decoder.DecodeFrame(packet)
+decoder.GetFrameYuv(packet, separate_planes=False)
+decoder.GetFrameRgb(packet, rgb_format=0)
+GetRocPyDecPacket(0, size=buffer.size, buffer=buffer)
+decoder.GetWidth()
+decoder.GetHeight()
+decoder.GetStride()
+decoder.GetFrameSize()
+decoder.GetOutputSurfaceInfo()
+decoder.GetResizedOutputSurfaceInfo()
+decoder.GetNumOfFlushedFrames()
+decoder.AddDecoderSessionOverHead(session_id=1, duration=123456)
+decoder.GetDecoderSessionOverHead(session_id=1)
+decoder.IsCodecSupported(device_id=0, codec_id=codec_id, bit_depth=8)
+decoder.GetBitDepth()
+decoder.ReleaseFrame(packet)
