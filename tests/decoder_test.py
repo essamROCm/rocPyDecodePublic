@@ -18,7 +18,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from inspect import getmembers, isfunction
 import numpy as np
 from pyRocVideoDecode.decoder import GetOutputFormat, GetRocDecCodecID, GetRectangle, GetDim, GetOutputSurfaceInfo, GetRocPyDecPacket
 import pyRocVideoDecode.demuxer as dmx

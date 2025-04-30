@@ -38,7 +38,8 @@ parser.add_argument(
 
 try:
     args = parser.parse_args()
-except BaseException:
+except SystemExit as e:
+    print(f"Error: {e}. Please check the input arguments and try again.")
     exit()
 
 input_file_path = args.input

@@ -44,7 +44,12 @@ typedef struct ReconfigDumpFileStruct_t {
 //
 class PyRocVideoDecoderCpu : public FFMpegVideoDecoder {
 
+    FFMpegVideoDecoder(int device_id, OutputSurfaceMemoryType out_mem_type, rocDecVideoCodec codec, bool force_zero_latency,
+        const Rect *p_crop_rect, bool extract_user_sei_Message, uint32_t disp_delay, bool no_multithreading, int max_width, int max_height, uint32_t clk_rate)
+
     public:
+        // The false, 0, true parameters sent in the FFMpegVideoDecoder constructor are as follow:
+        // bool extract_user_sei_Message = false, uint32_t disp_delay = 0, bool no_multithreading = true
         PyRocVideoDecoderCpu(int device_id, int mem_type, rocDecVideoCodec codec, bool force_zero_latency = false,
                           const Rect *p_crop_rect = nullptr, int max_width = 0, int max_height = 0,
                           uint32_t clk_rate = 0) : FFMpegVideoDecoder(device_id, static_cast<OutputSurfaceMemoryType>(mem_type), codec, force_zero_latency,
