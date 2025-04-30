@@ -20,15 +20,12 @@
 
 import pyRocVideoDecode.decodercpu as decoderscpu
 from inspect import getmembers, isfunction
-
 import rocpydecode.decTypes as dectypes
 import numpy as np
 from pyRocVideoDecode.decodercpu import decodercpu, GetOutputFormat, GetRocDecCodecID, GetRectangle, GetDim, GetOutputSurfaceInfo, GetRocPyDecPacket
 import pyRocVideoDecode.demuxer as dmx
 import pyRocVideoDecode.decodercpu as dec
 import argparse
-
-# input_file_path = "/opt/rocm/share/rocdecode/video/AMD_driving_virtual_20-H264.mp4"
 
 parser = argparse.ArgumentParser(
     description='PyRocDecode Video Decode Arguments')
@@ -46,13 +43,12 @@ except BaseException:
 
 input_file_path = args.input
 
-
 print('rocPyDecode DecodersCPU')
 rocpydecodeDecoders = getmembers(decoderscpu, isfunction)
 for i in range(len(rocpydecodeDecoders)):
     print(rocpydecodeDecoders[i])
 
-# test all
+# test all APIs
 codec_id = GetRocDecCodecID("h264")
 output_format = GetOutputFormat(0)
 crop_rect = GetRectangle((0, 0, 1920, 1080))
@@ -63,22 +59,20 @@ codec_id = dec.GetRocDecCodecID(demuxer.GetCodecId())
 decoder = dec.decodercpu(codec_id,0,1)
 gpu_info = decoder.GetGpuInfo()
 buffer = np.zeros((1080 * 1920 * 3,), dtype=np.uint8)
-packet = GetRocPyDecPacket(pts=0, size=buffer.size, buffer=buffer)
-# decoder.DecodeFrame(packet)
+packet = demuxer.DemuxFrame()
+decoder.DecodeFrame(packet)
 decoder.GetFrameYuv(packet, separate_planes=False)
 decoder.GetFrameRgb(packet, rgb_format=0)
-# dm = [640, 360]
-# decoder.ResizeFrame(packet, dm, surface_info=surface_info)
+GetRocPyDecPacket(0, size=buffer.size, buffer=buffer)
 decoder.GetWidth()
 decoder.GetHeight()
 decoder.GetStride()
 decoder.GetFrameSize()
-# decoder.GetOutputSurfaceInfo()
+decoder.GetOutputSurfaceInfo()
 decoder.GetResizedOutputSurfaceInfo()
-# decoder.SaveFrameToFile("frame.rgb", frame_adrs=buffer, surface_info=surface_info, output_format=0)
-decoder.ReleaseFrame(packet)
 decoder.GetNumOfFlushedFrames()
 decoder.AddDecoderSessionOverHead(session_id=1, duration=123456)
 decoder.GetDecoderSessionOverHead(session_id=1)
 decoder.IsCodecSupported(device_id=0, codec_id=codec_id, bit_depth=8)
 decoder.GetBitDepth()
+decoder.ReleaseFrame(packet)
