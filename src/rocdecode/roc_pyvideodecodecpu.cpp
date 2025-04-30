@@ -101,8 +101,7 @@ PyRocVideoDecoderCpu::~PyRocVideoDecoderCpu() {
 int PyRocVideoDecoderCpu::PyDecodeFrame(PyPacketData& packet) {
     if(packet.bitstream_size == 0)
         packet.pkt_flags |= ROCDEC_PKT_ENDOFSTREAM;
-    int num_decoded_pics=0;
-    int decoded_frame_count = DecodeFrame(reinterpret_cast<const uint8_t *>(packet.bitstream_adrs), static_cast<size_t>(packet.bitstream_size), packet.pkt_flags, packet.frame_pts, &num_decoded_pics);
+    int decoded_frame_count = DecodeFrame(reinterpret_cast<const uint8_t *>(packet.bitstream_adrs), static_cast<size_t>(packet.bitstream_size), packet.pkt_flags, packet.frame_pts, nullptr);
     return decoded_frame_count;
 }
 
