@@ -118,19 +118,18 @@ int CodeStream::InitializeSingleImage(const std::filesystem::path& filename, con
     // Stream Parse
     rocjpeg_status = rocJpegStreamParse(reinterpret_cast<uint8_t*>(file_data->data()), data_size, stream_handle);
     if (rocjpeg_status != ROCJPEG_STATUS_SUCCESS) {
-        std::cerr << "ERROR: Failed to parse the input jpeg stream with " << rocJpegGetErrorName(rocjpeg_status) << "Input File : " << (!filename.empty() ? filename : "") << std::endl;
-        return Release();
+        std::cerr << "ERROR: Failed to parse the input jpeg stream with " << rocJpegGetErrorName(rocjpeg_status) << ": Input File : " << (!filename.empty() ? filename : "") << std::endl;
+        Release();
+        return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;
 }
 
-int CodeStream::Release() {
-    hipError_t hip_status = hipSuccess;
+void CodeStream::Release() {
     if(stream_handle) {
         RocJpegStatus rocjpeg_status = rocJpegStreamDestroy(stream_handle);
         stream_handle = nullptr;
     }
-    return EXIT_FAILURE;
 }
 
 CodeStream::CodeStream(const std::filesystem::path& filename) {

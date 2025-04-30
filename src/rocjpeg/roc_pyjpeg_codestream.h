@@ -48,7 +48,7 @@ public:
 private:
     py::bytes data_ref_bytes_;
     py::array_t<uint8_t> data_ref_arr_;
-    int Release();
+    void Release();
     int ReadFromFile(const std::filesystem::path& filename, std::shared_ptr<std::vector<char>>& file_data, int& file_size);
     int InitializeSingleImage(const std::filesystem::path& filename, const unsigned char* data, int data_size);
 };
