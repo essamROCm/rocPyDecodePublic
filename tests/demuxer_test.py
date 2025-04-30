@@ -20,13 +20,10 @@
 
 import pyRocVideoDecode.demuxer as dmx
 import argparse
-
-import pyRocVideoDecode.demuxer as demuxer
-
 from inspect import getmembers, isfunction
 
 print('rocPyDecode Demuxer')
-rocpydecodeDemuxer = getmembers(demuxer, isfunction)
+rocpydecodeDemuxer = getmembers(dmx, isfunction)
 for i in range(len(rocpydecodeDemuxer)):
     print(rocpydecodeDemuxer[i])
 
@@ -54,7 +51,8 @@ if __name__ == "__main__":
         required=True)
     try:
         args = parser.parse_args()
-    except BaseException:
+    except SystemExit as e:
+        print(f"Error: {e}. Please check the input arguments and try again.")
         exit()
 
     input_file_path = args.input
