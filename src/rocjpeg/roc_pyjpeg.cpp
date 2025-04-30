@@ -101,4 +101,10 @@ PYBIND11_MODULE(rocpyjpegdecode, m) {
     DecodeSource::ExportToPython(m);
     BufferInterface::ExportToPython(m);
     PyJpegImages::ExportToPython(m);
+
+    // PyJpegUtils for HIP Call
+    py::class_<PyRocJpegUtils>(m, "PyRocJpegUtils")
+        .def(py::init<>())
+        .def("init_hip_device",&PyRocJpegUtils::InitHipDevice);
+
 }

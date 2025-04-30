@@ -21,6 +21,10 @@
 import rocpyjpegdecode as rocpyjpeg
 import rocpyjpegdecode.jpegTypes as jpegt
 
+def initialize_hip(device_id = 0):
+    hip = rocpyjpeg.PyRocJpegUtils()
+    return hip.init_hip_device(device_id)
+
 class decoder(object):
     def __init__(
             self, 
@@ -31,7 +35,6 @@ class decoder(object):
         self.backend = backend
         self.output_format = output_format
         self.jpegdec = rocpyjpeg.Decoder(self.device_id, self.backend, self.output_format)
-
 
     # read image or batch of images
     def read(self, jpeg_item_to_decode):

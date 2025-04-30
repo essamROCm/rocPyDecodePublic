@@ -74,7 +74,7 @@ public:
      * @param device_id The device ID.
      * @return True if successful, false otherwise.
      */
-    static bool InitHipDevice(int device_id) {
+    bool InitHipDevice(int device_id) {
         int num_devices;
         hipDeviceProp_t hip_dev_prop;
         PY_CHECK_HIP(hipGetDeviceCount(&num_devices));

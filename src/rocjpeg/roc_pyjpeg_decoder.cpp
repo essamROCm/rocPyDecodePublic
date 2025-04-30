@@ -96,14 +96,6 @@ Decoder::Decoder(int device_id, int backend, RocJpegOutputFormat output_format) 
     SetOutputFormat(output_format);     // save user choice if sent for output format
     m_device_id = device_id;            // save user device id
     m_backend = RocJpegBackend(backend);// save user backend choice
-    // init hip
-    RocJpegStatus status = ROCJPEG_STATUS_SUCCESS;
-    PyRocJpegUtils rocjpeg_utils;
-    if (!rocjpeg_utils.InitHipDevice(m_device_id)) {
-        std::cerr << "ERROR: Failed to initialize HIP!" << std::endl;
-        status = ROCJPEG_STATUS_RUNTIME_ERROR;
-        return;
-    }
     // create decode obj
     PY_CHECK_ROCJPEG(rocJpegCreate(m_backend, m_device_id, &rocjpeg_handle));    
     SetFormat(output_format); // init

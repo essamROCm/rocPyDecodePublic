@@ -37,6 +37,11 @@ def jpeg_decode(
         backend,
         output_file_path):
 
+    # initialize hip
+    if(jdec.initialize_hip(device_id) == False):
+        print(f"Exiting jpegdecode application, Device#: {device_id} not found.")
+        sys.exit()
+
     # create the decode instance
     decoder = jdec.decoder(device_id, backend)
     decoder.set_output_image_format(output_format)  # set the output image to the desired format
