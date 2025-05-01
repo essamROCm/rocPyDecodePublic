@@ -45,7 +45,6 @@ void PyRocVideoDecoderCpuInitializer(py::module& m) {
         .def("GetOutputSurfaceInfo",&PyRocVideoDecoderCpu::PyGetOutputSurfaceInfo)
         .def("GetResizedOutputSurfaceInfo",&PyRocVideoDecoderCpu::PyGetResizedOutputSurfaceInfo)
         .def("GetNumOfFlushedFrames",&PyRocVideoDecoderCpu::PyGetNumOfFlushedFrames)
-        .def("SetReconfigParams",&PyRocVideoDecoderCpu::PySetReconfigParams)
         .def("IsCodecSupported",&PyRocVideoDecoderCpu::PyCodecSupported)
         .def("GetBitDepth",&PyRocVideoDecoderCpu::PyGetBitDepth)
 #if ROCDECODE_CHECK_VERSION(0,6,0)
@@ -53,53 +52,6 @@ void PyRocVideoDecoderCpuInitializer(py::module& m) {
         .def("GetDecoderSessionOverHead",&PyRocVideoDecoderCpu::PyGetDecoderSessionOverHead)
 #endif
     ;
-}
-
-// callback function to flush last frames and save it to file when reconfigure happens
-// reference to non-static member function must be called
-int PyReconfigureFlushCallbackCpu(void *p_viddec_obj, uint32_t flush_mode, void * p_user_struct) {
-    int n_frames_flushed = 0;
-    if ((p_viddec_obj == nullptr) ||  (p_user_struct == nullptr))
-        return n_frames_flushed;
-    RocVideoDecoder *viddec = static_cast<RocVideoDecoder *> (p_viddec_obj);
-    OutputSurfaceInfo *surf_info;
-    if (!viddec->GetOutputSurfaceInfo(&surf_info)) {
-        std::cerr << "Error: Failed to get Output Surface Info!" << std::endl;
-        return n_frames_flushed;
-    }
-    uint8_t *pframe = nullptr;
-    int64_t pts;
-    while ((pframe = viddec->GetFrame(&pts))) {
-        if (flush_mode != RECONFIG_FLUSH_MODE_NONE) {
-            if (flush_mode == ReconfigFlushMode::RECONFIG_FLUSH_MODE_DUMP_TO_FILE) {
-                ReconfigDumpFileStruct *p_dump_file_struct = static_cast<ReconfigDumpFileStruct *>(p_user_struct);
-                if (p_dump_file_struct->b_dump_frames_to_file) {
-                    viddec->SaveFrameToFile(p_dump_file_struct->output_file_name, pframe, surf_info);
-                }
-            }
-        }
-        // release and flush frame
-        viddec->ReleaseFrame(pts, true);
-        n_frames_flushed ++;
-    }
-    return n_frames_flushed;
-}
-
-py::object PyRocVideoDecoderCpu::PySetReconfigParams(int flush_mode, std::string& output_file_name_in) {
-    ReconfigFlushMode mode = static_cast<ReconfigFlushMode>(flush_mode);
-    if(!output_file_name_in.empty()) {
-        PyReconfigDumpFileStruct.output_file_name = output_file_name_in;
-        PyReconfigDumpFileStruct.b_dump_frames_to_file = true;
-    } else {
-        if(mode == RECONFIG_FLUSH_MODE_DUMP_TO_FILE)
-            mode = RECONFIG_FLUSH_MODE_NONE;
-    }
-    PyReconfigParams.p_fn_reconfigure_flush = PyReconfigureFlushCallbackCpu;
-    PyReconfigParams.p_reconfig_user_struct = &PyReconfigDumpFileStruct;
-    PyReconfigParams.reconfig_flush_mode = mode;
-    // set the parent class
-    SetReconfigParams(&PyReconfigParams);
-    return py::cast<py::none>(Py_None);
 }
 
 void PyRocVideoDecoderCpu::InitConfigStructure() {
@@ -149,7 +101,8 @@ PyRocVideoDecoderCpu::~PyRocVideoDecoderCpu() {
 int PyRocVideoDecoderCpu::PyDecodeFrame(PyPacketData& packet) {
     if(packet.bitstream_size == 0)
         packet.pkt_flags |= ROCDEC_PKT_ENDOFSTREAM;
-    int decoded_frame_count = DecodeFrame(reinterpret_cast<const uint8_t *>(packet.bitstream_adrs), static_cast<size_t>(packet.bitstream_size), packet.pkt_flags, packet.frame_pts);
+    // The nullptr argument is reserved for future use or optional parameters (e.g., get the count of images decoded).
+    int decoded_frame_count = DecodeFrame(reinterpret_cast<const uint8_t *>(packet.bitstream_adrs), static_cast<size_t>(packet.bitstream_size), packet.pkt_flags, packet.frame_pts, nullptr);
     return decoded_frame_count;
 }
 

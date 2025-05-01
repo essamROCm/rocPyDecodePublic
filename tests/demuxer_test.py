@@ -18,11 +18,44 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import pyRocVideoDecode.demuxer as demuxer
-
+import pyRocVideoDecode.demuxer as dmx
+import argparse
 from inspect import getmembers, isfunction
+import sys
 
 print('rocPyDecode Demuxer')
-rocpydecodeDemuxer = getmembers(demuxer, isfunction)
+rocpydecodeDemuxer = getmembers(dmx, isfunction)
 for i in range(len(rocpydecodeDemuxer)):
     print(rocpydecodeDemuxer[i])
+
+
+def test_all_apis(input_file_path):
+    stream = dmx.stream_provider(input_file_path)
+    stream_provider_obj = stream.GetFileStreamProvider()
+    demuxer_from_path = dmx.demuxer(input_file_path)
+    demuxer_from_stream = dmx.demuxer(stream)
+    demuxer_from_path.GetCodecId()
+    demuxer_from_path.GetBitDepth()
+    demuxer_from_path.DemuxFrame()
+    dummy_frame =  dummy_seek_mode = dummy_seek_criteria = 0
+    demuxer_from_path.SeekFrame(dummy_frame, dummy_seek_mode, dummy_seek_criteria)
+    print('rocPyDecode Demuxer test finished.')
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(description='PyRocDecode Video Decode Arguments')
+    parser.add_argument(
+        '-i',
+        '--input',
+        type=str,
+        help='Input File Path - required',
+        required=True)
+    try:
+        args = parser.parse_args()
+    except SystemExit as e:
+        print(f"Error: {e}. Please check the input arguments and try again.")
+        sys.exit(1)
+
+    input_file_path = args.input
+
+    test_all_apis(input_file_path)
