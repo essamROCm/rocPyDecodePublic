@@ -19,6 +19,7 @@
 # THE SOFTWARE.
 
 import numpy as np
+import rocpydecode
 from pyRocVideoDecode.decoder import GetOutputFormat, GetRocDecCodecID, GetRectangle, GetDim, GetOutputSurfaceInfo, GetRocPyDecPacket
 import pyRocVideoDecode.demuxer as dmx
 import pyRocVideoDecode.decoder as dec
@@ -79,3 +80,24 @@ decoder.GetDecoderSessionOverHead(session_id=1)
 decoder.IsCodecSupported(device_id=0, codec_id=codec_id, bit_depth=8)
 decoder.GetBitDepth()
 decoder.ReleaseFrame(packet)
+
+# Test AVCodecString2RocDecVideoCodec
+try:
+    codec_id = rocpydecode.AVCodecString2RocDecVideoCodec("h264")
+except Exception as e:
+    print("AVCodecString2RocDecVideoCodec failed:", e)
+
+# Test AVCodec2RocDecVideoCodec
+try:
+    avcodec_id = 27
+    codec_enum = rocpydecode.AVCodec2RocDecVideoCodec(avcodec_id)
+except Exception as e:
+    print("AVCodec2RocDecVideoCodec failed:", e)
+
+# Test GetRocPyDecPacket
+try:
+    # Create a dummy buffer with arbitrary bytes
+    data = np.frombuffer(b'\x00' * 128, dtype=np.uint8)
+    packet = rocpydecode.GetRocPyDecPacket(0, 128, data)
+except Exception as e:
+    print("GetRocPyDecPacket failed:", e)
