@@ -60,6 +60,7 @@ find_package(Python3 QUIET)
 
 # Tests
 if(Python3_FOUND AND ROCPYDECODE_PYBIND_SCRIPTS)
+  execute_process(COMMAND ${Python3_EXECUTABLE} -c "import torch" RESULT_VARIABLE TORCH_PYTHON_RESULT OUTPUT_QUIET ERROR_QUIET)
   # add python-hip for perf tests
   execute_process(COMMAND ${Python3_EXECUTABLE} -m pip install --upgrade pip OUTPUT_VARIABLE PIP_VERSION ERROR_VARIABLE PIP_ERROR RESULT_VARIABLE PIP_RESULT)
   execute_process(COMMAND ${Python3_EXECUTABLE} -m pip install -i https://test.pypi.org/simple hip-python OUTPUT_VARIABLE PIP_VERSION ERROR_VARIABLE PIP_ERROR RESULT_VARIABLE PIP_RESULT)
@@ -141,13 +142,15 @@ if(Python3_FOUND AND ROCPYDECODE_PYBIND_SCRIPTS)
       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   )
   set_property(TEST video_decode_python_AV9 PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
-  # 12 - video_decode_python_ffmpeg test
-  add_test(NAME video_decode_python_ffmpeg
-      COMMAND ${Python3_EXECUTABLE} ${ROCM_PATH}/lib/pyRocVideoDecode/samples/rocdecode/videodecodetorch_cpu_backend.py
-      -i ${ROCM_PATH}/share/rocdecode/video/AMD_driving_virtual_20-H264.mp4
-      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-  )
-  set_property(TEST video_decode_python_ffmpeg PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
+  if(TORCH_PYTHON_RESULT EQUAL 0)
+    # 12 - video_decode_python_ffmpeg test
+    add_test(NAME video_decode_python_ffmpeg
+        COMMAND ${Python3_EXECUTABLE} ${ROCM_PATH}/lib/pyRocVideoDecode/samples/rocdecode/videodecodetorch_cpu_backend.py
+        -i ${ROCM_PATH}/share/rocdecode/video/AMD_driving_virtual_20-H264.mp4
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    )
+    set_property(TEST video_decode_python_ffmpeg PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
+  endif()
   # 13 - jpeg_decode_single_file_test
   list(APPEND CMAKE_PREFIX_PATH ${ROCM_PATH}/lib/cmake)
   find_package(ROCJPEG QUIET)
@@ -155,11 +158,13 @@ if(Python3_FOUND AND ROCPYDECODE_PYBIND_SCRIPTS)
     if(${ROCJPEG_VERSION_MAJOR} VERSION_GREATER "0" OR
       (${ROCJPEG_VERSION_MAJOR} VERSION_EQUAL "0" AND ${ROCJPEG_VERSION_MINOR} VERSION_GREATER_EQUAL "11") OR
       (${ROCJPEG_VERSION_MAJOR} VERSION_EQUAL "0" AND ${ROCJPEG_VERSION_MINOR} VERSION_EQUAL "11" AND ${ROCJPEG_VERSION_PATCH} VERSION_GREATER_EQUAL "1"))
-        add_test(NAME jpeg_decode_python
-              COMMAND ${Python3_EXECUTABLE} ${ROCM_PATH}/lib/pyRocVideoDecode/samples/rocjpeg/jpegdecode.py
-              -i ${ROCM_PATH}/share/rocjpeg/images/mug_420.jpg
-              WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-        set_property(TEST jpeg_decode_python PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
+        if(TORCH_PYTHON_RESULT EQUAL 0)
+          add_test(NAME jpeg_decode_python
+                COMMAND ${Python3_EXECUTABLE} ${ROCM_PATH}/lib/pyRocVideoDecode/samples/rocjpeg/jpegdecode.py
+                -i ${ROCM_PATH}/share/rocjpeg/images/mug_420.jpg
+                WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+          set_property(TEST jpeg_decode_python PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
+        endif()
         # 14 - jpegdecodebatched_test
         add_test(NAME jpeg_decode_batched_python
               COMMAND ${Python3_EXECUTABLE} ${ROCM_PATH}/lib/pyRocVideoDecode/samples/rocjpeg/jpegdecodebatched.py
