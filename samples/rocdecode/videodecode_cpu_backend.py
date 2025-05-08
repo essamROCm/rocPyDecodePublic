@@ -66,13 +66,6 @@ def Decoder(
           str(cfg.pci_device_id))
     print("info: decoding started, please wait! \n")
 
-    # set reconfiguration params based on user arguments
-    flush_mode = 0
-    if (output_file_path is not None):
-        flush_mode = 1
-
-    viddec.SetReconfigParams(flush_mode, output_file_path if (output_file_path is not None) else str(""))
-
     # -----------------
     # The decoding loop
     # -----------------

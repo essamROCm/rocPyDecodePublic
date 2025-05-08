@@ -25,7 +25,7 @@ def Decoder(
     model.to("cuda")
 
     # get labels as list
-    labels_file = open("data/labels.txt", "r")
+    labels_file = open("../data/labels.txt", "r")
     data = labels_file.read()
     categories = data.split("\n")
     labels_file.close()
@@ -171,7 +171,7 @@ if __name__ == "__main__":
         '-of',
         '--rgb_format',
         type=int,
-        default=3,
+        default=2,
         help="Rgb Format to use as tensor - 1:bgr, 2:bgr48, 3:rgb, 4:rgb48, 5:bgra, 6:bgra64, 7:rgba, 8:rgba64, converts decoded YUV frame to Tensor in RGB format, optional, default: 3",
         required=False)
 
@@ -187,7 +187,7 @@ if __name__ == "__main__":
     rgb_format = args.rgb_format
 
     # handel params
-    rgb_format = 3 if (rgb_format < 1 or rgb_format > 8) else rgb_format
+    rgb_format = 2 if (rgb_format < 1 or rgb_format > 8) else rgb_format
     if not os.path.exists(input_file_path):  # Input file (must exist)
         print("ERROR: input file doesn't exist.")
         exit()
