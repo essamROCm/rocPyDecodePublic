@@ -151,13 +151,13 @@ if(Python3_FOUND AND ROCPYDECODE_PYBIND_SCRIPTS)
     )
     set_property(TEST video_decode_python_ffmpeg PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
   endif()
-  # 13 - all_other_pydecode_APIs test
-  add_test(NAME all_other_pydecode_APIs
-            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/all_test.py
+  # 13 - all_other_decoder_apis test
+  add_test(NAME all_other_decoder_apis
+            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/decoder_api_test.py
             -i ${ROCM_PATH}/share/rocdecode/video/AMD_driving_virtual_20-H264.mp4
             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   )
-  set_property(TEST all_other_pydecode_APIs PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
+  set_property(TEST all_other_decoder_apis PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
   # 14 - jpeg_decode_single_file_test
   list(APPEND CMAKE_PREFIX_PATH ${ROCM_PATH}/lib/cmake)
   find_package(ROCJPEG QUIET)

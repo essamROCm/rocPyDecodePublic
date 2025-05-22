@@ -22,7 +22,7 @@ import rocpydecode
 import argparse
 import sys
  
-parser = argparse.ArgumentParser(description='PyRocDecode Video Decode Arguments')
+parser = argparse.ArgumentParser(description='PyRocDecode Video Decode Input Arguments')
 parser.add_argument(
     '-i',
     '--input',
