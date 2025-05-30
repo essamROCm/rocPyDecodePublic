@@ -200,4 +200,8 @@ PYBIND11_MODULE(rocpydecode, m) {
         .def_readwrite("pci_bus_id",    &ConfigInfo::pci_bus_id)
         .def_readwrite("pci_domain_id", &ConfigInfo::pci_domain_id)
         .def_readwrite("pci_device_id", &ConfigInfo::pci_device_id);
+
+    py::class_<DLPackPyTensor>(m, "DLPackPyTensor")
+        .def(py::init<>())
+        .def_static("test_all", &DLPackPyTensor::test_all);
 }
