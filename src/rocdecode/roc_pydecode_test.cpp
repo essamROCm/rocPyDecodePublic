@@ -38,9 +38,9 @@ void TestAllClassCalls(const char* input_file) {
     std::shared_ptr<PyPacketData> pkt = demuxer.DemuxFrame();
     if (!viddec.PyCodecSupported(0, ConvertAVCodec2RocDecVideoCodec(demuxer.GetCodecId()), demuxer.PyGetBitDepth()).cast<bool>()) return;
     viddec.PyGetFrameRgb(*pkt, 3);
-    Dim* resize_dim = new Dim{1920, 1080};
+    Dim resize_dim{1920, 1080};
     uintptr_t surf_info = static_cast<uintptr_t>(0); 
-    viddec.PyResizeFrame(*pkt, resize_dim, surf_info);
+    viddec.PyResizeFrame(*pkt, &resize_dim, surf_info);
     viddec.PyGetResizedOutputSurfaceInfo();    
     viddec.PyGetDeviceinfo();    
     viddec.PyGetNumOfFlushedFrames();
@@ -55,7 +55,7 @@ void TestAllClassCalls(const char* input_file) {
     pkt = demuxer.DemuxFrame();
     if (!cpu_dec.PyCodecSupported(0, ConvertAVCodec2RocDecVideoCodec(demuxer.GetCodecId()), demuxer.PyGetBitDepth()).cast<bool>()) return;
     cpu_dec.PyGetFrameRgb(*pkt, 3);    
-    cpu_dec.PyResizeFrame(*pkt, resize_dim, surf_info);
+    cpu_dec.PyResizeFrame(*pkt, &resize_dim, surf_info);
     cpu_dec.PyGetResizedOutputSurfaceInfo();    
     cpu_dec.PyGetDeviceinfo();    
     cpu_dec.PyGetNumOfFlushedFrames();
