@@ -25,6 +25,8 @@ THE SOFTWARE.
 
 using namespace std;
 
+void TestAllClassCalls(const char* input_file);
+
 PYBIND11_MODULE(rocpydecode, m) {
  
     m.doc() = "Python bindings for the C++ portions of rocDecode ..";
@@ -33,6 +35,9 @@ PYBIND11_MODULE(rocpydecode, m) {
     m.def("AVCodec2RocDecVideoCodec", &ConvertAVCodec2RocDecVideoCodec, "Convert AVCodecID to rocDecVideoCodec ID");
     m.def("AVCodecString2RocDecVideoCodec", &ConvertAVCodecString2RocDecVideoCodec, "Convert AVCodec string to rocDecVideoCodec ID");
     
+    // Testing in DEBUG build
+    m.def("TestAllClassCalls", &TestAllClassCalls, "Testing  and validation");
+
     m.def("GetRocPyDecPacket", [](int pts, int size, py::buffer buffer) {
         std::shared_ptr<PyPacketData> packet = make_shared<PyPacketData>();
         packet->frame_pts = static_cast<int64_t>(pts);
