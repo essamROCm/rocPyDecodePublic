@@ -19,6 +19,7 @@
 # THE SOFTWARE.
 
 import rocpydecode
+from rocpydecode import DLPackPyTensor
 import argparse
 import sys
  
@@ -38,4 +39,7 @@ except SystemExit as e:
 input_file_path = args.input
 
 rocpydecode.TestAllClassCalls(input_file_path)
-print('rocPyDecode APIs test finished.')
+print('rocPyDecode APIs test finished.\n')
+
+DLPackPyTensor.test_all()
+print('rocPyDecode DLPackPyTensor APIs test completed successfully.\n')
