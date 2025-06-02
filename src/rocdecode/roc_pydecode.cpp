@@ -26,6 +26,8 @@ THE SOFTWARE.
 using namespace std;
 
 void TestAllClassCalls(const char* input_file);
+void TestAll_roc_pybuffer();
+void Test_DLPackPyTensor_ConstructorsAndOperators();
 
 PYBIND11_MODULE(rocpydecode, m) {
  
@@ -37,6 +39,8 @@ PYBIND11_MODULE(rocpydecode, m) {
     
     // Testing in DEBUG build
     m.def("TestAllClassCalls", &TestAllClassCalls, "Testing  and validation");
+    m.def("TestAll_roc_pybuffer", &TestAll_roc_pybuffer, "Testing  and validation");
+    m.def("Test_DLPack", &Test_DLPackPyTensor_ConstructorsAndOperators, "Testing  and validation");
 
     m.def("GetRocPyDecPacket", [](int pts, int size, py::buffer buffer) {
         std::shared_ptr<PyPacketData> packet = make_shared<PyPacketData>();

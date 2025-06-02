@@ -39,6 +39,8 @@ except SystemExit as e:
 input_file_path = args.input
 
 rocpydecode.TestAllClassCalls(input_file_path)
+rocpydecode.TestAll_roc_pybuffer()
+rocpydecode.Test_DLPack()
 print('rocPyDecode APIs test finished.\n')
 
 DLPackPyTensor.test_all()
