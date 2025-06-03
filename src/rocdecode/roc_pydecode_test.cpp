@@ -55,33 +55,26 @@ void TestAllClassCalls(const char* input_file) {
     viddec.PyGetBitDepth();
     viddec.PyReleaseFrame(*pkt);
 
+    PyPacketData packet;
+    packet.bitstream_size = 100;
+    packet.bitstream_adrs = reinterpret_cast<uintptr_t>(malloc(100));
+    packet.frame_pts = 123;
+    for (int i = 0; i < 3; ++i)
+        packet.ext_buf[i] = std::make_shared<BufferInterface>();
+
     // testing Get/Resize
-    {
-        PyPacketData pkt;
-        pkt.bitstream_size = 100;
-        pkt.bitstream_adrs = reinterpret_cast<uintptr_t>(malloc(100));
-        pkt.frame_pts = 123;
-        for (int i = 0; i < 3; ++i)
-            pkt.ext_buf[i] = std::make_shared<BufferInterface>();
-        pkt.frame_adrs = reinterpret_cast<uintptr_t>(malloc(1920 * 1080 * 3 / 2));
-        viddec.PyGetFrameYuv(pkt, true);
-        viddec.PyGetFrameRgb(pkt, static_cast<int>(OutputFormatEnum::rgb));
-        Dim dim{640,360};
-        surf_info = viddec.PyGetOutputSurfaceInfo();
-        viddec.PyResizeFrame(pkt, &dim, surf_info);
-        std::string filename = "test_output_frame.yuv";
-        viddec.PySaveFrameToFile(filename, pkt.frame_adrs, surf_info, OutputFormatEnum::rgb);
-#if ROCDECODE_CHECK_VERSION(0,6,0)
-        viddec.PyAddDecoderSessionOverHead(1, 0.456);
-#endif
-#if ROCDECODE_CHECK_VERSION(0,6,0)
-        viddec.PyGetDecoderSessionOverHead(1);
-#endif
-        free(reinterpret_cast<void*>(pkt.bitstream_adrs));
-        free(reinterpret_cast<void*>(pkt.frame_adrs));
-        viddec.PyReleaseFrame(pkt);
-        std::cout << "Coverage PyRocVideoDecoder completed successfully.\n";
-    }
+    packet.frame_adrs = reinterpret_cast<uintptr_t>(malloc(1920 * 1080 * 3 / 2));
+    viddec.PyGetFrameYuv(packet, true);
+    viddec.PyGetFrameRgb(packet, static_cast<int>(OutputFormatEnum::rgb));
+    Dim dim{640,360};
+    surf_info = viddec.PyGetOutputSurfaceInfo();
+    viddec.PyResizeFrame(packet, &dim, surf_info);
+    std::string filename = "test_output_frame.yuv";
+    viddec.PySaveFrameToFile(filename, packet.frame_adrs, surf_info, OutputFormatEnum::rgb);
+    viddec.PyAddDecoderSessionOverHead(1, 0.456);
+    viddec.PyGetDecoderSessionOverHead(1);
+    viddec.PyReleaseFrame(packet);
+    std::cout << "Coverage PyRocVideoDecoder completed successfully.\n";
 
     // test CPU decoder
     PyRocVideoDecoderCpu cpu_dec(device_id, mem_type, dec_codec, force_zero_latency);    
@@ -96,32 +89,17 @@ void TestAllClassCalls(const char* input_file) {
     cpu_dec.PyReleaseFrame(*pkt);
 
     // testing Get/Resize
-    {
-        PyPacketData pkt;
-        pkt.bitstream_size = 100;
-        pkt.bitstream_adrs = reinterpret_cast<uintptr_t>(malloc(100));
-        pkt.frame_pts = 123;
-        for (int i = 0; i < 3; ++i)
-            pkt.ext_buf[i] = std::make_shared<BufferInterface>();
-        pkt.frame_adrs = reinterpret_cast<uintptr_t>(malloc(1920 * 1080 * 3 / 2));
-        cpu_dec.PyGetFrameYuv(pkt, true);
-        cpu_dec.PyGetFrameRgb(pkt, static_cast<int>(OutputFormatEnum::rgb));
-        Dim dim{640,360};
-        surf_info = cpu_dec.PyGetOutputSurfaceInfo();
-        cpu_dec.PyResizeFrame(pkt, &dim, surf_info);
-        std::string filename = "test_output_frame.yuv";
-        cpu_dec.PySaveFrameToFile(filename, pkt.frame_adrs, surf_info, OutputFormatEnum::rgb);
-#if ROCDECODE_CHECK_VERSION(0,6,0)
-        cpu_dec.PyAddDecoderSessionOverHead(1, 0.456);
-#endif
-#if ROCDECODE_CHECK_VERSION(0,6,0)
-        cpu_dec.PyGetDecoderSessionOverHead(1);
-#endif
-        free(reinterpret_cast<void*>(pkt.bitstream_adrs));
-        free(reinterpret_cast<void*>(pkt.frame_adrs));
-        cpu_dec.PyReleaseFrame(pkt);
-        std::cout << "Coverage PyRocVideoDecoderCpu completed successfully.\n";
-    }
+    cpu_dec.PyGetFrameYuv(packet, true);
+    cpu_dec.PyGetFrameRgb(packet, static_cast<int>(OutputFormatEnum::rgb));
+    surf_info = cpu_dec.PyGetOutputSurfaceInfo();
+    cpu_dec.PyResizeFrame(packet, &dim, surf_info);
+    cpu_dec.PySaveFrameToFile(filename, packet.frame_adrs, surf_info, OutputFormatEnum::rgb);
+    cpu_dec.PyAddDecoderSessionOverHead(1, 0.456);
+    cpu_dec.PyGetDecoderSessionOverHead(1);
+    free(reinterpret_cast<void*>(packet.bitstream_adrs));
+    free(reinterpret_cast<void*>(packet.frame_adrs));
+    cpu_dec.PyReleaseFrame(packet);
+    std::cout << "Coverage PyRocVideoDecoderCpu completed successfully.\n";
 
     std::cout << "All classes member methods calls completed successfully." << std::endl;
 #endif //#ifndef NDEBUG
