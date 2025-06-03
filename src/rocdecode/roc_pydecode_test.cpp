@@ -55,7 +55,7 @@ void TestAllClassCalls(const char* input_file) {
     viddec.PyGetBitDepth();
     viddec.PyReleaseFrame(*pkt);
 
-    // separate test
+    // testing Get/Resize
     {
         PyPacketData pkt;
         pkt.bitstream_size = 100;
@@ -95,7 +95,7 @@ void TestAllClassCalls(const char* input_file) {
     cpu_dec.PyGetBitDepth();
     cpu_dec.PyReleaseFrame(*pkt);
 
-    // separate test
+    // testing Get/Resize
     {
         PyPacketData pkt;
         pkt.bitstream_size = 100;
