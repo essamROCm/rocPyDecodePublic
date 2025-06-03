@@ -5,13 +5,15 @@
 #include "roc_pyvideodecodecpu.h"
 #include "common/roc_pybuffer.h"
 #include "common/roc_pydlpack.h"
+#include "roc_pydecode.h"
+#include <cstring>
 #include <iostream>
 #include <vector>
 #include <cstdint>
 #include <memory>
 
 void TestAllClassCalls(const char* input_file) {
-#ifndef NDEBUG    
+#ifndef NDEBUG
     // here check input_file, ret if invalid str or null
     if(!input_file){
         std::cout << "ERROR: Input File Name is a nullptr, BAD argument sent." << std::endl;    
@@ -53,10 +55,37 @@ void TestAllClassCalls(const char* input_file) {
     viddec.PyGetBitDepth();
     viddec.PyReleaseFrame(*pkt);
 
+    // separate test
+    {
+        PyPacketData pkt;
+        pkt.bitstream_size = 100;
+        pkt.bitstream_adrs = reinterpret_cast<uintptr_t>(malloc(100));
+        pkt.frame_pts = 123;
+        for (int i = 0; i < 3; ++i)
+            pkt.ext_buf[i] = std::make_shared<BufferInterface>();
+        pkt.frame_adrs = reinterpret_cast<uintptr_t>(malloc(1920 * 1080 * 3 / 2));
+        viddec.PyGetFrameYuv(pkt, true);
+        viddec.PyGetFrameRgb(pkt, static_cast<int>(OutputFormatEnum::rgb));
+        Dim dim{640,360};
+        surf_info = viddec.PyGetOutputSurfaceInfo();
+        viddec.PyResizeFrame(pkt, &dim, surf_info);
+        std::string filename = "test_output_frame.yuv";
+        viddec.PySaveFrameToFile(filename, pkt.frame_adrs, surf_info, OutputFormatEnum::rgb);
+#if ROCDECODE_CHECK_VERSION(0,6,0)
+        viddec.PyAddDecoderSessionOverHead(1, 0.456);
+#endif
+#if ROCDECODE_CHECK_VERSION(0,6,0)
+        viddec.PyGetDecoderSessionOverHead(1);
+#endif
+        free(reinterpret_cast<void*>(pkt.bitstream_adrs));
+        free(reinterpret_cast<void*>(pkt.frame_adrs));
+        viddec.PyReleaseFrame(pkt);
+        std::cout << "Coverage PyRocVideoDecoder completed successfully.\n";
+    }
+
     // test CPU decoder
     PyRocVideoDecoderCpu cpu_dec(device_id, mem_type, dec_codec, force_zero_latency);    
     std::cout << "Testing PyRocVideoDecoderCpu...\n";
-    pkt = demuxer.DemuxFrame();
     if (!cpu_dec.PyCodecSupported(0, ConvertAVCodec2RocDecVideoCodec(demuxer.GetCodecId()), demuxer.PyGetBitDepth()).cast<bool>()) return;
     cpu_dec.PyGetFrameRgb(*pkt, 3);    
     cpu_dec.PyResizeFrame(*pkt, &resize_dim, surf_info);
@@ -66,11 +95,40 @@ void TestAllClassCalls(const char* input_file) {
     cpu_dec.PyGetBitDepth();
     cpu_dec.PyReleaseFrame(*pkt);
 
+    // separate test
+    {
+        PyPacketData pkt;
+        pkt.bitstream_size = 100;
+        pkt.bitstream_adrs = reinterpret_cast<uintptr_t>(malloc(100));
+        pkt.frame_pts = 123;
+        for (int i = 0; i < 3; ++i)
+            pkt.ext_buf[i] = std::make_shared<BufferInterface>();
+        pkt.frame_adrs = reinterpret_cast<uintptr_t>(malloc(1920 * 1080 * 3 / 2));
+        cpu_dec.PyGetFrameYuv(pkt, true);
+        cpu_dec.PyGetFrameRgb(pkt, static_cast<int>(OutputFormatEnum::rgb));
+        Dim dim{640,360};
+        surf_info = cpu_dec.PyGetOutputSurfaceInfo();
+        cpu_dec.PyResizeFrame(pkt, &dim, surf_info);
+        std::string filename = "test_output_frame.yuv";
+        cpu_dec.PySaveFrameToFile(filename, pkt.frame_adrs, surf_info, OutputFormatEnum::rgb);
+#if ROCDECODE_CHECK_VERSION(0,6,0)
+        cpu_dec.PyAddDecoderSessionOverHead(1, 0.456);
+#endif
+#if ROCDECODE_CHECK_VERSION(0,6,0)
+        cpu_dec.PyGetDecoderSessionOverHead(1);
+#endif
+        free(reinterpret_cast<void*>(pkt.bitstream_adrs));
+        free(reinterpret_cast<void*>(pkt.frame_adrs));
+        cpu_dec.PyReleaseFrame(pkt);
+        std::cout << "Coverage PyRocVideoDecoderCpu completed successfully.\n";
+    }
+
     std::cout << "All classes member methods calls completed successfully." << std::endl;
-#endif //#ifndef NDEBUG    
+#endif //#ifndef NDEBUG
 }
 
 void TestAll_roc_pybuffer() {
+#ifndef NDEBUG
     std::cout << "Running TestAll_roc_pybuffer()..." << std::endl;
 
     // Step 1: Create test tensor via DLPackPyTensor
@@ -119,9 +177,11 @@ void TestAll_roc_pybuffer() {
     std::cout << "LoadDLPack returned: " << ret << std::endl;
 
     std::cout << "TestAll_roc_pybuffer() completed successfully.\n";
+#endif //#ifndef NDEBUG
 }
 
 void Test_DLPackPyTensor_ConstructorsAndOperators() {
+#ifndef NDEBUG
     std::cout << "Testing DLPackPyTensor constructors and operators...\n";
 
     // Step 1: Manually create DLTensor
@@ -167,4 +227,5 @@ void Test_DLPackPyTensor_ConstructorsAndOperators() {
     std::cout << "Moved tensor shape[1]: " << moved_tensor->shape[1] << std::endl;
 
     std::cout << "All DLPackPyTensor constructor/operator tests passed.\n";
+#endif //#ifndef NDEBUG
 }
