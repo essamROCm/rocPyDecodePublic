@@ -68,7 +68,7 @@ def Decoder(
         n_frame_returned = viddec.DecodeFrame(packet)
 
         for i in range(n_frame_returned):
-            viddec.GetFrameYuv(packet)
+            viddec.GetFrameYuv(packet, True)
 
             # Yuv (NV12) Plane torch tensor
             yuv_tensor = torch.from_dlpack(packet.ext_buf[0].__dlpack__(packet))
