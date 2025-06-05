@@ -168,3 +168,39 @@ void Test_DLPackPyTensor_ConstructorsAndOperators() {
 
     std::cout << "All DLPackPyTensor constructor/operator tests passed.\n";
 }
+
+// The actual test
+void Test_PyReconfigureFlushCallback() {
+    int device_id = 0;
+    OutputSurfaceMemoryType mem_type = static_cast<OutputSurfaceMemoryType>(0);
+    rocDecVideoCodec codec = rocDecVideoCodec_HEVC;
+    bool force_zero_latency = false;
+
+    RocVideoDecoder decoder(
+        device_id,
+        mem_type,
+        codec,
+        force_zero_latency,
+        nullptr,      // crop_rect
+        false,        // extract_user_SEI_Message
+        0,            // disp_delay
+        1920, 1080,   // max_width, max_height
+        1000          // clk_rate
+    );
+
+    ReconfigDumpFileStruct dump_struct;
+    dump_struct.b_dump_frames_to_file = true;
+    dump_struct.output_file_name = "dummy_output.yuv";
+
+    // Call with RECONFIG_FLUSH_MODE_DUMP_TO_FILE
+    int flushed = PyReconfigureFlushCallback(&decoder, RECONFIG_FLUSH_MODE_DUMP_TO_FILE, &dump_struct);
+    std::cout << "Flushed frames: " << flushed << std::endl;
+
+    // test with nullptr to hit the early-return path
+    int flushed_null = PyReconfigureFlushCallback(nullptr, 0, nullptr);
+    std::cout << "Flushed frames (null case): " << flushed_null << std::endl;
+
+    // test with RECONFIG_FLUSH_MODE_NONE (won’t call SaveFrameToFile)
+    flushed = PyReconfigureFlushCallback(&decoder, RECONFIG_FLUSH_MODE_NONE, &dump_struct);
+    std::cout << "Flushed frames (no file save): " << flushed << std::endl;
+}
