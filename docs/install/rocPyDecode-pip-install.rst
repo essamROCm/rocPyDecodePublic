@@ -1,16 +1,22 @@
 .. meta::
   :description: rocPyDecode Installation
-  :keywords: install, rocPyDecode, AMD, ROCm, wheel, docker, bare metal
+  :keywords: install, rocPyDecode, rocPyJpegDecode, AMD, ROCm, wheel, docker, bare metal
 
 ********************************************************************
 Installing rocPyDecode with pip
 ********************************************************************
 
-Installing rocPyDecode with pip is recommended to generate wheel and egg files. Otherwise, the :doc:`CMake installation <./rocPyDecode-cmake-install>`  is recommended.
+Installing rocPyDecode with pip is used for generating wheel and egg files. If you won't be generating wheel and egg files, the :doc:`CMake installation <./rocPyDecode-cmake-install>` is recommended.
+
+rocPyJpegDecode will only be installed if `rocJPEG <https://rocm.docs.amd.com/projects/rocJPEG/en/latest/index.html>`_ is already installed. 
+
+.. note::
+
+  The generated egg and wheel files include rocPyJpegDecode.
 
 The rocPyDecode source code and its installation scripts are available from the `rocPyDecode GitHub Repository <https://github.com/ROCm/rocPyDecode>`_. 
 
-The develop branch is the default rocPyDecode branch. The develop branch is intended for users who want to preview new features or contribute to the rocPyDecode code base. If you don't intend to preview new features or contribute to the codebase, clone the rocPyDecode branch that corresponds to your version of ROCm.
+The develop branch is the default branch and is intended for users who want to preview new features or contribute to the rocPyDecode and rocPyJpegDecode code base. If you don't intend to preview new features or contribute to the codebase, clone the branch that corresponds to your version of ROCm.
 
 .. note:: 
 
@@ -22,7 +28,7 @@ Before installing rocPyDecode, run `rocPyDecode-requirements.py <https://github.
 
   python3 rocPyDecode-requirements.py
 
-If you're installing rocPyDecode on Ubuntu 22.04, install libstdc++-12-dev:
+If you're installing on Ubuntu 22.04, install libstdc++-12-dev:
 
 .. code:: shell
 

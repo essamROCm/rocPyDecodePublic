@@ -20,17 +20,17 @@ subtrees:
 
 - caption: Conceptual
   entries:
-  - file: conceptual/rocPyDecode-mem-types.rst
+  - file: conceptual/rocPyDecode-mem-types
     title: rocPyDecode surface data memory locations
 
 - caption: How to
   entries:
-  - file: how-to/using-rocPydecode.rst
+  - file: how-to/using-rocPydecode
     title: Use rocPyDecode
 
 - caption: Tutorials
   entries:
-  - url: https://github.com/ROCm/rocPyDecode/tree/develop/samples
+  - file: tutorials/rocPyDecode-samples 
     title: rocPyDecode samples
 
 - caption: Reference
@@ -41,10 +41,12 @@ subtrees:
     title: rocPyDecode API
     subtrees:
     - entries:
-      - file: reference/structures.rst
+      - file: reference/structures
         title: rocPyDecode Structures
-      - file: reference/decoderClass.rst
-      - file: reference/demuxerClass.rst
+      - file: reference/decoderClass
+      - file: reference/demuxerClass
+  - file: reference/rocPyJPEGDecode-api
+    title: rocPyJpegDecode decoder class
 
 - caption: About
   entries:

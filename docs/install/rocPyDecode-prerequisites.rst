@@ -1,6 +1,6 @@
 .. meta::
   :description: rocPyDecode Installation Prerequisites
-  :keywords: install, rocPyDecode, AMD, ROCm, prerequisites, dependencies, requirements
+  :keywords: install, rocPyDecode, rocPyJpegDecode, AMD, ROCm, prerequisites, dependencies, requirements
 
 ********************************************************************
 rocPyDecode prerequisites
@@ -16,14 +16,16 @@ ROCm needs to be installed using the `AMDGPU installer <https://rocm.docs.amd.co
     
 rocPyDecode has the following prerequisites:
 
-* CMake 3.12 or later
-* Python3 3.9 or later
+* `CMake 3.12 or later <https://cmake.org/>`_
+* `Python3 3.9 or later <https://www.python.org/>`_
 * Python3 pip
-* PyBind11
-* rocDecode
-* pkg-config
-* FFmpeg runtime and headers
-* DLPack
-* NumPy, for running tests and samples
+* `PyBind11 <https://github.com/pybind/pybind11>`_
+* `rocDecode <https://rocm.docs.amd.com/projects/rocDecode/en/latest/index.html>`_
+* `FFmpeg runtime and headers <https://ffmpeg.org>`_
+* `DLPack <https://dmlc.github.io/dlpack/latest/>`_
+* `NumPy, for running tests and samples <https://numpy.org/>`_
 
-All prerequisites with the exception of NumPy are installed with the `rocPyDecode-requirements.py <https://github.com/ROCm/rocPyDecode/blob/develop/rocPyDecode-requirements.py>`_ script. NumPy can be installed with ``pip``, and libstdc++-12-dev can be installed with a Linux package installer.
+rocPyJpegDecode additionally requires `rocJPEG <https://rocm.docs.amd.com/projects/rocJPEG/en/latest/index.html>`_.
+
+All prerequisites except for NumPy and rocJPEG are installed with the `rocPyDecode-requirements.py <https://github.com/ROCm/rocPyDecode/blob/develop/rocPyDecode-requirements.py>`_ script. 
+
