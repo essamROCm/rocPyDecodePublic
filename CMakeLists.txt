@@ -159,7 +159,7 @@ set(CMAKE_SKIP_BUILD_RPATH true)
 
 # Find dependencies
 find_package(HIP QUIET)
-find_package(rocDecode QUIET)
+find_package(rocdecode QUIET)
 find_package(ROCJPEG QUIET)
 find_package(pybind11 QUIET)
 find_package(dlpack QUIET)
