@@ -33,7 +33,7 @@ namespace py = pybind11;
 using namespace py::literals;
 
 std::tuple<int, float, float> 
-decode_with_perfromance(std::string input_path, int batch_size = 1, int num_threads = 1, int device_id = 0);
+decode_with_performance(std::string input_path, int batch_size = 1, int num_threads = 1, int device_id = 0);
 
 PYBIND11_MODULE(rocpyjpegdecode, m) {
  
@@ -111,5 +111,5 @@ PYBIND11_MODULE(rocpyjpegdecode, m) {
         .def("init_hip_device",&PyRocJpegUtils::InitHipDevice);
 
     // JPEG Decode with Performance measurements (running 1-4 threads)
-    m.def("decode_with_perfromance", &decode_with_perfromance, "JPEG Decode with Performance measurements");
+    m.def("decode_with_performance", &decode_with_performance, "JPEG Decode with Performance measurements");
 }

@@ -23,7 +23,7 @@ THE SOFTWARE.
 #include "roc_pyjpeg_utils.h"
 #include <tuple>
 
-std::tuple<int, float, float> decode_with_perfromance(std::string input_path, int batch_size, int num_threads, int device_id);
+std::tuple<int, float, float> decode_with_performance(std::string input_path, int batch_size, int num_threads, int device_id);
 
 struct DecodeInfo {
     std::vector<std::string> file_paths;
@@ -198,7 +198,7 @@ void DecodeImages(DecodeInfo &decode_info, PyRocJpegUtils rocjpeg_utils, RocJpeg
     }
 }
 
-std::tuple<int, float, float> decode_with_perfromance(std::string input_path, int batch_size = 1, int num_threads = 1, int device_id = 0) {
+std::tuple<int, float, float> decode_with_performance(std::string input_path, int batch_size = 1, int num_threads = 1, int device_id = 0) {
 
     int ret_error_code = EXIT_FAILURE;
     float ret_images_per_sec = 0.0f;

@@ -25,6 +25,32 @@ import argparse
 from datetime import datetime
 import csv
 
+'''
+Note:
+This sample is simplified to benchmark performance, therefore it assumes passing a root folder path like: /home/user/jpeg_images/
+Under that folder the sample assumes one sub-folder named: 'flowers'.
+Under 'flowers' the sample assumes there are JPEG images' resolutions sub-folders: '640_480', '800_600', '1920_1080', '3840_2160', '7680_4320', '16384_16384'.
+Under each of those sub folders one JPEG image with a resolution reflects the sub-folder name.
+If you choose to use different root folder, then you will need to change the sample code below to match the sub-folders 'names' you may have.
+The rocPyJpegDecode API used here: 'decode_with_performance' is not dependable on any folder name.
+Folder structure example:
+    jpeg_images/
+        └── flowers
+            ├── 16384_16384
+            │   └── flowers.jpg
+            ├── 1920_1080
+            │   └── flowers.jpg
+            ├── 3840_2160
+            │   └── flowers.jpg
+            ├── 640_480
+            │   └── flowers.jpg
+            ├── 7680_4320
+            │   └── flowers.jpg
+            └── 800_600
+                └── flowers.jpg
+    8 directories, 6 files
+'''
+
 def copy_images(base_dir, num_images, benchmark_mode):
     resolutions = ['1920_1080', '3840_2160'] if benchmark_mode == 0 else ['640_480', '800_600', '1920_1080', '3840_2160', '7680_4320', '16384_16384'] # '3991_2661'
     for category in ['flowers']:
@@ -47,7 +73,7 @@ def run_benchmark(base_dir, batch_size, num_threads, num_images, device_id, benc
             best_ips, best_mps = 0, 0
             for _ in range(3):
                 print(f"decoding images in {dir_path}")
-                _, ips, mps = rocpyjpeg.decode_with_perfromance(dir_path, batch_size, num_threads, device_id)                
+                _, ips, mps = rocpyjpeg.decode_with_performance(dir_path, batch_size, num_threads, device_id)
                 if ips > best_ips:
                     best_ips, best_mps = ips, mps
             results.append([category, 'Native', resolution.replace('_', 'x'), num_images, best_ips, best_mps])   
