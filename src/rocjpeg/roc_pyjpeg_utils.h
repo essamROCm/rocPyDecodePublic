@@ -35,8 +35,9 @@ THE SOFTWARE.
 #include <functional>
 #include <condition_variable>
 #include <queue>
-#include <experimental/filesystem>
-namespace fs = std::experimental::filesystem;
+
+#include <filesystem>
+namespace fs = std::filesystem;
 
 #include <chrono>
 #include "rocjpeg/rocjpeg.h"
@@ -230,6 +231,61 @@ public:
         return EXIT_SUCCESS;
     }
 
+    /**
+     * Checks if a file is a JPEG file.
+     *
+     * @param filePath The path to the file to be checked.
+     * @return True if the file is a JPEG file, false otherwise.
+     */
+    static bool IsJPEG(const std::string& filePath) {
+        std::ifstream file(filePath, std::ios::binary);
+        if (!file.is_open()) {
+            std::cerr << "Failed to open file: " << filePath << std::endl;
+            return false;
+        }
+
+        unsigned char buffer[2];
+        file.read(reinterpret_cast<char*>(buffer), 2);
+        file.close();
+
+        // The first two bytes of every JPEG stream are always 0xFFD8, which represents the Start of Image (SOI) marker.
+        return buffer[0] == 0xFF && buffer[1] == 0xD8;
+    }
+
+    /**
+     * @brief Gets the file paths.
+     *
+     * This function gets the file paths based on the input path and sets the corresponding variables.
+     *
+     * @param input_path The input path.
+     * @param file_paths The vector to store the file paths.
+     * @param is_dir Flag indicating whether the input path is a directory.
+     * @param is_file Flag indicating whether the input path is a file.
+     * @return True if successful, false otherwise.
+     */
+    static bool GetFilePaths(std::string &input_path, std::vector<std::string> &file_paths, bool &is_dir, bool &is_file) {
+        std::cout << "Reading images from disk, please wait!" << std::endl;
+        if (!fs::exists(input_path)) {
+            std::cerr << "ERROR: the input path does not exist!" << std::endl;
+            return false;
+        }
+        is_dir = fs::is_directory(input_path);
+        is_file = fs::is_regular_file(input_path);
+        if (is_dir) {
+            for (const auto &entry : fs::recursive_directory_iterator(input_path)) {
+                if (fs::is_regular_file(entry) && IsJPEG(entry.path().string())) {
+                    file_paths.push_back(entry.path().string());
+                }
+            }
+        } else if (is_file && IsJPEG(input_path)) {
+            file_paths.push_back(input_path);
+        } else {
+            std::cerr << "ERROR: the input path does not contain JPEG files!" << std::endl;
+            return false;
+        }
+        return true;
+    }
+
 private:
     static const int mem_alignment = 4 * 1024 * 1024;
     /**
@@ -246,4 +302,63 @@ private:
     }
 };
 
+class ThreadPool {
+    public:
+        ThreadPool(int nthreads) : shutdown_(false) {
+            // Create the specified number of threads
+            threads_.reserve(nthreads);
+            for (int i = 0; i < nthreads; ++i)
+                threads_.emplace_back(std::bind(&ThreadPool::ThreadEntry, this, i));
+        }
+
+        ~ThreadPool() {}
+
+        void JoinThreads() {
+            {
+                // Unblock any threads and tell them to stop
+                std::unique_lock<std::mutex> lock(mutex_);
+                shutdown_ = true;
+                cond_var_.notify_all();
+            }
+
+            // Wait for all threads to stop
+            for (auto& thread : threads_)
+                thread.join();
+        }
+
+        void ExecuteJob(std::function<void()> func) {
+            // Place a job on the queue and unblock a thread
+            std::unique_lock<std::mutex> lock(mutex_);
+            decode_jobs_queue_.emplace(std::move(func));
+            cond_var_.notify_one();
+        }
+
+    protected:
+        void ThreadEntry(int i) {
+            std::function<void()> execute_decode_job;
+
+            while (true) {
+                {
+                    std::unique_lock<std::mutex> lock(mutex_);
+                    cond_var_.wait(lock, [&] {return shutdown_ || !decode_jobs_queue_.empty();});
+                    if (decode_jobs_queue_.empty()) {
+                        // No jobs to do; shutting down
+                        return;
+                    }
+
+                    execute_decode_job = std::move(decode_jobs_queue_.front());
+                    decode_jobs_queue_.pop();
+                }
+
+                // Execute the decode job without holding any locks
+                execute_decode_job();
+            }
+        }
+
+        std::mutex mutex_;
+        std::condition_variable cond_var_;
+        bool shutdown_;
+        std::queue<std::function<void()>> decode_jobs_queue_;
+        std::vector<std::thread> threads_;
+};
 #endif //ROC_PY_JPEG_UTILS
