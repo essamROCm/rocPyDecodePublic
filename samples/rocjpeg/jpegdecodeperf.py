@@ -33,7 +33,7 @@ def jpeg_decode_batch_process(
         output_format,
         device_id,
         backend,
-        images_total,
+        imgs_total,
         bad_images,
         mps,
         ips):
@@ -64,7 +64,7 @@ def jpeg_decode_batch_process(
             for i, img in enumerate(img_list):
                 mps.value += (float(img.width) * float(img.height)) / 1000000.0
 
-    images_total.value = total_valid_images_processed
+    imgs_total.value = total_valid_images_processed
     bad_images.value = total-total_valid_images_processed
 
     if (total_valid_images_processed > 0 and total_dec_time > 0):
@@ -161,10 +161,10 @@ if __name__ == "__main__":
 
     # prepare shared containers
     processes = []
-    mps = Value('f', 0.0)
-    ips = Value('f', 0.0)
-    images_total = Value('i', 0)
-    bad_images = Value('i', 0)
+    images_totals = [Value('i', 0) for _ in range(num_process)]
+    bad_images_list = [Value('i', 0) for _ in range(num_process)]
+    mps_list = [Value('f', 0.0) for _ in range(num_process)]
+    ips_list = [Value('f', 0.0) for _ in range(num_process)]
 
     # Distribute files into num_process lists as equally as possible
     all_files_full_path = [os.path.join(root, f) for root, _, files in os.walk(input_file_path) for f in files]
@@ -173,21 +173,33 @@ if __name__ == "__main__":
         files_batch_full_path_list[i % num_process].append(filepath)
 
     # create count of processes required by args.num_process
-    for i in range(0, num_process):
-        p = Process(target=jpeg_decode_batch_process, args=(files_batch_full_path_list[i], batch_size, output_format, device_id, backend, images_total, bad_images, mps, ips))
+    for i in range(num_process):
+        p = Process(target=jpeg_decode_batch_process, args=(
+            files_batch_full_path_list[i],
+            batch_size,
+            output_format,
+            device_id,
+            backend,
+            images_totals[i],
+            bad_images_list[i],
+            mps_list[i],
+            ips_list[i],
+        ))
         p.start()
         processes.append(p)
 
     # launch the processes and synchronize collecting its data
     for p in processes:
         p.join()
-        total_bad_images += bad_images.value
-        total_images += images_total.value
-        total_mps += mps.value
-        total_ips += ips.value
+
+    # aggregate
+    total_images = sum(v.value for v in images_totals)
+    total_bad_images = sum(v.value for v in bad_images_list)
+    total_mps = sum(v.value for v in mps_list)
+    total_ips = sum(v.value for v in ips_list)
 
     # printout results
     print("\ninfo: Total images decoded: " + str(total_images))
-    print("info: Image per second: " + str(round(total_ips/total_images, 2)))
-    print("info: Mega Pixel per second: " + str(round(total_mps/total_images, 2)))
-    print("info: Total Bad files found : " + str(total_bad_images) + "\n")
+    print("info: Images per second: " + str(round(total_ips, 3)))
+    print("info: Megapixel per second: " + str(round(total_mps / float(num_process), 3)))
+    print("info: Total bad files found : " + str(total_bad_images) + "\n")
