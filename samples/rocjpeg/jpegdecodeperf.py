@@ -36,7 +36,8 @@ def jpeg_decode_batch_process(
         imgs_total,
         bad_images,
         mps,
-        ips):
+        ips,
+        ims):
 
     # initialize hip
     if(jdec.initialize_hip(device_id) == False):
@@ -48,6 +49,7 @@ def jpeg_decode_batch_process(
     total = len(files_batch_full_path_list)
     total_valid_images_processed = 0
     total_dec_time = 0.0
+    mps.value = 0.0
 
     # print(f"Decoding Starting for {total} files with batch size = {batch_size}.")
     for i in range(0, total, batch_size):
@@ -56,6 +58,7 @@ def jpeg_decode_batch_process(
         img_list = decoder.decode(current_batch)
         end_time = datetime.datetime.now()
         time_per_frame = end_time - start_time
+        ims.value = (float(time_per_frame.total_seconds()) * 1000.0)
         total_dec_time = total_dec_time + time_per_frame.total_seconds()
         total_valid_images_processed += len(img_list)
         
@@ -151,6 +154,7 @@ if __name__ == "__main__":
     total_mps = 0.0
     total_images = 0
     total_bad_images = 0
+    total_ims = 0.0
 
     # processes init
     try:
@@ -165,6 +169,7 @@ if __name__ == "__main__":
     bad_images_list = [Value('i', 0) for _ in range(num_process)]
     mps_list = [Value('f', 0.0) for _ in range(num_process)]
     ips_list = [Value('f', 0.0) for _ in range(num_process)]
+    ims_list = [Value('f', 0.0) for _ in range(num_process)]
 
     # Distribute files into num_process lists as equally as possible
     all_files_full_path = [os.path.join(root, f) for root, _, files in os.walk(input_file_path) for f in files]
@@ -184,6 +189,7 @@ if __name__ == "__main__":
             bad_images_list[i],
             mps_list[i],
             ips_list[i],
+            ims_list[i],
         ))
         p.start()
         processes.append(p)
@@ -197,9 +203,12 @@ if __name__ == "__main__":
     total_bad_images = sum(v.value for v in bad_images_list)
     total_mps = sum(v.value for v in mps_list)
     total_ips = sum(v.value for v in ips_list)
+    total_ims = sum(v.value for v in ims_list)
 
     # printout results
-    print("\ninfo: Total images decoded: " + str(total_images))
-    print("info: Images per second: " + str(round(total_ips, 3)))
-    print("info: Megapixel per second: " + str(round(total_mps / float(num_process), 3)))
+    print("\n")
+    print("info: Total decoded images: " + str(total_images))
     print("info: Total bad files found : " + str(total_bad_images) + "\n")
+    print("info: Average processing time per image (ms):      " + str(round(total_ims / float(num_process), 3)))
+    print("info: Average decoded images per sec (Images/Sec): " + str(round(total_ips / float(num_process), 3)))
+    print("info: Average decoded images size (Mpixels/Sec):   " + str(round(total_mps / float(num_process), 3)) + "\n")
