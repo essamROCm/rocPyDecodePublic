@@ -27,53 +27,39 @@ import multiprocessing
 from multiprocessing import Process, Value
 
 # decoding batch of jpeg images
-def jpeg_decode_batch_process(
-        files_batch_full_path_list,
-        batch_size,
-        output_format,
-        device_id,
-        backend,
-        imgs_total,
-        bad_images,
-        mps,
-        ips,
-        ims):
+def jpeg_decode_batch_process(files_batch_full_path_list, batch_size, output_format, device_id, backend, imgs_total, bad_images, mps, ips, ims):
 
-    # initialize hip
-    if(jdec.initialize_hip(device_id) == False):
-        print(f"Exiting jpegdecodeperf application, Device#: {device_id} not found.")
-        sys.exit()
     # create the decoder instance
     decoder = jdec.decoder(device_id, backend)
-    decoder.set_output_image_format(output_format)   
+    decoder.set_output_image_format(output_format)
+
+    # init variables
     total = len(files_batch_full_path_list)
     total_valid_images_processed = 0
     total_dec_time = 0.0
     mps.value = 0.0
+    ips.value = 0.0
 
-    # print(f"Decoding Starting for {total} files with batch size = {batch_size}.")
     for i in range(0, total, batch_size):
         current_batch = files_batch_full_path_list[i:i + batch_size]
         start_time = datetime.datetime.now()
         img_list = decoder.decode(current_batch)
         end_time = datetime.datetime.now()
-        time_per_frame = end_time - start_time
-        ims.value = (float(time_per_frame.total_seconds()) * 1000.0)
-        total_dec_time = total_dec_time + time_per_frame.total_seconds()
+        time_per_image = end_time - start_time
+        total_dec_time += time_per_image.total_seconds()
         total_valid_images_processed += len(img_list)
         
-        # calc mega pixels for all images
+        # calc megapixels for all images
         if(len(img_list) > 0):
             for i, img in enumerate(img_list):
-                mps.value += (float(img.width) * float(img.height)) / 1000000.0
+                mps.value += ((float(img.width) * float(img.height)) / 1000000.0)
 
     imgs_total.value = total_valid_images_processed
     bad_images.value = total-total_valid_images_processed
 
-    if (total_valid_images_processed > 0 and total_dec_time > 0):
-        time_per_frame = (total_dec_time / total_valid_images_processed) * 1000
-        frame_per_second = total_valid_images_processed / total_dec_time
-        ips.value = frame_per_second
+    if ((total_valid_images_processed > 0) and (total_dec_time > 0.0)):
+        ips.value = float(total_valid_images_processed) / total_dec_time
+        ims.value = (total_dec_time / float(total_valid_images_processed)) * 1000.0
 
 
 if __name__ == "__main__":
@@ -149,6 +135,11 @@ if __name__ == "__main__":
         print("ERROR: input folder doesn't exist.")
         exit()
 
+    # initialize hip
+    if(jdec.initialize_hip(device_id) == False):
+        print(f"Exiting jpegdecodeperf application, Device#: {device_id} not found.")
+        sys.exit()
+
     # prepare data collecting containers
     total_ips = 0.0
     total_mps = 0.0
@@ -198,7 +189,7 @@ if __name__ == "__main__":
     for p in processes:
         p.join()
 
-    # aggregate
+    # aggregate results
     total_images = sum(v.value for v in images_totals)
     total_bad_images = sum(v.value for v in bad_images_list)
     total_mps = sum(v.value for v in mps_list)
@@ -206,9 +197,8 @@ if __name__ == "__main__":
     total_ims = sum(v.value for v in ims_list)
 
     # printout results
-    print("\n")
-    print("info: Total decoded images: " + str(total_images))
-    print("info: Total bad files found : " + str(total_bad_images) + "\n")
-    print("info: Average processing time per image (ms):      " + str(round(total_ims / float(num_process), 3)))
-    print("info: Average decoded images per sec (Images/Sec): " + str(round(total_ips / float(num_process), 3)))
-    print("info: Average decoded images size (Mpixels/Sec):   " + str(round(total_mps / float(num_process), 3)) + "\n")
+    print("info: Total decoded images:   " + str(total_images))
+    print("info: Total bad files found : " + str(total_bad_images))
+    print("info: Average processing time per image (ms):      " + str(round(total_ims, 3)))
+    print("info: Average decoded images per sec (Images/Sec): " + str(round(total_ips, 3)))
+    print("info: Average decoded images size (Mpixels/Sec):   " + str(round(total_mps, 3)) + "\n")
