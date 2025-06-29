@@ -38,13 +38,13 @@ class decoder(object):
 
     # read image or batch of images
     def read(self, jpeg_item_to_decode):
-        img = self.jpegdec.read(jpeg_item_to_decode)
-        return img
+        elapsed_time_in_msec, img = self.jpegdec.read(jpeg_item_to_decode) # elapsed_time_in_msec back in milliseconds
+        return elapsed_time_in_msec, img
 
     # decode image or batch of images
     def decode(self, jpeg_item_to_decode):
-        img = self.jpegdec.decode(jpeg_item_to_decode)
-        return img
+        elapsed_time_in_msec, img = self.jpegdec.decode(jpeg_item_to_decode) # elapsed_time_in_msec back in milliseconds
+        return elapsed_time_in_msec, img
 
     def set_output_image_format(self, output_format):
         self.output_format = jpegt.RocJpegOutputFormat(output_format)

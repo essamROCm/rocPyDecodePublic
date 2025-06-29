@@ -22,44 +22,42 @@ import pyRocJpegDecode.decoder as jdec
 import argparse
 import os
 import sys
-import datetime
 import multiprocessing
 from multiprocessing import Process, Value
 
 # decoding batch of jpeg images
-def jpeg_decode_batch_process(files_batch_full_path_list, batch_size, output_format, device_id, backend, imgs_total, bad_images, mps, ips, ims):
+def jpeg_decode_batch_process(files_batch_full_path_list, batch_size, output_format, device_id, backend, imgs_total, bad_images, mps, ips):
 
     # create the decoder instance
     decoder = jdec.decoder(device_id, backend)
     decoder.set_output_image_format(output_format)
 
-    # init variables
+    # init variables/containers
     total = len(files_batch_full_path_list)
+    total_decode_time_in_milli_sec = 0.0
     total_valid_images_processed = 0
-    total_dec_time = 0.0
+    image_size_in_mpixels_all = 0.0
     mps.value = 0.0
     ips.value = 0.0
 
     for i in range(0, total, batch_size):
         current_batch = files_batch_full_path_list[i:i + batch_size]
-        start_time = datetime.datetime.now()
-        img_list = decoder.decode(current_batch)
-        end_time = datetime.datetime.now()
-        time_per_image = end_time - start_time
-        total_dec_time += time_per_image.total_seconds()
+        batch_time_msec, img_list = decoder.decode(current_batch)  # batch_time_msec elapsed time in milliseconds for 'current' batch
+        total_decode_time_in_milli_sec += batch_time_msec
         total_valid_images_processed += len(img_list)
         
         # calc megapixels for all images
         if(len(img_list) > 0):
             for i, img in enumerate(img_list):
-                mps.value += ((float(img.width) * float(img.height)) / 1000000.0)
+                image_size_in_mpixels_all += ((float(img.width) * float(img.height)) / 1000000.0)
 
     imgs_total.value = total_valid_images_processed
     bad_images.value = total-total_valid_images_processed
 
-    if ((total_valid_images_processed > 0) and (total_dec_time > 0.0)):
-        ips.value = float(total_valid_images_processed) / total_dec_time
-        ims.value = (total_dec_time / float(total_valid_images_processed)) * 1000.0
+    if (total_valid_images_processed > 0):
+        avg_time_per_image = total_decode_time_in_milli_sec / float(total)
+        ips.value = 1000.0 / avg_time_per_image
+        mps.value = (ips.value * image_size_in_mpixels_all) / float(total)
 
 
 if __name__ == "__main__":
@@ -110,7 +108,7 @@ if __name__ == "__main__":
         default=4,
         help='Num of parallel runs - optional, default 4',
         required=False)
-    
+
     try:
         args = parser.parse_args()
     except BaseException:
@@ -120,9 +118,9 @@ if __name__ == "__main__":
     input_file_path = args.input
     batch_size = args.batch
     output_format = args.output_format
-    device_id = args.device
+    device_id = 0 if args.device <= 0 else args.device
     backend = args.backend
-    num_process = args.num_process
+    num_process = 4 if args.num_process <= 0 else args.num_process
 
     # parse/process params
     if not isinstance(batch_size, int) or batch_size <= 0:
@@ -141,6 +139,7 @@ if __name__ == "__main__":
         sys.exit()
 
     # prepare data collecting containers
+    print(f"Info: Number of processes:    {num_process}")
     total_ips = 0.0
     total_mps = 0.0
     total_images = 0
@@ -155,12 +154,10 @@ if __name__ == "__main__":
         exit()
 
     # prepare shared containers
-    processes = []
     images_totals = [Value('i', 0) for _ in range(num_process)]
     bad_images_list = [Value('i', 0) for _ in range(num_process)]
     mps_list = [Value('f', 0.0) for _ in range(num_process)]
     ips_list = [Value('f', 0.0) for _ in range(num_process)]
-    ims_list = [Value('f', 0.0) for _ in range(num_process)]
 
     # Distribute files into num_process lists as equally as possible
     all_files_full_path = [os.path.join(root, f) for root, _, files in os.walk(input_file_path) for f in files]
@@ -169,19 +166,9 @@ if __name__ == "__main__":
         files_batch_full_path_list[i % num_process].append(filepath)
 
     # create count of processes required by args.num_process
+    processes = []
     for i in range(num_process):
-        p = Process(target=jpeg_decode_batch_process, args=(
-            files_batch_full_path_list[i],
-            batch_size,
-            output_format,
-            device_id,
-            backend,
-            images_totals[i],
-            bad_images_list[i],
-            mps_list[i],
-            ips_list[i],
-            ims_list[i],
-        ))
+        p = Process(target=jpeg_decode_batch_process, args=(files_batch_full_path_list[i], batch_size, output_format, device_id, backend, images_totals[i], bad_images_list[i], mps_list[i], ips_list[i]))
         p.start()
         processes.append(p)
 
@@ -189,16 +176,15 @@ if __name__ == "__main__":
     for p in processes:
         p.join()
 
-    # aggregate results
+    # aggregate results from all processes
     total_images = sum(v.value for v in images_totals)
     total_bad_images = sum(v.value for v in bad_images_list)
     total_mps = sum(v.value for v in mps_list)
     total_ips = sum(v.value for v in ips_list)
-    total_ims = sum(v.value for v in ims_list)
 
     # printout results
     print("info: Total decoded images:   " + str(total_images))
     print("info: Total bad files found : " + str(total_bad_images))
-    print("info: Average processing time per image (ms):      " + str(round(total_ims, 3)))
+    print("info: Average processing time per image (ms):      " + str(round(1000.0/total_ips, 3)))
     print("info: Average decoded images per sec (Images/Sec): " + str(round(total_ips, 3)))
     print("info: Average decoded images size (Mpixels/Sec):   " + str(round(total_mps, 3)) + "\n")
