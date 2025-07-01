@@ -82,6 +82,9 @@ public:
             std::cerr << "ERROR: didn't find any GPU!" << std::endl;
             return std::make_tuple(num_devices, false);
         }
+        // if '-' then caller needs only count of devices
+        if(device_id<0)
+            return std::make_tuple(num_devices, true);
         if (device_id >= num_devices) {
             std::cerr << "ERROR: the requested device_id is not found!" << std::endl;
             return std::make_tuple(num_devices, false);

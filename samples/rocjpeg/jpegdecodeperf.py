@@ -26,7 +26,14 @@ import multiprocessing
 from multiprocessing import Process, Value
 
 # decoding batch of jpeg images
-def jpeg_decode_batch_process(files_batch_full_path_list, batch_size, output_format, device_id, backend, imgs_total, bad_images, mps, ips):
+def jpeg_decode_batch_process(files_batch_full_path_list, batch_size, output_format, device_id, backend, imgs_total, bad_images, mps, ips, init_hip):
+
+    # each process on diff GPU device
+    if(init_hip):
+        _, ret = jdec.initialize_hip(device_id)
+        if(ret == False):
+            print(f"Exiting, Device#: {device_id} not found.")
+            sys.exit()
 
     # create the decoder instance
     decoder = jdec.decoder(device_id, backend)
@@ -133,11 +140,20 @@ if __name__ == "__main__":
         print("ERROR: input folder doesn't exist.")
         exit()
 
-    # initialize hip
-    devices_count, ret = jdec.initialize_hip(device_id)
+    # not initializing hip if many GPUs, just get count of devices back
+    init_hip = False # init hip ONE time here as we have only 1 GPU
+    devices_count, ret = jdec.initialize_hip(-1)
     if(ret == False):
         print(f"Exiting jpegdecodeperf application, Device#: {device_id} not found.")
         sys.exit()
+    if(devices_count>1):
+        init_hip = True # init hip in every process to distribute workload
+    else:
+        # init hip ONE time here as we have only 1 GPU
+        _, ret = jdec.initialize_hip(device_id)
+        if(ret == False):
+            print(f"Exiting, Device#: {device_id} not found.")
+            sys.exit()
 
     # prepare data collecting containers
     print(f"Info: Number of processes:    {num_process}")
@@ -172,7 +188,7 @@ if __name__ == "__main__":
     # create count of processes required by args.num_process
     processes = []
     for i in range(num_process):
-        p = Process(target=jpeg_decode_batch_process, args=(files_batch_full_path_list[i], batch_size, output_format, device_ids[i], backend, images_totals[i], bad_images_list[i], mps_list[i], ips_list[i]))
+        p = Process(target=jpeg_decode_batch_process, args=(files_batch_full_path_list[i], batch_size, output_format, device_ids[i], backend, images_totals[i], bad_images_list[i], mps_list[i], ips_list[i], init_hip))
         p.start()
         processes.append(p)
 
