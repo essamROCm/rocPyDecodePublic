@@ -23,7 +23,8 @@ import rocpyjpegdecode.jpegTypes as jpegt
 
 def initialize_hip(device_id = 0):
     hip = rocpyjpeg.PyRocJpegUtils()
-    return hip.init_hip_device(device_id)
+    num_devices, ret = hip.init_hip_device(device_id)
+    return num_devices, ret
 
 class decoder(object):
     def __init__(

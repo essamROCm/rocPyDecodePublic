@@ -134,7 +134,8 @@ if __name__ == "__main__":
         exit()
 
     # initialize hip
-    if(jdec.initialize_hip(device_id) == False):
+    devices_count, ret = jdec.initialize_hip(device_id)
+    if(ret == False):
         print(f"Exiting jpegdecodeperf application, Device#: {device_id} not found.")
         sys.exit()
 
@@ -159,6 +160,9 @@ if __name__ == "__main__":
     mps_list = [Value('f', 0.0) for _ in range(num_process)]
     ips_list = [Value('f', 0.0) for _ in range(num_process)]
 
+    # device_id list distributed over available devices (for best HW performance):Essam Aly
+    device_ids = [i % devices_count for i in range(num_process)]
+
     # Distribute files into num_process lists as equally as possible
     all_files_full_path = [os.path.join(root, f) for root, _, files in os.walk(input_file_path) for f in files]
     files_batch_full_path_list = [[] for _ in range(num_process)]
@@ -168,7 +172,7 @@ if __name__ == "__main__":
     # create count of processes required by args.num_process
     processes = []
     for i in range(num_process):
-        p = Process(target=jpeg_decode_batch_process, args=(files_batch_full_path_list[i], batch_size, output_format, device_id, backend, images_totals[i], bad_images_list[i], mps_list[i], ips_list[i]))
+        p = Process(target=jpeg_decode_batch_process, args=(files_batch_full_path_list[i], batch_size, output_format, device_ids[i], backend, images_totals[i], bad_images_list[i], mps_list[i], ips_list[i]))
         p.start()
         processes.append(p)
 
@@ -187,4 +191,6 @@ if __name__ == "__main__":
     print("info: Total bad files found : " + str(total_bad_images))
     print("info: Average processing time per image (ms):      " + str(round(1000.0/total_ips, 3)))
     print("info: Average decoded images per sec (Images/Sec): " + str(round(total_ips, 3)))
-    print("info: Average decoded images size (Mpixels/Sec):   " + str(round(total_mps, 3)) + "\n")
+    print("info: Average decoded images size (Mpixels/Sec):   " + str(round(total_mps, 3)))
+    print(f"info: GPU Devices Used: {device_ids}")
+    print(f"info: Batch Size Used:  {batch_size}\n")
