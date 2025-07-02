@@ -30,7 +30,7 @@ def jpeg_decode_batch_process(files_batch_full_path_list, batch_size, output_for
 
     # each process on diff GPU device
     if(init_hip):
-        _, ret = jdec.initialize_hip(device_id)
+        _, ret = jdec.initialize_hip(device_id, False)
         if(ret == False):
             print(f"Exiting, Device#: {device_id} not found.")
             sys.exit()

@@ -74,7 +74,7 @@ public:
      * @param device_id The device ID.
      * @return True if successful, false otherwise.
      */
-    std::tuple<int, bool> InitHipDevice(int device_id) {
+    std::tuple<int, bool> InitHipDevice(int device_id, bool display_prop = true) {
         int num_devices;
         hipDeviceProp_t hip_dev_prop;
         PY_CHECK_HIP(hipGetDeviceCount(&num_devices));
@@ -90,12 +90,13 @@ public:
             return std::make_tuple(num_devices, false);
         }
         PY_CHECK_HIP(hipSetDevice(device_id));
-        PY_CHECK_HIP(hipGetDeviceProperties(&hip_dev_prop, device_id));
 
-        std::cout << "Using GPU device " << device_id << ": " << hip_dev_prop.name << "[" << hip_dev_prop.gcnArchName << "] on PCI bus " <<
-        std::setfill('0') << std::setw(2) << std::right << std::hex << hip_dev_prop.pciBusID << ":" << std::setfill('0') << std::setw(2) <<
-        std::right << std::hex << hip_dev_prop.pciDomainID << "." << hip_dev_prop.pciDeviceID << std::dec << std::endl;
-
+        if(display_prop) {
+            PY_CHECK_HIP(hipGetDeviceProperties(&hip_dev_prop, device_id));
+            std::cout << "Using GPU device " << device_id << ": " << hip_dev_prop.name << "[" << hip_dev_prop.gcnArchName << "] on PCI bus " <<
+            std::setfill('0') << std::setw(2) << std::right << std::hex << hip_dev_prop.pciBusID << ":" << std::setfill('0') << std::setw(2) <<
+            std::right << std::hex << hip_dev_prop.pciDomainID << "." << hip_dev_prop.pciDeviceID << std::dec << std::endl;
+        }
         return std::make_tuple(num_devices, true);
     }
     /**
