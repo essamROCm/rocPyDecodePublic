@@ -1,11 +1,14 @@
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-# rocDecode Python Binding
+<p align="center"><img width="70%" src="docs/data/AMD_rocPyDecode_Logo.png" alt="AMD rocPyDecode Logo" /></p>
 
 > [!NOTE]
 > The published documentation is available at [rocPyDecode](https://rocm.docs.amd.com/projects/rocPyDecode/en/latest/index.html) in an organized, easy-to-read format, with search and a table of contents. The documentation source files reside in the `docs` folder of this repository. As with all ROCm projects, the documentation is open source. For more information on contributing to the documentation, see [Contribute to ROCm documentation](https://rocm.docs.amd.com/en/latest/contribute/contributing.html).
 
-The rocDecode Python Binding, rocPyDecode, is a tool that allows users to access rocDecode APIs in both Python and C/C++ languages. It works by connecting Python and C/C++ libraries, enabling function calling and data passing between the two languages. The `rocpydecode.so` library is a wrapper that facilitates the use of rocDecode APIs that are written primarily in C/C++ language within Python.
+rocPyDecode is a Python binding library that connects Python with AMD’s [rocDecode](https://github.com/ROCm/rocDecode) and [rocJPEG](https://github.com/ROCm/rocJPEG) C/C++ APIs, enabling seamless function calls and data exchange between the two languages. It serves as a high-level wrapper, making the video and image decoding capabilities of rocDecode and rocJPEG accessible from Python.
+
+rocPyDecode includes [rocPyJpegDecode](https://github.com/ROCm/rocPyDecode/blob/develop/docs/reference/rocPyJPEGDecode-api.rst#rocpyjpegdecode-python-api) when the underlying rocJPEG library is available on the system, providing JPEG-specific decoding support through Python.
+The library supports multi-VCN configurations via batch decoding, making it well-suited for high-throughput and parallelized image and video processing workloads.
 
 ## Prerequisites
 
