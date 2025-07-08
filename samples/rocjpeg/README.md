@@ -25,8 +25,8 @@ The following are full list of arguments that can be passed to the sample.
 
 ## jpegdecodebatched.py
 
-This sample decodes batch of JPEG images. The user specifies the root folder full path with the -i argument for multiple JPEG images with any count of files and or sub folders. \
-To run this python sample script, you need to provide input JPEG files batch full path name, other arguments are optional.
+This sample decodes batch of JPEG images. \
+The user specifies the root folder full path with the -i argument for multiple JPEG images with any count of files and or sub folders. 
 
 ### Arguments
 
@@ -43,9 +43,10 @@ The following are full list of arguments that can be passed to the sample.
 
 ## jpegdecodeperf.py
 
-This sample decodes batch of JPEG images on multiple processes. User can define the number of parallel jobs to observe performance scaling. \
+This sample decodes batch of JPEG images on multiple processes. \
+The user can define the number of parallel jobs to observe performance scaling. \
 The user specifies the root folder full path with the -i argument for multiple JPEG images with any count of files and or sub folders. \
-This sample distributes the workload on the available GPU devises if more than one was available.
+This sample distributes the workload on the available GPU devices if more than one was available.
 
 ### Arguments
 
