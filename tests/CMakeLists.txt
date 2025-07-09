@@ -25,6 +25,15 @@
 ################################################################################
 cmake_minimum_required(VERSION 3.12)
 
+if(NOT DEFINED ENHANCED_MESSAGE)
+  string(ASCII 27 Esc)
+  set(ColourReset "${Esc}[m")
+  set(Red         "${Esc}[31m")
+  set(Green       "${Esc}[32m")
+  set(Yellow      "${Esc}[33m")
+  set(White       "${Esc}[37m")
+endif()
+
 # ROCM Path
 if(DEFINED ENV{ROCM_PATH})
     set(ROCM_PATH $ENV{ROCM_PATH} CACHE PATH "Default ROCm installation path")
@@ -34,12 +43,13 @@ else()
     set(ROCM_PATH /opt/rocm CACHE PATH "Default ROCm installation path")
 endif()
 # Set AMD Clang as default compiler
-if (NOT DEFINED CMAKE_CXX_COMPILER)
-    set(CMAKE_C_COMPILER ${ROCM_PATH}/bin/amdclang)
-    set(CMAKE_CXX_COMPILER ${ROCM_PATH}/bin/amdclang++)
-endif()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED On)
+set(CMAKE_CXX_EXTENSIONS ON)
+if (NOT DEFINED CMAKE_CXX_COMPILER)
+  set(CMAKE_C_COMPILER ${ROCM_PATH}/bin/amdclang)
+  set(CMAKE_CXX_COMPILER ${ROCM_PATH}/bin/amdclang++)
+endif()
 
 project(rocpydecode-test)
 
@@ -51,21 +61,64 @@ include(CTest)
 list(APPEND CMAKE_PREFIX_PATH ${ROCM_PATH}/lib/cmake)
 list(APPEND CMAKE_MODULE_PATH ${ROCM_PATH}/share/rocpydecode/cmake)
 
-find_package(rocdecode REQUIRED)
-set(ROCPYDECODE_PYBIND_SCRIPTS OFF)
+# check pybind scripts
+set(VIDEO_DECODE_PYBIND_SCRIPTS OFF)
 if(EXISTS "${ROCM_PATH}/lib/pyRocVideoDecode")
-  set(ROCPYDECODE_PYBIND_SCRIPTS ON)
+  set(VIDEO_DECODE_PYBIND_SCRIPTS ON)
+  message("-- ${White}${PROJECT_NAME}: rocPyDecode found at ${ROCM_PATH}/lib/pyRocVideoDecode${ColourReset}")
 endif()
+set(JPEG_DECODE_PYBIND_SCRIPTS OFF)
+if(EXISTS "${ROCM_PATH}/lib/pyRocJpegDecode")
+  set(JPEG_DECODE_PYBIND_SCRIPTS ON)
+  message("-- ${White}${PROJECT_NAME}: rocPyJPEG found at ${ROCM_PATH}/lib/pyRocJpegDecode${ColourReset}")
+endif()
+
+# find requirements
+find_package(rocdecode QUIET)
+find_package(rocjpeg QUIET)
 set(Python3_FIND_VIRTUALENV FIRST)
 find_package(Python3 QUIET)
 
+if(rocdecode_FOUND)
+  message("-- ${White}${PROJECT_NAME}: rocdecode found with find_package(rocdecode QUIET)${ColourReset}")
+  message("-- \t${White}rocdecode_INCLUDE_DIR -- ${rocdecode_INCLUDE_DIR}${ColourReset}")
+  message("-- \t${White}rocdecode_LIB_DIR -- ${rocdecode_LIB_DIR}${ColourReset}")
+  message("-- \t${White}rocdecode_LIBRARY -- ${rocdecode_LIBRARY}${ColourReset}")
+  message("-- \t${White}rocdecode_FOUND -- ${rocdecode_FOUND}${ColourReset}")
+  message("-- \t${White}rocdecode_VERSION -- ${rocdecode_VERSION}${ColourReset}")
+  message("-- \t${White}rocdecode_VERSION_MAJOR -- ${rocdecode_VERSION_MAJOR}${ColourReset}")
+  message("-- \t${White}rocdecode_VERSION_MINOR -- ${rocdecode_VERSION_MINOR}${ColourReset}")
+  message("-- \t${White}rocdecode_VERSION_PATCH -- ${rocdecode_VERSION_PATCH}${ColourReset}")
+else()
+  message("-- ${Yellow}${PROJECT_NAME}: Requires rocdecode. Install rocdecode before running CTests")
+endif(rocdecode_FOUND)
+if(rocjpeg_FOUND)
+  message("-- ${White}${PROJECT_NAME}: rocjpeg found with find_package(rocjpeg QUIET)${ColourReset}")
+  message("-- \t${White}rocjpeg_INCLUDE_DIR -- ${rocjpeg_INCLUDE_DIR}${ColourReset}")
+  message("-- \t${White}rocjpeg_LIB_DIR -- ${rocjpeg_LIB_DIR}${ColourReset}")
+  message("-- \t${White}rocjpeg_LIBRARY -- ${rocjpeg_LIBRARY}${ColourReset}")
+  message("-- \t${White}rocjpeg_FOUND -- ${rocjpeg_FOUND}${ColourReset}")
+  message("-- \t${White}rocjpeg_VERSION -- ${rocjpeg_VERSION}${ColourReset}")
+  message("-- \t${White}rocjpeg_VERSION_MAJOR -- ${rocjpeg_VERSION_MAJOR}${ColourReset}")
+  message("-- \t${White}rocjpeg_VERSION_MINOR -- ${rocjpeg_VERSION_MINOR}${ColourReset}")
+  message("-- \t${White}rocjpeg_VERSION_PATCH -- ${rocjpeg_VERSION_PATCH}${ColourReset}")
+else()
+  message("-- ${Yellow}${PROJECT_NAME}: Requires rocjpeg for rocpyjpeg tests. Install rocjpeg before running CTests${ColourReset}")
+endif(rocjpeg_FOUND)
+
+if(NOT VIDEO_DECODE_PYBIND_SCRIPTS)
+  message("-- ${Yellow}NOTE: ${PROJECT_NAME} requires the project to be built and installed before running CTests${ColourReset}")
+endif()
+if(NOT JPEG_DECODE_PYBIND_SCRIPTS)
+  message("-- ${Yellow}NOTE: ${PROJECT_NAME} requires the JPEG decode bindings to be built and installed before running JPEG tests${ColourReset}")
+endif()
+
 # Tests
-if(Python3_FOUND AND ROCPYDECODE_PYBIND_SCRIPTS)
+if(Python3_FOUND)
   execute_process(COMMAND ${Python3_EXECUTABLE} -c "import torch" RESULT_VARIABLE TORCH_PYTHON_RESULT OUTPUT_QUIET ERROR_QUIET)
   # add python-hip for perf tests
   execute_process(COMMAND ${Python3_EXECUTABLE} -m pip install --upgrade pip OUTPUT_VARIABLE PIP_VERSION ERROR_VARIABLE PIP_ERROR RESULT_VARIABLE PIP_RESULT)
   execute_process(COMMAND ${Python3_EXECUTABLE} -m pip install -i https://test.pypi.org/simple hip-python OUTPUT_VARIABLE PIP_VERSION ERROR_VARIABLE PIP_ERROR RESULT_VARIABLE PIP_RESULT)
-  message("-- ${PROJECT_NAME}: rocPyDecode found at ${ROCM_PATH}/lib/pyRocVideoDecode")
   # 1 - decoders test
   add_test(NAME rocpydecode_test_decoders
             COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/decoder_test.py
@@ -167,31 +220,30 @@ if(Python3_FOUND AND ROCPYDECODE_PYBIND_SCRIPTS)
   )
   set_property(TEST all_other_decoder_apis PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
   # 15 - jpeg_decode_single_file_test
-  find_package(ROCJPEG QUIET)
-  if(ROCJPEG_FOUND)
-    if(${ROCJPEG_VERSION_MAJOR} VERSION_GREATER "0" OR
-      (${ROCJPEG_VERSION_MAJOR} VERSION_EQUAL "0" AND ${ROCJPEG_VERSION_MINOR} VERSION_GREATER_EQUAL "11") OR
-      (${ROCJPEG_VERSION_MAJOR} VERSION_EQUAL "0" AND ${ROCJPEG_VERSION_MINOR} VERSION_EQUAL "11" AND ${ROCJPEG_VERSION_PATCH} VERSION_GREATER_EQUAL "1"))
+  if(rocjpeg_FOUND AND JPEG_DECODE_PYBIND_SCRIPTS)
         if(TORCH_PYTHON_RESULT EQUAL 0)
           add_test(NAME jpeg_decode_python
                 COMMAND ${Python3_EXECUTABLE} ${ROCM_PATH}/lib/pyRocJpegDecode/samples/rocjpeg/jpegdecode.py
                 -i ${ROCM_PATH}/share/rocjpeg/images/mug_420.jpg
                 WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
           set_property(TEST jpeg_decode_python PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
-        endif()
+        endif(TORCH_PYTHON_RESULT EQUAL 0)
         # 16 - jpegdecodebatched_test
         add_test(NAME jpeg_decode_batched_python
               COMMAND ${Python3_EXECUTABLE} ${ROCM_PATH}/lib/pyRocJpegDecode/samples/rocjpeg/jpegdecodebatched.py
               -i ${ROCM_PATH}/share/rocjpeg/images/
               WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
         set_property(TEST jpeg_decode_batched_python PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
+  else()
+    if(NOT rocjpeg_FOUND)
+      message("-- ${Yellow}NOTE: ${PROJECT_NAME} rocjpeg not found${ColourReset}")
     endif()
-  endif()
+    if(NOT JPEG_DECODE_PYBIND_SCRIPTS)
+      message("-- ${Yellow}NOTE: ${PROJECT_NAME} requires the rocjpeg pybindings to be built and installed - JPEG tests skipped${ColourReset}")
+    endif()
+  endif(rocjpeg_FOUND AND JPEG_DECODE_PYBIND_SCRIPTS)
 else()
   if(NOT Python3_FOUND)
-    message("-- NOTE: ${PROJECT_NAME} requires Python3 - NOT FOUND")
+    message("-- ${Yellow}NOTE: ${PROJECT_NAME} requires Python3 - NOT FOUND${ColourReset}")
   endif()
-  if(NOT ROCPYDECODE_PYBIND_SCRIPTS)
-    message("-- NOTE: ${PROJECT_NAME} requires the project to be built and installed - NOT FOUND")
-  endif()
-endif(Python3_FOUND AND ROCPYDECODE_PYBIND_SCRIPTS)
+endif(Python3_FOUND)
