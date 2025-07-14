@@ -190,12 +190,12 @@ file(GLOB include src/rocdecode/*.h src/common/*.h ${ROCM_PATH}/share/rocdecode/
 file(GLOB sources src/rocdecode/*.cpp src/common/*.cpp ${ROCM_PATH}/share/rocdecode/utils/*.cpp ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.cpp ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.cpp)
 # rocJPEG
 include_directories(${rocjpeg_INCLUDE_DIR} ${ROCM_PATH}/share/rocjpeg/samples)
-set(LINK_LIBRARY_LIST ${LINK_LIBRARY_LIST} ${rocjpeg_LIBRARY})
+set(LINK_LIBRARY_LIST_JPEG ${LINK_LIBRARY_LIST_JPEG} hip::device ${rocjpeg_LIBRARY})
 file(GLOB pyfiles_jpeg pyRocJpegDecode/*.py pyRocJpegDecode/*.pyi)
 file(GLOB include_jpeg src/rocjpeg/*.h src/common/*.h)
 file(GLOB sources_jpeg src/rocjpeg/*.cpp src/common/*.cpp)
 
-message("-- ${White}rocPyDecode -- Link Libraries: ${LINK_LIBRARY_LIST}${ColourReset}")
+message("-- ${White}rocPyDecode -- Link Libraries: ${LINK_LIBRARY_LIST} ${LINK_LIBRARY_LIST_JPEG}${ColourReset}")
 message("-- ${White}rocPyDecode -- CMAKE_CXX_FLAGS:${CMAKE_CXX_FLAGS}${ColourReset}")
 
 # set license information
@@ -296,7 +296,7 @@ if(NOT PYTHON_EXECUTABLES_LIST STREQUAL "")
             set(TARGET_NAME_JPEG_VERSIONED "${TARGET_NAME_JPEG}.${PYTHON_INDEX}")
             #add-rocpyjpegdecode-pybind11-module
             pybind11_add_module(${TARGET_NAME_JPEG_VERSIONED} MODULE ${sources_jpeg})
-            target_link_libraries(${TARGET_NAME_JPEG_VERSIONED} PRIVATE ${LINK_LIBRARY_LIST})
+            target_link_libraries(${TARGET_NAME_JPEG_VERSIONED} PRIVATE ${LINK_LIBRARY_LIST_JPEG})
 
             #include
             target_include_directories(${TARGET_NAME_JPEG_VERSIONED} PRIVATE ${pybind11_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIR})
