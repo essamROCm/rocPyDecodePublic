@@ -72,7 +72,7 @@ The library supports multi-VCN configurations via batch decoding, making it well
   sudo apt install pkg-config
   ```
 
-* [FFmpeg](https://ffmpeg.org/about.html) runtime and headers - for tests and samples
+* [FFmpeg](https://ffmpeg.org/about.html)
 
   ```shell
   sudo apt install libavcodec-dev libavformat-dev libavutil-dev
