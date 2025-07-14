@@ -2,7 +2,7 @@
 
 ## Prerequisites
 * [rocJPEG C/C++ Library](https://github.com/ROCm/rocJPEG)
-* [rocPyJpegDecode installed](../README.md#rocpyjpegdecode-install)
+* [rocPyJpegDecode installed](https://github.com/ROCm/rocPyDecode/tree/develop/samples/rocjpeg)
 * [DLPack](https://pypi.org/project/dlpack/)
 
 ## jpegdecode.py

@@ -2,7 +2,7 @@
 
 ## Prerequisites
 * [rocDecode C/C++ Library](https://github.com/ROCm/rocDecode)
-* [rocPyDecode installed](../README.md#rocpydecode-install)
+* [rocPyDecode installed](https://github.com/ROCm/rocPyDecode/tree/develop/samples/rocdecode)
 * [DLPack](https://pypi.org/project/dlpack/)
 * [pytorch for ROCm](https://pytorch.org/get-started/locally/)
 * [Python HIP](https://rocm.docs.amd.com/projects/hip-python/en/latest/user_guide/0_install.html)
@@ -11,13 +11,13 @@ The torch python sample requires pytorch for ROCm, which can be installed as fol
 
 - If using bare-metal, `sudo` access is needed.
 ```bash
-    pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/rocm6.2
+    pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/rocm6.4
     sudo reboot 
 ```
 
 - If using a docker environment or any system with `root` access, no need for reboot.
 ```bash
-    pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/rocm6.2
+    pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/rocm6.4
 ```
 
 The performance sample requires python HIP, which can be installed as follows:
