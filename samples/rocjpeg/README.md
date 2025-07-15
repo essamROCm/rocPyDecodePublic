@@ -26,7 +26,7 @@ The following are full list of arguments that can be passed to the sample.
 ## jpegdecodebatched.py
 
 This sample decodes batch of JPEG images. \
-The user specifies the root folder full path with the -i argument for multiple JPEG images with any count of files and or sub folders. 
+The user specifies the root folder full path with the -i argument for multiple JPEG images with any number of files and/or subfolders.
 
 ### Arguments
 
@@ -45,7 +45,7 @@ The following are full list of arguments that can be passed to the sample.
 
 This sample decodes batch of JPEG images on multiple processes. \
 The user can define the number of parallel jobs to observe performance scaling. \
-The user specifies the root folder full path with the -i argument for multiple JPEG images with any count of files and or sub folders. \
+The user specifies the root folder full path with the -i argument for multiple JPEG images with any number of files and/or subfolders. \
 This sample distributes the workload on the available GPU devices if more than one was available.
 
 ### Arguments
@@ -68,6 +68,6 @@ The following list shows the provided notebooks samples that visually demonstrat
 
 | Notebook File             | Description |
 |---------------------------|-------------|
-| `batch_sample.ipynb`      | This sample decodes a batch of multiple JPEG images, passing all the images full path as a list, or loading their data and pass it as a list of memory buffer(s). |
+| `batch_sample.ipynb`      | This sample decodes a batch of multiple JPEG images, passing all the images full path as a list, or loading their data and passes it as a list of memory buffers. |
 | `decode_rgb_planar.ipynb` | This sample decodes a JPEG image into 3 planes, red, green and blue, then it views each of those planes as a separate image and combines them in one RGB image in one row. |
 | `decode_source.ipynb`     | This sample decodes one JPEG image, passing the image full path, or loading its data and passing it as memory buffer, and as a NumPy array. |
