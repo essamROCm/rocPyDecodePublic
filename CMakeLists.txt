@@ -196,8 +196,9 @@ file(GLOB pyfiles_jpeg pyRocJpegDecode/*.py pyRocJpegDecode/*.pyi)
 file(GLOB include_jpeg src/rocjpeg/*.h src/common/*.h)
 file(GLOB sources_jpeg src/rocjpeg/*.cpp src/common/*.cpp)
 
-message("-- ${White}rocPyDecode -- Link Libraries: ${LINK_LIBRARY_LIST} ${LINK_LIBRARY_LIST_JPEG}${ColourReset}")
-message("-- ${White}rocPyDecode -- CMAKE_CXX_FLAGS:${CMAKE_CXX_FLAGS}${ColourReset}")
+message("-- ${White}rocPyDecode -- Link Libraries: ${LINK_LIBRARY_LIST}${ColourReset}")
+message("-- ${White}rocPyJPEG -- Link Libraries: ${LINK_LIBRARY_LIST_JPEG}${ColourReset}")
+message("-- ${White}rocPyDecode/rocPyJPEG -- CMAKE_CXX_FLAGS:${CMAKE_CXX_FLAGS}${ColourReset}")
 
 # set license information
 set(CPACK_RPM_PACKAGE_LICENSE "MIT")
