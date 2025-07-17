@@ -36,6 +36,7 @@ def jpeg_decode_batch(
         backend):
 
     # initialize hip
+    print("")
     devices_count, ret = jdec.initialize_hip(device_id)
     if(ret == False):
         print(f"Exiting jpegdecodebatched application, Device#: {device_id} not found.")
@@ -45,21 +46,37 @@ def jpeg_decode_batch(
     decoder = jdec.decoder(device_id, backend)
     decoder.set_output_image_format(output_format)  # set the output image to the desired format
 
-    print(f"Image output format set to: {jpegt.RocJpegOutputFormat(output_format)}")
-    print(f"\nDecoding whole folder of images: {input_file_path} on Device: {'CPU' if backend else 'GPU'} with Device ID: {device_id}")
+    # print(f"Image output format set to: {jpegt.RocJpegOutputFormat(output_format)}")
+    print(f"Decoding whole folder of images: {input_file_path} on Device: {'CPU' if backend else 'GPU'} with Device ID: {device_id}")
 
     files_full_path_list = [os.path.join(root, f) for root, _, files in os.walk(input_file_path) for f in files]
     total = len(files_full_path_list)
+    total_decode_time_in_milli_sec = 0.0
     total_valid_images_processed = 0
+    image_size_in_mpixels_all = 0.0
 
     print(f"Decoding Starting for {total} files with batch size = {batch_size}.")
     for i in range(0, total, batch_size):
         current_batch = files_full_path_list[i:i + batch_size]
-        dec_time_msec, img_list = decoder.decode(current_batch)
+        batch_time_msec, img_list = decoder.decode(current_batch)
+        total_decode_time_in_milli_sec += batch_time_msec
         total_valid_images_processed += len(img_list)
+
+    # calc megapixels for all images
+    if(len(img_list) > 0):
+        for i, img in enumerate(img_list):
+            image_size_in_mpixels_all += ((float(img.width) * float(img.height)) / 1000000.0)
 
     print(f"Total files processed : {total_valid_images_processed}")
     print(f"Total Bad files found : {total-total_valid_images_processed}")
+    if (total_valid_images_processed > 0):
+        avg_time_per_image = total_decode_time_in_milli_sec / float(total)
+        ips = 1000.0 / avg_time_per_image
+        mps = (ips * image_size_in_mpixels_all) / float(total)
+        print("info: Average processing time per image (ms):      " + str(round(avg_time_per_image, 3)))
+        print("info: Average decoded images per sec (Images/Sec): " + str(round(ips, 3)))
+        print("info: Average decoded images size (Mpixels/Sec):   " + str(round(mps, 3)) + "\n")
+
 
 if __name__ == "__main__":
 
