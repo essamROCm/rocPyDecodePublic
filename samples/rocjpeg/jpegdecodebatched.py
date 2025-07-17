@@ -53,7 +53,6 @@ def jpeg_decode_batch(
     total = len(files_full_path_list)
     total_decode_time_in_milli_sec = 0.0
     total_valid_images_processed = 0
-    image_size_in_mpixels_all = 0.0
 
     print(f"Decoding Starting for {total} files with batch size = {batch_size}.")
     for i in range(0, total, batch_size):
@@ -62,20 +61,13 @@ def jpeg_decode_batch(
         total_decode_time_in_milli_sec += batch_time_msec
         total_valid_images_processed += len(img_list)
 
-    # calc megapixels for all images
-    if(len(img_list) > 0):
-        for i, img in enumerate(img_list):
-            image_size_in_mpixels_all += ((float(img.width) * float(img.height)) / 1000000.0)
-
     print(f"Total files processed : {total_valid_images_processed}")
     print(f"Total Bad files found : {total-total_valid_images_processed}")
     if (total_valid_images_processed > 0):
         avg_time_per_image = total_decode_time_in_milli_sec / float(total)
         ips = 1000.0 / avg_time_per_image
-        mps = (ips * image_size_in_mpixels_all) / float(total)
         print("info: Average processing time per image (ms):      " + str(round(avg_time_per_image, 3)))
-        print("info: Average decoded images per sec (Images/Sec): " + str(round(ips, 3)))
-        print("info: Average decoded images size (Mpixels/Sec):   " + str(round(mps, 3)) + "\n")
+        print("info: Average decoded images per sec (Images/Sec): " + str(round(ips, 3)) + "\n")
 
 
 if __name__ == "__main__":
