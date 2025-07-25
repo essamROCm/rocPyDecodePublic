@@ -177,6 +177,26 @@ for i in range(len(commonPackages)):
     ERROR_CHECK(os.system('sudo '+linuxFlag+' '+linuxSystemInstall +
             ' '+linuxSystemInstall_check+' install '+ commonPackages[i]))
 
+# setup directory path
+setupDir_deps = '~/rocpydecode-deps'
+deps_dir = os.path.expanduser(setupDir_deps)
+deps_dir = os.path.abspath(deps_dir)
+
+# Delete previous install
+if os.path.exists(deps_dir):
+    ERROR_CHECK(os.system('sudo rm -rf '+deps_dir))
+    print("rocpydecode Setup: Removing Previous Install -- "+deps_dir+"\n")
+
+# dlpack - https://github.com/dmlc/dlpack
+if "ubuntu" in platformInfo:
+    ERROR_CHECK(os.system('sudo '+linuxFlag+' '+linuxSystemInstall+' '+linuxSystemInstall_check +' install libdlpack-dev'))
+elif "sles" in platformInfo:
+    ERROR_CHECK(os.system('sudo '+linuxFlag+' '+linuxSystemInstall+' '+linuxSystemInstall_check +' install dlpack-devel'))
+else:
+    ERROR_CHECK(os.system('mkdir '+deps_dir))
+    ERROR_CHECK(os.system('(cd '+deps_dir+'; git clone -b v1.0 https://github.com/dmlc/dlpack.git)'))
+    ERROR_CHECK(os.system('(cd '+deps_dir+'/dlpack; mkdir -p build && cd build; '+linuxCMake+' ..; make -j$(nproc); sudo make install)'))
+
 # rocPyDecode Requirements
 ERROR_CHECK(os.system(sudoValidate))
 if "Ubuntu" in platformInfo:
@@ -192,5 +212,10 @@ elif "redhat" in platformInfo:
 
 # Tests requirements
 #ERROR_CHECK(os.system('python3 -m pip install -i https://test.pypi.org/simple hip-python'))
+
+# clean up temp folders
+if os.path.exists(deps_dir):
+    ERROR_CHECK(os.system('sudo rm -rf '+deps_dir))
+    print("rocpydecode setup: Removing temp folders -- "+deps_dir+"\n")
 
 print("rocPyDecode Dependencies Installed with rocPyDecode-setup.py V-"+__version__)
