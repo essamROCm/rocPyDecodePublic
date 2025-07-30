@@ -46,7 +46,6 @@ def jpeg_decode_batch(
     decoder = jdec.decoder(device_id, backend)
     decoder.set_output_image_format(output_format)  # set the output image to the desired format
 
-    # print(f"Image output format set to: {jpegt.RocJpegOutputFormat(output_format)}")
     print(f"Decoding whole folder of images: {input_file_path} on Device: {'CPU' if backend else 'GPU'} with Device ID: {device_id}")
 
     files_full_path_list = [os.path.join(root, f) for root, _, files in os.walk(input_file_path) for f in files]
