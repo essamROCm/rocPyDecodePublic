@@ -45,7 +45,6 @@ set(VERSION "0.6.0")
 # Set Project Version and Language
 project(rocpydecode VERSION ${VERSION} LANGUAGES CXX)
 set(TARGET_NAME rocpydecode)
-set(TARGET_NAME_JPEG rocpyjpegdecode)
 
 set(CMAKE_INSTALL_LIBDIR "lib" CACHE STRING "Library install directory")
 set(CMAKE_INSTALL_INCLUDEDIR "include" CACHE STRING "Include install directory")
@@ -149,7 +148,6 @@ set(CMAKE_SKIP_BUILD_RPATH true)
 # Find dependencies
 find_package(HIP REQUIRED)
 find_package(rocdecode 1.0.0 REQUIRED)
-find_package(rocjpeg 1.0.0 REQUIRED)
 find_package(pybind11 REQUIRED)
 find_package(dlpack REQUIRED)
 find_package(FFmpeg REQUIRED)
@@ -200,17 +198,8 @@ include_directories(src)
 file(GLOB pyfiles pyRocVideoDecode/*.py pyRocVideoDecode/*.pyi)
 file(GLOB include src/rocdecode/*.h src/common/*.h ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.h ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.h)
 file(GLOB sources src/rocdecode/*.cpp src/common/*.cpp ${ROCM_PATH}/share/rocdecode/utils/*.cpp ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.cpp ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.cpp)
-# rocJPEG
-include_directories(${rocjpeg_INCLUDE_DIR} ${ROCM_PATH}/share/rocjpeg/samples)
-set(LINK_LIBRARY_LIST_JPEG ${LINK_LIBRARY_LIST_JPEG} hip::device rocjpeg::rocjpeg)
-
-file(GLOB pyfiles_jpeg pyRocJpegDecode/*.py pyRocJpegDecode/*.pyi)
-file(GLOB include_jpeg src/rocjpeg/*.h src/common/*.h)
-file(GLOB sources_jpeg src/rocjpeg/*.cpp src/common/*.cpp)
-
 message("-- ${White}rocPyDecode -- Link Libraries: ${LINK_LIBRARY_LIST}${ColourReset}")
-message("-- ${White}rocPyJPEG -- Link Libraries: ${LINK_LIBRARY_LIST_JPEG}${ColourReset}")
-message("-- ${White}rocPyDecode/rocPyJPEG -- CMAKE_CXX_FLAGS:${CMAKE_CXX_FLAGS}${ColourReset}")
+message("-- ${White}rocPyDecode -- CMAKE_CXX_FLAGS:${CMAKE_CXX_FLAGS}${ColourReset}")
 
 # set license information
 set(CPACK_RPM_PACKAGE_LICENSE "MIT")
@@ -221,7 +210,6 @@ install(FILES ${CPACK_RESOURCE_FILE_LICENSE} DESTINATION ${CMAKE_INSTALL_DOCDIR}
 # Detect Conda Installation
 execute_process(COMMAND which conda OUTPUT_VARIABLE CONDA_EXECUTABLE OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
 set(CONDA_PYTHON_VERSIONS "")
-
 if(CONDA_EXECUTABLE)
     message(STATUS "Conda detected at: ${CONDA_EXECUTABLE}")
 
@@ -305,28 +293,6 @@ if(NOT PYTHON_EXECUTABLES_LIST STREQUAL "")
             set(ROCPYDECODE_INSTALLED TRUE)
             message(STATUS "Building and installing rocPyDecode for ${PYTHON_VERSION}")
             install(FILES ${NAME_DST_VIDEO} DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime)
-
-
-            set(TARGET_NAME_JPEG_VERSIONED "${TARGET_NAME_JPEG}.${PYTHON_INDEX}")
-            #add-rocpyjpegdecode-pybind11-module
-            pybind11_add_module(${TARGET_NAME_JPEG_VERSIONED} MODULE ${sources_jpeg})
-            target_link_libraries(${TARGET_NAME_JPEG_VERSIONED} PRIVATE ${LINK_LIBRARY_LIST_JPEG})
-
-            #include
-            target_include_directories(${TARGET_NAME_JPEG_VERSIONED} PRIVATE ${pybind11_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIR})
-            foreach(filename ${pyfiles_jpeg})
-                get_filename_component(target "${filename}" REALPATH)
-                #to maintain folder structure
-                file(RELATIVE_PATH ITEM_PATH_REL ${CMAKE_CURRENT_SOURCE_DIR} ${filename})
-                message(STATUS "Copying ${filename} to ${TARGET_NAME_JPEG_VERSIONED}/${ITEM_PATH_REL}")
-                configure_file("${filename}" "${CMAKE_BINARY_DIR}/${TARGET_NAME_JPEG_VERSIONED}/${ITEM_PATH_REL}" COPYONLY)
-            endforeach(filename)
-            set_target_properties(${TARGET_NAME_JPEG_VERSIONED} PROPERTIES PREFIX "${PYTHON_MODULE_PREFIX}" SUFFIX "${PYTHON_MODULE_EXTENSION}" LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${TARGET_NAME_JPEG}/${CMAKE_INSTALL_LIBDIR}")
-            set(NAME_SRC_JPEG ${CMAKE_BINARY_DIR}/${TARGET_NAME_JPEG}/${CMAKE_INSTALL_LIBDIR}/${PYTHON_MODULE_PREFIX}${TARGET_NAME_JPEG_VERSIONED}${PYTHON_MODULE_EXTENSION})
-            set(NAME_DST_JPEG ${CMAKE_BINARY_DIR}/${TARGET_NAME_JPEG}/${CMAKE_INSTALL_LIBDIR}/${PYTHON_MODULE_PREFIX}${TARGET_NAME_JPEG}${PYTHON_MODULE_EXTENSION})
-            add_custom_command(TARGET ${TARGET_NAME_JPEG_VERSIONED} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${NAME_SRC_JPEG} ${NAME_DST_JPEG} COMMENT "Renaming shared library after build: ${NAME_SRC_JPEG} -> ${NAME_DST_JPEG}" VERBATIM)
-            message(STATUS "Building and installing rocpyjpegdecode for ${PYTHON_VERSION}")
-            install(FILES ${NAME_DST_JPEG} DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime)
         else()
             message(STATUS "[Python Version DOES NOT EXIST] :${PYTHON_VERSION}")
         endif() # (EXISTS ${CURRENT_PY_EXECUTABLE})
@@ -345,10 +311,6 @@ endif()
 #install rocPyDecode API folder -and- samples folder
 install(DIRECTORY pyRocVideoDecode DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime)
 install(DIRECTORY samples/rocdecode DESTINATION ${CMAKE_INSTALL_LIBDIR}/pyRocVideoDecode/samples COMPONENT runtime)
-#install rocpyjpegdecode API folder -and- samples folder
-install(DIRECTORY pyRocJpegDecode DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime)
-install(DIRECTORY samples/rocjpeg DESTINATION ${CMAKE_INSTALL_LIBDIR}/pyRocJpegDecode/samples COMPONENT runtime)
-
 # Test - Installed -rocpydecode
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/tests DESTINATION ${CMAKE_INSTALL_DATADIR}/rocpydecode COMPONENT test)
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/cmake DESTINATION ${CMAKE_INSTALL_DATADIR}/rocpydecode COMPONENT test)
@@ -392,9 +354,9 @@ if(DEFINED ENV{ROCM_LIBPATCH_VERSION})
 endif()
 
 # Set the dependent packages
-set(ROCPYDECODE_DEBIAN_PACKAGE_LIST "rocdecode-dev, rocjpeg-dev, libdlpack-dev, python3-dev, python3-pip")
+set(ROCPYDECODE_DEBIAN_PACKAGE_LIST "rocdecode-dev, libdlpack-dev, python3-dev, python3-pip")
 # TBD: libdlpack-devel not available
-set(ROCPYDECODE_RPM_PACKAGE_LIST "rocdecode-devel, rocjpeg-devel, python3-devel, python3-pip")
+set(ROCPYDECODE_RPM_PACKAGE_LIST "rocdecode-devel, python3-devel, python3-pip")
 
 # '%{?dist}' breaks manual builds on debian systems due to empty Provides
 execute_process(
