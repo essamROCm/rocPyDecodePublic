@@ -154,8 +154,8 @@ if __name__ == "__main__":
         '-m',
         '--mem_type',
         type=int,
-        default=1,
-        help='mem_type of output surfce - 0: Internal 1: dev_copied 2: host_copied 3: MEM not mapped, optional, default 0',
+        default=2,
+        help='mem_type of output surfce - 0: Internal 1: dev_copied 2: host_copied, optional, default 2',
         required=False)
     parser.add_argument(
         '-crop',
@@ -186,7 +186,7 @@ if __name__ == "__main__":
     resize_dim = args.resize_dim
 
     # handel params
-    mem_type = 1
+    mem_type = 2 if (mem_type < 0 or mem_type > 2) else mem_type
     if not os.path.exists(input_file_path):  # Input file (must exist)
         print("ERROR: input file doesn't exist.")
         exit()

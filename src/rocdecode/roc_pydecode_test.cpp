@@ -57,6 +57,7 @@ void TestAllClassCalls(const char* input_file) {
     viddec.PyReleaseFrame(*pkt);
 
     // test CPU decoder
+    mem_type = 2;
     PyRocVideoDecoderCpu cpu_dec(device_id, mem_type, dec_codec, force_zero_latency);    
     std::cout << "Testing PyRocVideoDecoderCpu...\n";
     pkt = demuxer.DemuxFrame();

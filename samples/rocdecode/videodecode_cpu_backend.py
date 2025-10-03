@@ -49,21 +49,7 @@ def Decoder(
         exit()
 
     #  print some GPU info out
-    print("\ninfo: Input file: " +
-          input_file_path +
-          '\n' +
-          "info: Using GPU device " +
-          str(device_id) +
-          " - " +
-          cfg.device_name +
-          "[" +
-          cfg.gcn_arch_name +
-          "] on PCI bus " +
-          str(cfg.pci_bus_id) +
-          ":" +
-          str(cfg.pci_domain_id) +
-          "." +
-          str(cfg.pci_device_id))
+    print("\ninfo: Input file: "+input_file_path+'\n'+"info: Using GPU device "+str(device_id)+" - "+cfg.device_name+"["+cfg.gcn_arch_name+"] on PCI bus "+str(cfg.pci_bus_id)+":"+str(cfg.pci_domain_id)+"."+str(cfg.pci_device_id))
     print("info: decoding started, please wait! \n")
 
     # -----------------
@@ -167,8 +153,8 @@ if __name__ == "__main__":
         '-m',
         '--mem_type',
         type=int,
-        default=1,
-        help='mem_type of output surfce - 0: Internal 1: dev_copied 2: host_copied 3: MEM not mapped, optional, default 0',
+        default=2,
+        help='mem_type of output surfce - 0: Internal 1: dev_copied 2: host_copied, optional, default 2',
         required=False)
     parser.add_argument(
         '-crop',
@@ -232,7 +218,7 @@ if __name__ == "__main__":
             exit()
 
     # handle params
-    mem_type = 0 if (mem_type < 0 or mem_type > 3) else mem_type
+    mem_type = 2 if (mem_type < 0 or mem_type > 2) else mem_type
     if not os.path.exists(input_file_path):  # Input file (must exist)
         print("ERROR: input file doesn't exist.")
         exit()
