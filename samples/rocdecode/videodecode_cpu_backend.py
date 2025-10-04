@@ -5,6 +5,7 @@
 
 import pyRocVideoDecode.decodercpu as dec
 import pyRocVideoDecode.demuxer as dmx
+import pyRocVideoDecode.types as dectypes
 import datetime
 import sys
 import argparse
@@ -153,8 +154,8 @@ if __name__ == "__main__":
         '-m',
         '--mem_type',
         type=int,
-        default=2,
-        help='mem_type of output surfce - 0: Internal 1: dev_copied 2: host_copied, optional, default 2',
+        default=dectypes.OUT_SURFACE_MEM_HOST_COPIED,
+        help='mem_type of output surface - 0: Internal 1: dev_copied 2: host_copied, optional, default 2',
         required=False)
     parser.add_argument(
         '-crop',
@@ -218,7 +219,7 @@ if __name__ == "__main__":
             exit()
 
     # handle params
-    mem_type = 2 if (mem_type < 0 or mem_type > 2) else mem_type
+    mem_type = dectypes.OUT_SURFACE_MEM_HOST_COPIED if (mem_type < dectypes.OUT_SURFACE_MEM_DEV_INTERNAL or mem_type > dectypes.OUT_SURFACE_MEM_HOST_COPIED) else mem_type
     if not os.path.exists(input_file_path):  # Input file (must exist)
         print("ERROR: input file doesn't exist.")
         exit()
