@@ -49,8 +49,11 @@ def Decoder(
         print("ERROR: Codec is not supported on this GPU " + cfg.device_name)
         exit()
 
-    #  print some GPU info out
-    print("\ninfo: Input file: "+input_file_path+'\n'+"info: Using GPU device "+str(device_id)+" - "+cfg.device_name+"["+cfg.gcn_arch_name+"] on PCI bus "+str(cfg.pci_bus_id)+":"+str(cfg.pci_domain_id)+"."+str(cfg.pci_device_id))
+    #  print file name out
+    print("\ninfo: Input file: "+input_file_path+'\n')
+    # some GPU info out
+    if(mem_type==dectypes.OUT_SURFACE_MEM_DEV_COPIED):
+        print("info: Using GPU device "+str(device_id)+" - "+cfg.device_name+"["+cfg.gcn_arch_name+"] on PCI bus "+str(cfg.pci_bus_id)+":"+str(cfg.pci_domain_id)+"."+str(cfg.pci_device_id))
     print("info: decoding started, please wait! \n")
 
     # -----------------
