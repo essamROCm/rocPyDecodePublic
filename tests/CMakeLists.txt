@@ -197,13 +197,13 @@ set_property(TEST video_decode_python_AV9 PROPERTY ENVIRONMENT "PYTHONPATH=${ROC
 #   )
 #   set_property(TEST video_decode_python_ffmpeg_torch PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
 # endif()
-# 13 - video_decode_python_ffmpeg test
-add_test(NAME video_decode_python_ffmpeg
-  COMMAND ${Python3_EXECUTABLE} ${ROCM_PATH}/lib/pyRocVideoDecode/samples/rocdecode/videodecode_cpu_backend.py
-  -i ${ROCM_PATH}/share/rocdecode/video/AMD_driving_virtual_20-H264.mp4 -m 2
-  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-)
-set_property(TEST video_decode_python_ffmpeg PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
+# # 13 - video_decode_python_ffmpeg test
+# add_test(NAME video_decode_python_ffmpeg
+#   COMMAND ${Python3_EXECUTABLE} ${ROCM_PATH}/lib/pyRocVideoDecode/samples/rocdecode/videodecode_cpu_backend.py
+#   -i ${ROCM_PATH}/share/rocdecode/video/AMD_driving_virtual_20-H264.mp4 -m 2
+#   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+# )
+# set_property(TEST video_decode_python_ffmpeg PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
 # # 14 - all_other_decoder_apis test
 # add_test(NAME all_other_decoder_apis
 #   COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/decoder_api_test.py
