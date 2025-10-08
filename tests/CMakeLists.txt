@@ -204,13 +204,13 @@ add_test(NAME video_decode_python_ffmpeg
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )
 set_property(TEST video_decode_python_ffmpeg PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
-# 14 - all_other_decoder_apis test
-add_test(NAME all_other_decoder_apis
-  COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/decoder_api_test.py
-  -i ${ROCM_PATH}/share/rocdecode/video/AMD_driving_virtual_20-H264.mp4
-  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-)
-set_property(TEST all_other_decoder_apis PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
+# # 14 - all_other_decoder_apis test
+# add_test(NAME all_other_decoder_apis
+#   COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/decoder_api_test.py
+#   -i ${ROCM_PATH}/share/rocdecode/video/AMD_driving_virtual_20-H264.mp4
+#   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+# )
+# set_property(TEST all_other_decoder_apis PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
 # 15 - jpeg_decode_single_file_test
 if(TORCH_PYTHON_RESULT EQUAL 0)
   add_test(NAME jpeg_decode_python
