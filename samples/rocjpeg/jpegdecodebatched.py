@@ -33,8 +33,7 @@ def jpeg_decode_batch(
         batch_size,
         output_format,
         device_id,
-        backend,
-        quick):
+        backend):
 
     # initialize hip
     print("")
@@ -51,8 +50,6 @@ def jpeg_decode_batch(
 
     files_full_path_list = [os.path.join(root, f) for root, _, files in os.walk(input_file_path) for f in files]
     total = len(files_full_path_list)
-    total = 1 if(quick > 0) else total
-    batch_size = 1 if(quick > 0) else batch_size
     total_decode_time_in_milli_sec = 0.0
     total_valid_images_processed = 0
 
@@ -113,14 +110,6 @@ if __name__ == "__main__":
         default=0,
         help='GPU device ID - optional, default 0',
         required=False)
-    parser.add_argument(
-        '-q',
-        '--quick',
-        type=int,
-        choices=[0, 1],
-        default=0,
-        help='Quick test, optional, 1 = decode only one file from list or folder of files, 0 = default, decode all.',
-        required=False)
 
     try:
         args = parser.parse_args()
@@ -133,7 +122,6 @@ if __name__ == "__main__":
     output_format = args.output_format
     device_id = args.device
     backend = args.backend
-    quick = args.quick
 
     if not isinstance(batch_size, int) or batch_size <= 0:
         print(f"Args Error: batch_size must be a positive integer, got {batch_size}\n")
@@ -145,4 +133,4 @@ if __name__ == "__main__":
         print("ERROR: input folder doesn't exist.")
         exit()
 
-    jpeg_decode_batch(input_file_path, batch_size, output_format, device_id, backend, quick)
+    jpeg_decode_batch(input_file_path, batch_size, output_format, device_id, backend)

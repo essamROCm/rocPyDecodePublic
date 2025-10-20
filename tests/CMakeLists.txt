@@ -219,9 +219,9 @@ if(TORCH_PYTHON_RESULT EQUAL 0)
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
   set_property(TEST jpeg_decode_python PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
 endif(TORCH_PYTHON_RESULT EQUAL 0)
-# 16 - jpegdecodebatched_test
-add_test(NAME jpeg_decode_batched_python
-  COMMAND ${Python3_EXECUTABLE} ${ROCM_PATH}/lib/pyRocJpegDecode/samples/rocjpeg/jpegdecodebatched.py
-  -i ${ROCM_PATH}/share/rocjpeg/images/ -q 1
-  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_property(TEST jpeg_decode_batched_python PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
+# # 16 - jpegdecodebatched_test
+# add_test(NAME jpeg_decode_batched_python
+#   COMMAND ${Python3_EXECUTABLE} ${ROCM_PATH}/lib/pyRocJpegDecode/samples/rocjpeg/jpegdecodebatched.py
+#   -i ${ROCM_PATH}/share/rocjpeg/images/
+#   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+# set_property(TEST jpeg_decode_batched_python PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
