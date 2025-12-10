@@ -128,7 +128,7 @@ message("-- ${White}${PROJECT_NAME} -- AMD GPU_TARGETS: ${GPU_TARGETS}${ColourRe
 
 # Allow specifying a Python version via -D PYTHON_VERSION_SUGGESTED
 option(PYTHON_VERSION_SUGGESTED "Suggested Python version for installation" "")
-# Fixed Python version list (same as in rocAL_pybind)
+# Fixed Python version list
 set(PYTHON_VERSIONS "3.13" "3.12" "3.11" "3.10" "3.9" "3.8")
 if(PYTHON_VERSION_SUGGESTED AND NOT (PYTHON_VERSION_SUGGESTED STREQUAL ""))
     set(PYTHON_VERSIONS "${PYTHON_VERSION_SUGGESTED}")
@@ -148,7 +148,8 @@ find_package(dlpack REQUIRED)
 find_package(FFmpeg REQUIRED)
 
 # HIP
-set(LINK_LIBRARY_LIST ${LINK_LIBRARY_LIST} hip::device)
+set(LINK_LIBRARY_LIST "")
+list(APPEND LINK_LIBRARY_LIST hip::device)
 # rocDecode
 include_directories(${rocdecode_INCLUDE_DIR}
     ${ROCM_PATH}/include/rocdecode
@@ -161,28 +162,30 @@ else()
     find_library(rocdecode_HOST_LIBRARY rocdecode-host PATHS ${ROCM_PATH}/lib)
 endif()
 
-set(LINK_LIBRARY_LIST ${LINK_LIBRARY_LIST} rocdecode::rocdecode)
+list(APPEND LINK_LIBRARY_LIST rocdecode::rocdecode)
 if(rocdecode_HOST_LIBRARY)
-    set(LINK_LIBRARY_LIST ${LINK_LIBRARY_LIST} ${rocdecode_HOST_LIBRARY})
+    list(APPEND LINK_LIBRARY_LIST ${rocdecode_HOST_LIBRARY})
     message(STATUS "rocdecode_HOST_LIBRARY found")
 else()
     message(FATAL_ERROR "Library rocdecode_HOST_LIBRARY not found!")
 endif()
 # FFMPEG
 include_directories(${AVUTIL_INCLUDE_DIR} ${AVCODEC_INCLUDE_DIR} ${AVFORMAT_INCLUDE_DIR})
-set(LINK_LIBRARY_LIST ${LINK_LIBRARY_LIST} ${FFMPEG_LIBRARIES})
+list(APPEND LINK_LIBRARY_LIST ${FFMPEG_LIBRARIES})
 # rocPyDecode 
 include_directories(src)
-file(GLOB pyfiles pyRocVideoDecode/*.py pyRocVideoDecode/*.pyi)
 file(GLOB include src/rocdecode/*.h src/common/*.h ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.h ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.h)
 file(GLOB sources src/rocdecode/*.cpp src/common/*.cpp ${ROCM_PATH}/share/rocdecode/utils/*.cpp ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.cpp ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.cpp)
 # rocJPEG
 include_directories(${rocjpeg_INCLUDE_DIR} ${ROCM_PATH}/share/rocjpeg/samples)
-set(LINK_LIBRARY_LIST_JPEG ${LINK_LIBRARY_LIST_JPEG} hip::device rocjpeg::rocjpeg)
+set(LINK_LIBRARY_LIST_JPEG "")
+list(APPEND LINK_LIBRARY_LIST_JPEG hip::device rocjpeg::rocjpeg)
 
-file(GLOB pyfiles_jpeg pyRocJpegDecode/*.py pyRocJpegDecode/*.pyi)
 file(GLOB include_jpeg src/rocjpeg/*.h src/common/*.h)
 file(GLOB sources_jpeg src/rocjpeg/*.cpp src/common/*.cpp)
+
+set(LINK_LIBRARY_LIST_BASE ${LINK_LIBRARY_LIST})
+set(LINK_LIBRARY_LIST_JPEG_BASE ${LINK_LIBRARY_LIST_JPEG})
 
 message("-- ${White}rocPyDecode -- Link Libraries: ${LINK_LIBRARY_LIST}${ColourReset}")
 message("-- ${White}rocPyJPEG -- Link Libraries: ${LINK_LIBRARY_LIST_JPEG}${ColourReset}")
@@ -193,10 +196,6 @@ set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
 install(FILES ${CPACK_RESOURCE_FILE_LICENSE} DESTINATION ${CMAKE_INSTALL_DOCDIR} COMPONENT runtime)
 install(FILES ${CPACK_RESOURCE_FILE_LICENSE} DESTINATION ${CMAKE_INSTALL_DOCDIR}-asan COMPONENT asan)
-
-# Install rocPyDecode pybind lib (fixed version list, CMake Python discovery)
-set(ROCPYDECODE_INSTALLED FALSE)
-set(PYTHON_INDEX 0)
 
 foreach(PY_VERSION ${PYTHON_VERSIONS})
     message(STATUS "Searching for Python version: ${PY_VERSION}")
@@ -226,16 +225,17 @@ foreach(PY_VERSION ${PYTHON_VERSIONS})
         continue()
     endif()
 
-    # Ensure we have a standard extension suffix (e.g., .cpython-312-x86_64-linux-gnu.so)
-    if(NOT Python3_EXTENSION_SUFFIX OR Python3_EXTENSION_SUFFIX STREQUAL "")
-        if(Python3_SOABI)
-            set(Python3_EXTENSION_SUFFIX ".${Python3_SOABI}.so")
-        else()
-            set(Python3_EXTENSION_SUFFIX ".so")
-        endif()
-    endif()
+    # Reset link lists so each Python build starts clean
+    set(LINK_LIBRARY_LIST ${LINK_LIBRARY_LIST_BASE})
+    set(LINK_LIBRARY_LIST_JPEG ${LINK_LIBRARY_LIST_JPEG_BASE})
 
-    math(EXPR PYTHON_INDEX "${PYTHON_INDEX} + 1")
+    # Get extension suffix via Python to support CMake 3.15 (Python3_SOABI appears in 3.17+)
+    execute_process(
+        COMMAND "${Python3_EXECUTABLE}" -c "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))"
+        OUTPUT_VARIABLE Python3_EXTENSION_SUFFIX
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
     set(TARGET_NAME_VERSIONED "${TARGET_NAME}_${PY_VERSION}")
     set(TARGET_NAME_JPEG_VERSIONED "${TARGET_NAME_JPEG}_${PY_VERSION}")
 
@@ -257,20 +257,12 @@ foreach(PY_VERSION ${PYTHON_VERSIONS})
         target_compile_definitions(${TARGET_NAME_VERSIONED} PUBLIC USE_AVCODEC_GREATER_THAN_58_134=1)
     endif()
 
-    foreach(filename ${pyfiles})
-        get_filename_component(target "${filename}" REALPATH)
-        file(RELATIVE_PATH ITEM_PATH_REL ${CMAKE_CURRENT_SOURCE_DIR} ${filename})
-        message(STATUS "Copying ${filename} to ${TARGET_NAME_VERSIONED}/${ITEM_PATH_REL}")
-        configure_file("${filename}" "${CMAKE_BINARY_DIR}/${TARGET_NAME_VERSIONED}/${ITEM_PATH_REL}" COPYONLY)
-    endforeach(filename)
-
     set_target_properties(${TARGET_NAME_VERSIONED} PROPERTIES
         PREFIX ""
         SUFFIX "${Python3_EXTENSION_SUFFIX}"
         OUTPUT_NAME "${TARGET_NAME}"
         LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${TARGET_NAME}/${CMAKE_INSTALL_LIBDIR}")
 
-    set(ROCPYDECODE_INSTALLED TRUE)
     message(STATUS "Building and installing rocPyDecode for Python ${PY_VERSION}")
     install(TARGETS ${TARGET_NAME_VERSIONED} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime)
 
@@ -278,13 +270,6 @@ foreach(PY_VERSION ${PYTHON_VERSIONS})
     pybind11_add_module(${TARGET_NAME_JPEG_VERSIONED} MODULE ${sources_jpeg})
     target_link_libraries(${TARGET_NAME_JPEG_VERSIONED} PRIVATE ${LINK_LIBRARY_LIST_JPEG} ${Python3_LIBRARIES})
     target_include_directories(${TARGET_NAME_JPEG_VERSIONED} PRIVATE ${pybind11_INCLUDE_DIRS} ${Python3_INCLUDE_DIRS})
-
-    foreach(filename ${pyfiles_jpeg})
-        get_filename_component(target "${filename}" REALPATH)
-        file(RELATIVE_PATH ITEM_PATH_REL ${CMAKE_CURRENT_SOURCE_DIR} ${filename})
-        message(STATUS "Copying ${filename} to ${TARGET_NAME_JPEG_VERSIONED}/${ITEM_PATH_REL}")
-        configure_file("${filename}" "${CMAKE_BINARY_DIR}/${TARGET_NAME_JPEG_VERSIONED}/${ITEM_PATH_REL}" COPYONLY)
-    endforeach(filename)
 
     set_target_properties(${TARGET_NAME_JPEG_VERSIONED} PROPERTIES
         PREFIX ""
@@ -295,11 +280,6 @@ foreach(PY_VERSION ${PYTHON_VERSIONS})
     message(STATUS "Building and installing rocpyjpegdecode for Python ${PY_VERSION}")
     install(TARGETS ${TARGET_NAME_JPEG_VERSIONED} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime)
 endforeach()
-
-# Was rocPyDecode Installed?
-if(NOT ROCPYDECODE_INSTALLED)
-    message("-- ${Red}rocPyDecode wasn't installed, no python installation was found.${ColourReset}")
-endif()
 
 #install rocPyDecode API folder -and- samples folder
 install(DIRECTORY pyRocVideoDecode DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime)
