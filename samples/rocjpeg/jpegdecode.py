@@ -21,10 +21,126 @@
 import pyRocJpegDecode.decoder as jdec
 import rocpyjpegdecode.jpegTypes as jpegt
 import argparse
+import ctypes
 import os
 import sys
-from PIL import Image
-import numpy as np
+
+_capsule_get_pointer = ctypes.pythonapi.PyCapsule_GetPointer
+_capsule_get_pointer.restype = ctypes.c_void_p
+_capsule_get_pointer.argtypes = [ctypes.py_object, ctypes.c_char_p]
+
+
+class _DLDevice(ctypes.Structure):
+    _fields_ = [("device_type", ctypes.c_int), ("device_id", ctypes.c_int)]
+
+class _DLDataType(ctypes.Structure):
+    _fields_ = [("code", ctypes.c_uint8), ("bits", ctypes.c_uint8), ("lanes", ctypes.c_uint16)]
+
+class _DLTensor(ctypes.Structure):
+    _fields_ = [
+        ("data", ctypes.c_void_p),
+        ("device", _DLDevice),
+        ("ndim", ctypes.c_int),
+        ("dtype", _DLDataType),
+        ("shape", ctypes.POINTER(ctypes.c_int64)),
+        ("strides", ctypes.POINTER(ctypes.c_int64)),
+        ("byte_offset", ctypes.c_uint64),
+    ]
+
+class _DLManagedTensor(ctypes.Structure):
+    _fields_ = [
+        ("dl_tensor", _DLTensor),
+        ("manager_ctx", ctypes.c_void_p),
+        ("deleter", ctypes.c_void_p),
+    ]
+
+
+def _dlpack_bytes_and_shape(buffer_obj):
+    """Extract bytes, shape, and bit depth from a DLPack buffer without numpy/torch."""
+    capsule = buffer_obj.__dlpack__()
+    managed_ptr = _capsule_get_pointer(capsule, b"dltensor")
+    if not managed_ptr:
+        raise RuntimeError("Failed to acquire DLPack pointer from capsule")
+    managed = _DLManagedTensor.from_address(managed_ptr)
+    tensor = managed.dl_tensor
+    shape = [tensor.shape[i] for i in range(tensor.ndim)]
+    if not shape:
+        raise RuntimeError("Empty shape returned from DLTensor")
+    bit_depth = int(tensor.dtype.bits)
+    bytes_per_item = max((bit_depth + 7) // 8, 1)
+    total_items = 1
+    for dim in shape:
+        total_items *= dim
+    data_ptr = ctypes.c_void_p(tensor.data).value
+    if data_ptr is None:
+        raise RuntimeError("DLTensor data pointer is null")
+    data_ptr += int(tensor.byte_offset)
+    raw_bytes = ctypes.string_at(data_ptr, total_items * bytes_per_item)
+    return raw_bytes, shape, bit_depth
+
+
+def _tensor_to_interleaved_rgb(img_tensor, output_format):
+    planar_format = int(jpegt.RocJpegOutputFormat.ROCJPEG_OUTPUT_RGB_PLANAR)
+    bit_depth = None
+    bytes_per_sample = None
+    if output_format == planar_format:
+        planes = []
+        plane_shape = None
+        for idx in range(3):
+            plane_bytes, shape, bits = _dlpack_bytes_and_shape(img_tensor.ext_buf[idx])
+            if len(shape) < 2:
+                raise RuntimeError(f"Unexpected plane shape: {shape}")
+            if bit_depth is None:
+                bit_depth = bits
+                bytes_per_sample = max((bit_depth + 7) // 8, 1)
+            if plane_shape is None:
+                plane_shape = shape
+            elif plane_shape[0] != shape[0] or plane_shape[1] != shape[1]:
+                raise RuntimeError("RGB planes have mismatched dimensions")
+            if bits != bit_depth:
+                raise RuntimeError("RGB planes have mismatched bit depths")
+            planes.append(plane_bytes)
+        height, width = int(plane_shape[0]), int(plane_shape[1])
+        pixel_count = height * width
+        expected_plane_bytes = pixel_count * bytes_per_sample
+        for plane in planes:
+            if len(plane) < expected_plane_bytes:
+                raise RuntimeError("RGB plane buffer smaller than expected for given dimensions")
+        interleaved = bytearray(pixel_count * 3 * bytes_per_sample)
+        for i in range(pixel_count):
+            base = i * 3 * bytes_per_sample
+            offset = i * bytes_per_sample
+            interleaved[base:base + bytes_per_sample] = planes[0][offset:offset + bytes_per_sample]
+            interleaved[base + bytes_per_sample:base + 2 * bytes_per_sample] = planes[1][offset:offset + bytes_per_sample]
+            interleaved[base + 2 * bytes_per_sample:base + 3 * bytes_per_sample] = planes[2][offset:offset + bytes_per_sample]
+        return bytes(interleaved), width, height, bit_depth
+    else:
+        rgb_bytes, shape, bit_depth = _dlpack_bytes_and_shape(img_tensor.ext_buf[0])
+        if len(shape) < 3 or shape[2] < 3:
+            raise RuntimeError(f"Unexpected tensor shape for RGB output: {shape}")
+        height, width = int(shape[0]), int(shape[1])
+        bytes_per_sample = max((bit_depth + 7) // 8, 1)
+        expected = height * width * 3 * bytes_per_sample
+        if len(rgb_bytes) < expected:
+            raise RuntimeError("RGB buffer smaller than expected for given dimensions")
+        return rgb_bytes[:expected], width, height, bit_depth
+
+
+def _save_image_from_tensor(img_tensor, output_format, filename):
+    base_path = filename.strip()
+    dir_name = os.path.dirname(base_path)
+    root_name = os.path.splitext(os.path.basename(base_path))[0]
+    if not root_name:
+        root_name = "output"
+
+    rgb_bytes, width, height, bit_depth = _tensor_to_interleaved_rgb(img_tensor, output_format)
+    out_name = f"{root_name}_{width}x{height}_{bit_depth}bits.rgb"
+    output_path = os.path.join(dir_name, out_name) if dir_name else out_name
+
+    with open(output_path, "wb") as fh:
+        fh.write(rgb_bytes)
+
+    return output_path
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Example of decoding jpeg image
@@ -53,13 +169,11 @@ def jpeg_decode(
 
     print(f"Decoding file: {input_file_path} is complete.\n")
 
-    # example how to save the decoded image as a file (.png)
+    # example how to save the decoded image as a raw RGB file
     if (output_file_path is not None):
-        filename = output_file_path.strip() + ".png"
-        arr = img_tensor.to_numpy()
-        img = Image.fromarray(arr.astype(np.uint8))
-        img.save(filename)
-        print(f"Image saved as: {filename}")
+        filename = output_file_path.strip()
+        saved_path = _save_image_from_tensor(img_tensor, output_format, filename)
+        print(f"Raw RGB image saved as: {saved_path}")
 
 
 if __name__ == "__main__":
