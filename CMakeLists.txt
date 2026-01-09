@@ -303,7 +303,7 @@ if(NOT PYTHON_EXECUTABLES_LIST STREQUAL "" AND (ROCPYDECODE_DEPENDENCY_READY OR 
                 target_link_libraries(${TARGET_NAME_VERSIONED} PRIVATE ${LINK_LIBRARY_LIST})
 
                 # include
-                target_include_directories(${TARGET_NAME_VERSIONED} PRIVATE ${pybind11_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIR})
+                target_include_directories(${TARGET_NAME_VERSIONED} PRIVATE ${pybind11_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
                 # FFMPEG multi-version support
                 if(_FFMPEG_AVCODEC_VERSION VERSION_LESS_EQUAL 58.134.100)
@@ -337,7 +337,7 @@ if(NOT PYTHON_EXECUTABLES_LIST STREQUAL "" AND (ROCPYDECODE_DEPENDENCY_READY OR 
                 target_link_libraries(${TARGET_NAME_JPEG_VERSIONED} PRIVATE ${LINK_LIBRARY_LIST_JPEG})
 
                 #include
-                target_include_directories(${TARGET_NAME_JPEG_VERSIONED} PRIVATE ${pybind11_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIR})
+                target_include_directories(${TARGET_NAME_JPEG_VERSIONED} PRIVATE ${pybind11_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src)
                 foreach(filename ${pyfiles_jpeg})
                     get_filename_component(target "${filename}" REALPATH)
                     #to maintain folder structure
