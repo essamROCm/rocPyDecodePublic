@@ -298,7 +298,7 @@ if(NOT PYTHON_EXECUTABLES_LIST STREQUAL "" AND (ROCPYDECODE_DEPENDENCY_READY OR 
             #Get this python .so file extension (full name)
             execute_process(COMMAND ${CURRENT_PY_EXECUTABLE} -c "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))" OUTPUT_VARIABLE PYTHON_MODULE_EXTENSION OUTPUT_STRIP_TRAILING_WHITESPACE)
             if(ROCPYDECODE_DEPENDENCY_READY)
-                #add-rocPyDecode-pybind11-module
+                # add-rocPyDecode-pybind11-module
                 pybind11_add_module(${TARGET_NAME_VERSIONED} MODULE ${sources})
                 target_link_libraries(${TARGET_NAME_VERSIONED} PRIVATE ${LINK_LIBRARY_LIST})
 
