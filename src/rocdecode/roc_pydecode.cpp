@@ -22,6 +22,9 @@ THE SOFTWARE.
 
 #include "common/roc_pybuffer.h"
 #include "roc_pyvideodecode.h"
+#if defined(ROCPYDECODE_ENABLE_HOST) && ROCPYDECODE_ENABLE_HOST
+#include "roc_pyvideodecodecpu.h"
+#endif
 
 using namespace std;
 
@@ -137,7 +140,9 @@ PYBIND11_MODULE(rocpydecode, m) {
     // --------------------------------------
     // AMD Video Decoder 'PyRocVideoDecoderCpu' -- FFMpeg Decode
     // --------------------------------------
+#if defined(ROCPYDECODE_ENABLE_HOST) && ROCPYDECODE_ENABLE_HOST
     PyRocVideoDecoderCpuInitializer(m);
+#endif
 
     // ----------------
     // Structures:

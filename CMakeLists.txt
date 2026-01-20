@@ -183,8 +183,7 @@ if(rocdecode_FOUND)
     include_directories(${rocdecode_INCLUDE_DIR}
         ${ROCM_PATH}/include/rocdecode
         ${ROCM_PATH}/share/rocdecode/utils
-        ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode
-    )
+        ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode)
     if(rocdecode_VERSION VERSION_LESS_EQUAL 1.3.0)
         find_library(rocdecode_HOST_LIBRARY rocdecodehost PATHS ${ROCM_PATH}/lib)
     else()
@@ -204,8 +203,17 @@ if(rocdecode_FOUND)
     # rocPyDecode
     include_directories(src)
     file(GLOB pyfiles pyRocVideoDecode/*.py pyRocVideoDecode/*.pyi)
-    file(GLOB include src/rocdecode/*.h src/common/*.h ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.h ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.h)
-    file(GLOB sources src/rocdecode/*.cpp src/common/*.cpp ${ROCM_PATH}/share/rocdecode/utils/*.cpp ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.cpp ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.cpp)
+    file(GLOB include_base src/rocdecode/*.h src/common/*.h ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.h)
+    file(GLOB sources_base src/rocdecode/roc_pydecode.cpp src/rocdecode/roc_pyvideodecode.cpp src/rocdecode/roc_pyvideodemuxer.cpp src/common/*.cpp ${ROCM_PATH}/share/rocdecode/utils/*.cpp ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.cpp)
+    set(include ${include_base})
+    set(sources ${sources_base})
+    if(ROCPYDECODE_HOST_LIBRARY_FOUND)
+        include_directories(${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode)
+        file(GLOB include_host ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.h)
+        file(GLOB sources_host src/rocdecode/roc_pyvideodecodecpu.cpp src/rocdecode/roc_pydecode_test.cpp ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.cpp)
+        list(APPEND include ${include_host})
+        list(APPEND sources ${sources_host})
+    endif()
     # FFMPEG
     include_directories(${AVUTIL_INCLUDE_DIR} ${AVCODEC_INCLUDE_DIR} ${AVFORMAT_INCLUDE_DIR})
     set(LINK_LIBRARY_LIST ${LINK_LIBRARY_LIST} ${FFMPEG_LIBRARIES})
@@ -305,6 +313,7 @@ if(NOT PYTHON_EXECUTABLES_LIST STREQUAL "" AND (ROCPYDECODE_DEPENDENCY_READY OR 
                 # add-rocPyDecode-pybind11-module
                 pybind11_add_module(${TARGET_NAME_VERSIONED} MODULE ${sources})
                 target_link_libraries(${TARGET_NAME_VERSIONED} PRIVATE ${LINK_LIBRARY_LIST})
+                target_compile_definitions(${TARGET_NAME_VERSIONED} PRIVATE ROCPYDECODE_ENABLE_HOST=$<BOOL:${ROCPYDECODE_HOST_LIBRARY_FOUND}>)
 
                 # include
                 target_include_directories(${TARGET_NAME_VERSIONED} PRIVATE ${pybind11_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src)
