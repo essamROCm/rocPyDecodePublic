@@ -156,6 +156,7 @@ find_package(FFmpeg REQUIRED)
 
 set(ROCPYDECODE_DEPENDENCY_READY FALSE)
 set(ROCPYJPEG_DEPENDENCY_READY FALSE)
+set(ROCPYDECODE_HOST_LIBRARY_FOUND FALSE)
 
 # Search for all installed Python versions - exclude Python versions lower than 3.9
 execute_process(COMMAND bash -c "compgen -c | grep -E '^python3\.[0-9]+$' | awk -F. '$2 >= 9' | sort -Vru" OUTPUT_VARIABLE PYTHON_EXECUTABLES OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -190,21 +191,24 @@ if(rocdecode_FOUND)
         find_library(rocdecode_HOST_LIBRARY rocdecode-host PATHS ${ROCM_PATH}/lib)
     endif()
 
+    list(APPEND LINK_LIBRARY_LIST rocdecode::rocdecode)
     if(rocdecode_HOST_LIBRARY)
-        list(APPEND LINK_LIBRARY_LIST rocdecode::rocdecode ${rocdecode_HOST_LIBRARY})
-        set(ROCPYDECODE_DEPENDENCY_READY TRUE)
+        list(APPEND LINK_LIBRARY_LIST ${rocdecode_HOST_LIBRARY})
+        set(ROCPYDECODE_HOST_LIBRARY_FOUND TRUE)
         message(STATUS "rocdecode_HOST_LIBRARY found")
-        # rocPyDecode
-        include_directories(src)
-        file(GLOB pyfiles pyRocVideoDecode/*.py pyRocVideoDecode/*.pyi)
-        file(GLOB include src/rocdecode/*.h src/common/*.h ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.h ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.h)
-        file(GLOB sources src/rocdecode/*.cpp src/common/*.cpp ${ROCM_PATH}/share/rocdecode/utils/*.cpp ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.cpp ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.cpp)
-        # FFMPEG
-        include_directories(${AVUTIL_INCLUDE_DIR} ${AVCODEC_INCLUDE_DIR} ${AVFORMAT_INCLUDE_DIR})
-        set(LINK_LIBRARY_LIST ${LINK_LIBRARY_LIST} ${FFMPEG_LIBRARIES})
     else()
-        message(WARNING "Library rocdecode_HOST_LIBRARY not found! rocPyDecode will be skipped.")
+        message(WARNING "Library rocdecode_HOST_LIBRARY not found! CPU backend support and samples will be limited.")
     endif()
+
+    set(ROCPYDECODE_DEPENDENCY_READY TRUE)
+    # rocPyDecode
+    include_directories(src)
+    file(GLOB pyfiles pyRocVideoDecode/*.py pyRocVideoDecode/*.pyi)
+    file(GLOB include src/rocdecode/*.h src/common/*.h ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.h ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.h)
+    file(GLOB sources src/rocdecode/*.cpp src/common/*.cpp ${ROCM_PATH}/share/rocdecode/utils/*.cpp ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.cpp ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.cpp)
+    # FFMPEG
+    include_directories(${AVUTIL_INCLUDE_DIR} ${AVCODEC_INCLUDE_DIR} ${AVFORMAT_INCLUDE_DIR})
+    set(LINK_LIBRARY_LIST ${LINK_LIBRARY_LIST} ${FFMPEG_LIBRARIES})
 else()
     message(WARNING "rocdecode not found. rocPyDecode will not be built or installed.")
 endif()
@@ -382,7 +386,13 @@ endif()
 #install rocPyDecode API folder -and- samples folder
 if(ROCPYDECODE_DEPENDENCY_READY)
     install(DIRECTORY pyRocVideoDecode DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime)
-    install(DIRECTORY samples/rocdecode DESTINATION ${CMAKE_INSTALL_LIBDIR}/pyRocVideoDecode/samples COMPONENT runtime)
+    if(ROCPYDECODE_HOST_LIBRARY_FOUND)
+        install(DIRECTORY samples/rocdecode DESTINATION ${CMAKE_INSTALL_LIBDIR}/pyRocVideoDecode/samples COMPONENT runtime)
+    else()
+        install(DIRECTORY samples/rocdecode DESTINATION ${CMAKE_INSTALL_LIBDIR}/pyRocVideoDecode/samples COMPONENT runtime
+            PATTERN "videodecode_cpu_backend.py" EXCLUDE
+            PATTERN "videodecodetorch_cpu_backend.py" EXCLUDE)
+    endif()
 endif()
 #install rocpyjpegdecode API folder -and- samples folder
 if(ROCPYJPEG_DEPENDENCY_READY)
