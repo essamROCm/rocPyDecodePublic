@@ -38,12 +38,15 @@ except SystemExit as e:
 
 input_file_path = args.input
 
-rocpydecode.TestAllClassCalls(input_file_path)
-rocpydecode.TestAll_roc_pybuffer()
-rocpydecode.Test_DLPack()
-rocpydecode.Test_PyReconfigureFlushCallback()
-rocpydecode.Test_CalculateRgbImageSize()
-print('rocPyDecode APIs test finished.\n')
+if hasattr(rocpydecode, "TestAllClassCalls"):
+    rocpydecode.TestAllClassCalls(input_file_path)
+    rocpydecode.TestAll_roc_pybuffer()
+    rocpydecode.Test_DLPack()
+    rocpydecode.Test_PyReconfigureFlushCallback()
+    rocpydecode.Test_CalculateRgbImageSize()
+    print('rocPyDecode APIs test finished.\n')
 
-DLPackPyTensor.test_all()
-print('rocPyDecode DLPackPyTensor APIs test completed successfully.\n')
+    DLPackPyTensor.test_all()
+    print('rocPyDecode DLPackPyTensor APIs test completed successfully.\n')
+else:
+    print("rocPyDecode host/CPU test APIs not built; skipping decoder_api_test.")

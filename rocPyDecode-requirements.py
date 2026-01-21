@@ -154,6 +154,7 @@ commonPackages = [
 # Debian packages
 coreDebianPackages = [
     'rocdecode-dev',
+    'rocdecode-host',
     'rocjpeg-dev',
     'python3-dev',
     'python3-pip',
