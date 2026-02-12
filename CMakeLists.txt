@@ -135,7 +135,7 @@ if(NOT (PYTHON_VERSION_SUGGESTED STREQUAL OFF))
 endif()
 
 # Python versions to probe (highest to lowest). User suggestion replaces the list.
-set(PYTHON_VERSION_LIST 3.13 3.12 3.11 3.10 3.9 3.8)
+set(PYTHON_VERSION_LIST 3.13 3.12 3.11 3.10 3.9 3.8 CACHE STRING "Python versions to probe")
 if(USER_DEFINED)
     set(PYTHON_VERSION_LIST ${PYTHON_VERSION_SUGGESTED})
 endif()
