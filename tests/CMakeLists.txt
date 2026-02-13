@@ -53,6 +53,11 @@ endif()
 
 project(rocpydecode-test)
 
+# Python is required to locate pybind outputs and run the tests
+set(Python3_FIND_VIRTUALENV FIRST)
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+set(PY_VERSION_SUFFIX "${Python3_VERSION_MAJOR}_${Python3_VERSION_MINOR}")
+
 # make test with CTest
 enable_testing()
 include(CTest)
@@ -61,16 +66,86 @@ include(CTest)
 list(APPEND CMAKE_PREFIX_PATH ${ROCM_PATH}/lib/cmake)
 list(APPEND CMAKE_MODULE_PATH ${ROCM_PATH}/share/rocpydecode/cmake)
 
-# check installed pybind bindings
+# Default (installed) locations
+set(ROCPYDECODE_LIB_DIR "${ROCM_PATH}/lib")
+set(ROCPYDECODE_PY_DIR "${ROCM_PATH}/lib/pyRocVideoDecode")
+set(ROCPYJPEG_LIB_DIR "${ROCM_PATH}/lib")
+set(ROCPYJPEG_PY_DIR "${ROCM_PATH}/lib/pyRocJpegDecode")
+
+# In-tree build locations (match pybind target layout)
+set(ROCPYDECODE_BUILD_LIB_DIR "${CMAKE_BINARY_DIR}/rocpydecode/lib")
+set(ROCPYDECODE_BUILD_PY_DIR "${CMAKE_BINARY_DIR}/rocpydecode_${PY_VERSION_SUFFIX}/pyRocVideoDecode")
+set(ROCPYJPEG_BUILD_LIB_DIR "${CMAKE_BINARY_DIR}/rocpyjpegdecode/lib")
+set(ROCPYJPEG_BUILD_PY_DIR "${CMAKE_BINARY_DIR}/rocpyjpegdecode_${PY_VERSION_SUFFIX}/pyRocJpegDecode")
+
+# check installed or build-tree pybind bindings
 set(VIDEO_DECODE_BINDINGS_INSTALLED OFF)
-if(EXISTS "${ROCM_PATH}/lib/pyRocVideoDecode")
+if(EXISTS "${ROCPYDECODE_PY_DIR}")
   set(VIDEO_DECODE_BINDINGS_INSTALLED ON)
-  message("-- ${White}${PROJECT_NAME}: rocPyDecode found at ${ROCM_PATH}/lib/pyRocVideoDecode${ColourReset}")
+  message("-- ${White}${PROJECT_NAME}: rocPyDecode found at ${ROCPYDECODE_PY_DIR}${ColourReset}")
 endif()
+if(VIDEO_DECODE_BINDINGS_INSTALLED)
+  file(GLOB ROCPYDECODE_PYMODULES "${ROCPYDECODE_LIB_DIR}/rocpydecode*.so" "${ROCPYDECODE_LIB_DIR}/rocpydecode*.pyd")
+  if(NOT ROCPYDECODE_PYMODULES)
+    set(VIDEO_DECODE_BINDINGS_INSTALLED OFF)
+    message("-- ${Yellow}${PROJECT_NAME}: rocPyDecode bindings directory present but shared object not found in ${ROCPYDECODE_LIB_DIR}; will try build-tree outputs.${ColourReset}")
+  endif()
+endif()
+if(NOT VIDEO_DECODE_BINDINGS_INSTALLED)
+  file(GLOB ROCPYDECODE_PYMODULES "${ROCPYDECODE_BUILD_LIB_DIR}/rocpydecode*.so" "${ROCPYDECODE_BUILD_LIB_DIR}/rocpydecode*.pyd")
+  if(ROCPYDECODE_PYMODULES AND EXISTS "${ROCPYDECODE_BUILD_PY_DIR}")
+    set(VIDEO_DECODE_BINDINGS_INSTALLED ON)
+    set(ROCPYDECODE_LIB_DIR "${ROCPYDECODE_BUILD_LIB_DIR}")
+    set(ROCPYDECODE_PY_DIR "${ROCPYDECODE_BUILD_PY_DIR}")
+    message("-- ${White}${PROJECT_NAME}: using in-tree rocPyDecode build outputs at ${ROCPYDECODE_LIB_DIR}${ColourReset}")
+  endif()
+endif()
+
 set(JPEG_DECODE_PYBIND_SCRIPTS OFF)
-if(EXISTS "${ROCM_PATH}/lib/pyRocJpegDecode")
+if(EXISTS "${ROCPYJPEG_PY_DIR}")
   set(JPEG_DECODE_PYBIND_SCRIPTS ON)
-  message("-- ${White}${PROJECT_NAME}: rocPyJPEG found at ${ROCM_PATH}/lib/pyRocJpegDecode${ColourReset}")
+  message("-- ${White}${PROJECT_NAME}: rocPyJPEG found at ${ROCPYJPEG_PY_DIR}${ColourReset}")
+endif()
+if(JPEG_DECODE_PYBIND_SCRIPTS)
+  file(GLOB ROCPYJPEG_PYMODULES "${ROCPYJPEG_LIB_DIR}/rocpyjpegdecode*.so" "${ROCPYJPEG_LIB_DIR}/rocpyjpegdecode*.pyd")
+  if(NOT ROCPYJPEG_PYMODULES)
+    set(JPEG_DECODE_PYBIND_SCRIPTS OFF)
+    message("-- ${Yellow}${PROJECT_NAME}: rocPyJPEG bindings directory present but shared object not found in ${ROCPYJPEG_LIB_DIR}; will try build-tree outputs.${ColourReset}")
+  endif()
+endif()
+if(NOT JPEG_DECODE_PYBIND_SCRIPTS)
+  file(GLOB ROCPYJPEG_PYMODULES "${ROCPYJPEG_BUILD_LIB_DIR}/rocpyjpegdecode*.so" "${ROCPYJPEG_BUILD_LIB_DIR}/rocpyjpegdecode*.pyd")
+  if(ROCPYJPEG_PYMODULES AND EXISTS "${ROCPYJPEG_BUILD_PY_DIR}")
+    set(JPEG_DECODE_PYBIND_SCRIPTS ON)
+    set(ROCPYJPEG_LIB_DIR "${ROCPYJPEG_BUILD_LIB_DIR}")
+    set(ROCPYJPEG_PY_DIR "${ROCPYJPEG_BUILD_PY_DIR}")
+    message("-- ${White}${PROJECT_NAME}: using in-tree rocPyJPEG build outputs at ${ROCPYJPEG_LIB_DIR}${ColourReset}")
+  endif()
+endif()
+
+# fallback sample/script locations and PYTHONPATH for tests
+set(ROCPYDECODE_SAMPLE_DIR "${ROCPYDECODE_PY_DIR}/samples/rocdecode")
+if(NOT EXISTS "${ROCPYDECODE_SAMPLE_DIR}")
+  set(ROCPYDECODE_SAMPLE_DIR "${CMAKE_SOURCE_DIR}/samples/rocdecode")
+endif()
+get_filename_component(ROCPYDECODE_PY_PARENT "${ROCPYDECODE_PY_DIR}" DIRECTORY)
+set(_ROCPYDECODE_PATHS "${ROCPYDECODE_LIB_DIR}:${ROCPYDECODE_PY_PARENT}")
+if(DEFINED ENV{PYTHONPATH} AND NOT "$ENV{PYTHONPATH}" STREQUAL "")
+  set(ROCPYDECODE_PYTHONPATH "$ENV{PYTHONPATH}:${_ROCPYDECODE_PATHS}")
+else()
+  set(ROCPYDECODE_PYTHONPATH "${_ROCPYDECODE_PATHS}")
+endif()
+
+set(ROCPYJPEG_SAMPLE_DIR "${ROCPYJPEG_PY_DIR}/samples/rocjpeg")
+if(NOT EXISTS "${ROCPYJPEG_SAMPLE_DIR}")
+  set(ROCPYJPEG_SAMPLE_DIR "${CMAKE_SOURCE_DIR}/samples/rocjpeg")
+endif()
+get_filename_component(ROCPYJPEG_PY_PARENT "${ROCPYJPEG_PY_DIR}" DIRECTORY)
+set(_ROCPYJPEG_PATHS "${ROCPYJPEG_LIB_DIR}:${ROCPYJPEG_PY_PARENT}")
+if(DEFINED ENV{PYTHONPATH} AND NOT "$ENV{PYTHONPATH}" STREQUAL "")
+  set(ROCPYJPEG_PYTHONPATH "$ENV{PYTHONPATH}:${_ROCPYJPEG_PATHS}")
+else()
+  set(ROCPYJPEG_PYTHONPATH "${_ROCPYJPEG_PATHS}")
 endif()
 
 # find requirements (optional to allow skipping tests)
@@ -92,7 +167,7 @@ if(rocdecode_FOUND AND VIDEO_DECODE_BINDINGS_INSTALLED)
 elseif(NOT rocdecode_FOUND)
   message("-- ${Yellow}${PROJECT_NAME}: skipping rocPyDecode tests; rocdecode not found.${ColourReset}")
 else()
-  message("-- ${Yellow}${PROJECT_NAME}: skipping rocPyDecode tests; rocPyDecode bindings not installed at ${ROCM_PATH}/lib/pyRocVideoDecode${ColourReset}")
+  message("-- ${Yellow}${PROJECT_NAME}: skipping rocPyDecode tests; rocPyDecode bindings not found in install path or build tree${ColourReset}")
 endif()
 
 if(rocjpeg_FOUND AND JPEG_DECODE_PYBIND_SCRIPTS)
@@ -101,19 +176,19 @@ if(rocjpeg_FOUND AND JPEG_DECODE_PYBIND_SCRIPTS)
 elseif(NOT rocjpeg_FOUND)
   message("-- ${Yellow}${PROJECT_NAME}: skipping rocPyJPEG tests; rocjpeg not found.${ColourReset}")
 else()
-  message("-- ${Yellow}${PROJECT_NAME}: skipping rocPyJPEG tests; rocPyJPEG bindings not installed at ${ROCM_PATH}/lib/pyRocJpegDecode${ColourReset}")
+  message("-- ${Yellow}${PROJECT_NAME}: skipping rocPyJPEG tests; rocPyJPEG bindings not found in install path or build tree${ColourReset}")
 endif()
 
+message("-- ${White}${PROJECT_NAME}: summary RUN_ROCPYDECODE_TESTS=${RUN_ROCPYDECODE_TESTS} RUN_ROCPYDECODE_HOST_TESTS=${RUN_ROCPYDECODE_HOST_TESTS} RUN_ROCPYJPEG_TESTS=${RUN_ROCPYJPEG_TESTS}${ColourReset}")
+
 if(NOT VIDEO_DECODE_BINDINGS_INSTALLED)
-  message("-- ${Yellow}NOTE: ${PROJECT_NAME} requires the video decode bindings to be built and installed before running CTests${ColourReset}")
+  message("-- ${Yellow}NOTE: ${PROJECT_NAME} requires the video decode bindings to be built (build tree or installed) before running CTests${ColourReset}")
 endif()
 if(NOT JPEG_DECODE_PYBIND_SCRIPTS)
-  message("-- ${Yellow}NOTE: ${PROJECT_NAME} requires the JPEG decode bindings to be built and installed before running CTests${ColourReset}")
+  message("-- ${Yellow}NOTE: ${PROJECT_NAME} requires the JPEG decode bindings to be built (build tree or installed) before running CTests${ColourReset}")
 endif()
 
 if(RUN_ROCPYDECODE_TESTS OR RUN_ROCPYJPEG_TESTS)
-  set(Python3_FIND_VIRTUALENV FIRST)
-  find_package(Python3 REQUIRED)
   # Tests
   execute_process(COMMAND ${Python3_EXECUTABLE} -c "import torch" RESULT_VARIABLE TORCH_PYTHON_RESULT OUTPUT_QUIET ERROR_QUIET)
   # add python-hip for perf tests
@@ -130,7 +205,7 @@ if(RUN_ROCPYDECODE_TESTS)
     -i ${ROCM_PATH}/share/rocdecode/video/AMD_driving_virtual_20-H264.mp4
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   )
-  set_property(TEST rocpydecode_test_decoders PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
+  set_property(TEST rocpydecode_test_decoders PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYDECODE_PYTHONPATH}:$PYTHONPATH")
   # 2 - decodercpu test
   if(RUN_ROCPYDECODE_HOST_TESTS)
     add_test(NAME rocpydecode_test_decodercpu
@@ -138,7 +213,7 @@ if(RUN_ROCPYDECODE_TESTS)
       -i ${ROCM_PATH}/share/rocdecode/video/AMD_driving_virtual_20-H264.mp4
       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     )
-    set_property(TEST rocpydecode_test_decodercpu PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
+    set_property(TEST rocpydecode_test_decodercpu PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYDECODE_PYTHONPATH}:$PYTHONPATH")
   endif()
   # 3 - demuxer test
   add_test(NAME rocpydecode_test_demuxer
@@ -146,80 +221,80 @@ if(RUN_ROCPYDECODE_TESTS)
     -i ${ROCM_PATH}/share/rocdecode/video/AMD_driving_virtual_20-H264.mp4
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   )
-  set_property(TEST rocpydecode_test_demuxer PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
+  set_property(TEST rocpydecode_test_demuxer PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYDECODE_PYTHONPATH}:$PYTHONPATH")
   # 4 - types test
   add_test(NAME rocpydecode_test_types
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/types_test.py
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   )
-  set_property(TEST rocpydecode_test_types PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
+  set_property(TEST rocpydecode_test_types PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYDECODE_PYTHONPATH}:$PYTHONPATH")
   # 5 - video_decode_python_H265 test
   add_test(NAME video_decode_python_H265
-    COMMAND ${Python3_EXECUTABLE} ${ROCM_PATH}/lib/pyRocVideoDecode/samples/rocdecode/videodecode.py
+    COMMAND ${Python3_EXECUTABLE} ${ROCPYDECODE_SAMPLE_DIR}/videodecode.py
     -i ${ROCM_PATH}/share/rocdecode/video/AMD_driving_virtual_20-H265.mp4
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   )
-  set_property(TEST video_decode_python_H265 PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
+  set_property(TEST video_decode_python_H265 PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYDECODE_PYTHONPATH}:$PYTHONPATH")
   # 6 - video_decode_perf_python_H265 test
   add_test(NAME video_decode_perf_python_H265
-    COMMAND ${Python3_EXECUTABLE} ${ROCM_PATH}/lib/pyRocVideoDecode/samples/rocdecode/videodecodeperf.py
+    COMMAND ${Python3_EXECUTABLE} ${ROCPYDECODE_SAMPLE_DIR}/videodecodeperf.py
     -i ${ROCM_PATH}/share/rocdecode/video/AMD_driving_virtual_20-H265.mp4
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   )
-  set_property(TEST video_decode_perf_python_H265 PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
+  set_property(TEST video_decode_perf_python_H265 PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYDECODE_PYTHONPATH}:$PYTHONPATH")
   # 7 - video_decode_rgb_python_H265 test
   add_test(NAME video_decode_rgb_python_H265
-    COMMAND ${Python3_EXECUTABLE} ${ROCM_PATH}/lib/pyRocVideoDecode/samples/rocdecode/videodecodergb.py
+    COMMAND ${Python3_EXECUTABLE} ${ROCPYDECODE_SAMPLE_DIR}/videodecodergb.py
     -i ${ROCM_PATH}/share/rocdecode/video/AMD_driving_virtual_20-H265.mp4
     -of 3
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   )
-  set_property(TEST video_decode_rgb_python_H265 PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
+  set_property(TEST video_decode_rgb_python_H265 PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYDECODE_PYTHONPATH}:$PYTHONPATH")
   # 8 - video_decode_python_H264 test
   add_test(NAME video_decode_python_H264
-    COMMAND ${Python3_EXECUTABLE} ${ROCM_PATH}/lib/pyRocVideoDecode/samples/rocdecode/videodecode.py
+    COMMAND ${Python3_EXECUTABLE} ${ROCPYDECODE_SAMPLE_DIR}/videodecode.py
     -i ${ROCM_PATH}/share/rocdecode/video/AMD_driving_virtual_20-H264.mp4 -resize 640 360 -p yes
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   )
-  set_property(TEST video_decode_python_H264 PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
+  set_property(TEST video_decode_python_H264 PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYDECODE_PYTHONPATH}:$PYTHONPATH")
   # 9 - video_decode_perf_python_H264 test
   add_test(NAME video_decode_perf_python_H264
-    COMMAND ${Python3_EXECUTABLE} ${ROCM_PATH}/lib/pyRocVideoDecode/samples/rocdecode/videodecodeperf.py
+    COMMAND ${Python3_EXECUTABLE} ${ROCPYDECODE_SAMPLE_DIR}/videodecodeperf.py
     -i ${ROCM_PATH}/share/rocdecode/video/AMD_driving_virtual_20-H264.mp4
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   )
-  set_property(TEST video_decode_perf_python_H264 PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
+  set_property(TEST video_decode_perf_python_H264 PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYDECODE_PYTHONPATH}:$PYTHONPATH")
   # 10 - video_decode_python_AV1 test
   add_test(NAME video_decode_python_AV1
-    COMMAND ${Python3_EXECUTABLE} ${ROCM_PATH}/lib/pyRocVideoDecode/samples/rocdecode/videodecode.py
+    COMMAND ${Python3_EXECUTABLE} ${ROCPYDECODE_SAMPLE_DIR}/videodecode.py
     -i ${ROCM_PATH}/share/rocdecode/video/AMD_driving_virtual_20-AV1.mp4 -resize 640 360
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   )
-  set_property(TEST video_decode_python_AV1 PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
+  set_property(TEST video_decode_python_AV1 PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYDECODE_PYTHONPATH}:$PYTHONPATH")
   # 11 - video_decode_python_AV9 test
   add_test(NAME video_decode_python_AV9
-    COMMAND ${Python3_EXECUTABLE} ${ROCM_PATH}/lib/pyRocVideoDecode/samples/rocdecode/videodecode.py
+    COMMAND ${Python3_EXECUTABLE} ${ROCPYDECODE_SAMPLE_DIR}/videodecode.py
     -i ${ROCM_PATH}/share/rocdecode/video/AMD_driving_virtual_20-VP9.ivf -resize 640 360
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   )
-  set_property(TEST video_decode_python_AV9 PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
+  set_property(TEST video_decode_python_AV9 PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYDECODE_PYTHONPATH}:$PYTHONPATH")
   if(TORCH_PYTHON_RESULT EQUAL 0 AND RUN_ROCPYDECODE_HOST_TESTS)
     # 12 - video_decode_python_ffmpeg(torch) test
     add_test(NAME video_decode_python_ffmpeg_torch
-      COMMAND ${Python3_EXECUTABLE} ${ROCM_PATH}/lib/pyRocVideoDecode/samples/rocdecode/videodecodetorch_cpu_backend.py
+      COMMAND ${Python3_EXECUTABLE} ${ROCPYDECODE_SAMPLE_DIR}/videodecodetorch_cpu_backend.py
       -i ${ROCM_PATH}/share/rocdecode/video/AMD_driving_virtual_20-H264.mp4 -m 2
       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     )
-    set_property(TEST video_decode_python_ffmpeg_torch PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
+    set_property(TEST video_decode_python_ffmpeg_torch PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYDECODE_PYTHONPATH}:$PYTHONPATH")
   endif()
   # 13 - video_decode_python_ffmpeg test
   if(RUN_ROCPYDECODE_HOST_TESTS)
     add_test(NAME video_decode_python_ffmpeg
-      COMMAND ${Python3_EXECUTABLE} ${ROCM_PATH}/lib/pyRocVideoDecode/samples/rocdecode/videodecode_cpu_backend.py
+      COMMAND ${Python3_EXECUTABLE} ${ROCPYDECODE_SAMPLE_DIR}/videodecode_cpu_backend.py
       -i ${ROCM_PATH}/share/rocdecode/video/AMD_driving_virtual_20-H264.mp4 -m 2
       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     )
-    set_property(TEST video_decode_python_ffmpeg PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
+    set_property(TEST video_decode_python_ffmpeg PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYDECODE_PYTHONPATH}:$PYTHONPATH")
   endif()
   # 14 - all_other_decoder_apis test
   add_test(NAME all_other_decoder_apis
@@ -227,22 +302,22 @@ if(RUN_ROCPYDECODE_TESTS)
     -i ${ROCM_PATH}/share/rocdecode/video/AMD_driving_virtual_20-H264.mp4
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   )
-  set_property(TEST all_other_decoder_apis PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
+  set_property(TEST all_other_decoder_apis PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYDECODE_PYTHONPATH}:$PYTHONPATH")
 endif()
 
 if(RUN_ROCPYJPEG_TESTS)
   # 15 - jpeg_decode_single_file_test
   if(TORCH_PYTHON_RESULT EQUAL 0)
     add_test(NAME jpeg_decode_python
-      COMMAND ${Python3_EXECUTABLE} ${ROCM_PATH}/lib/pyRocJpegDecode/samples/rocjpeg/jpegdecode.py
+      COMMAND ${Python3_EXECUTABLE} ${ROCPYJPEG_SAMPLE_DIR}/jpegdecode.py
       -i ${ROCM_PATH}/share/rocjpeg/images/mug_420.jpg
       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-    set_property(TEST jpeg_decode_python PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
+    set_property(TEST jpeg_decode_python PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYJPEG_PYTHONPATH}:$PYTHONPATH")
   endif(TORCH_PYTHON_RESULT EQUAL 0)
   # 16 - jpegdecodebatched_test
   add_test(NAME jpeg_decode_batched_python
-    COMMAND ${Python3_EXECUTABLE} ${ROCM_PATH}/lib/pyRocJpegDecode/samples/rocjpeg/jpegdecodebatched.py
+    COMMAND ${Python3_EXECUTABLE} ${ROCPYJPEG_SAMPLE_DIR}/jpegdecodebatched.py
     -i ${ROCM_PATH}/share/rocjpeg/images/
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-  set_property(TEST jpeg_decode_batched_python PROPERTY ENVIRONMENT "PYTHONPATH=${ROCM_PATH}/lib:$PYTHONPATH")
+  set_property(TEST jpeg_decode_batched_python PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYJPEG_PYTHONPATH}:$PYTHONPATH")
 endif()
