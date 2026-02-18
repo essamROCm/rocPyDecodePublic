@@ -303,7 +303,7 @@ if(RUN_ROCPYDECODE_TESTS)
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   )
   set_property(TEST all_other_decoder_apis PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYDECODE_PYTHONPATH}:$PYTHONPATH")
-  # 15 - full API coverage helper (Python-driven)
+  # (15) - full API coverage helper (Python-driven)
   add_test(NAME rocpydecode_full_coverage
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_rocdecode.py
     --video ${ROCM_PATH}/share/rocdecode/video/AMD_driving_virtual_20-H265.mp4
@@ -327,7 +327,7 @@ if(RUN_ROCPYJPEG_TESTS)
     -i ${ROCM_PATH}/share/rocjpeg/images/
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
   set_property(TEST jpeg_decode_batched_python PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYJPEG_PYTHONPATH}:$PYTHONPATH")
-  # 18 - full API coverage helper (Python-driven)
+  # (18) - full API coverage helper (Python-driven)
   add_test(NAME rocpyjpeg_full_coverage
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_rocjpeg.py
     --jpeg ${ROCM_PATH}/share/rocjpeg/images/
