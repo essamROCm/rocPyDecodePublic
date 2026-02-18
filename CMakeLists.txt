@@ -43,9 +43,7 @@ endif()
 set(VERSION "0.8.0")
 
 # Force HIP to use the ROCm backend for this configure
-set(ENV{HIP_PLATFORM} "amd")
-# Only needed if something else set this env var and it conflicts
-unset(ENV{CMAKE_HIP_PLATFORM})
+set (HIP_PLATFORM amd CACHE STRING "HIP platform")
 
 # Set Project Version and Language
 project(rocpydecode VERSION ${VERSION} LANGUAGES CXX)
