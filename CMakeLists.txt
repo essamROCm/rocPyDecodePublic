@@ -42,9 +42,6 @@ endif()
 # lib version - NOTE: update version across multiple files
 set(VERSION "0.8.0")
 
-# Force HIP to use the ROCm backend for this configure
-set (HIP_PLATFORM amd CACHE STRING "HIP platform")
-
 # Set Project Version and Language
 project(rocpydecode VERSION ${VERSION} LANGUAGES CXX)
 set(TARGET_NAME rocpydecode)
@@ -145,6 +142,9 @@ endif()
 
 # rocPyDecode build
 set(CMAKE_SKIP_BUILD_RPATH true)
+
+# Force HIP to use the ROCm backend for this configure
+set (HIP_PLATFORM amd CACHE STRING "HIP platform")
 
 # Find dependencies
 find_package(HIP REQUIRED)
