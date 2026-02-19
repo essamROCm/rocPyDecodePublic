@@ -12,33 +12,6 @@ import pyRocVideoDecode.demuxer as dmx
 import pyRocVideoDecode.types as dectypes
 
 
-def _safe_str(val):
-    """Return a printable string even if the underlying value has bad encoding."""
-    try:
-        return str(val)
-    except UnicodeDecodeError:
-        if isinstance(val, (bytes, bytearray)):
-            return val.decode("utf-8", errors="replace")
-        return repr(val)
-    except Exception:
-        return repr(val)
-
-
-def _torch_device_info(device_id):
-    """Best-effort device info via torch; falls back to None on failure."""
-    try:
-        props = torch.cuda.get_device_properties(device_id)
-        return {
-            "name": props.name,
-            "gcn": getattr(props, "gcnArchName", ""),
-            "bus": getattr(props, "pci_bus_id", None),
-            "domain": getattr(props, "pci_domain_id", None),
-            "device": getattr(props, "pci_device_id", None),
-        }
-    except Exception:
-        return None
-
-
 def Decoder(
         input_file_path,
         output_file_path,
@@ -53,43 +26,20 @@ def Decoder(
     # get the used coded id
     codec_id = dec.GetRocDecCodecID(demuxer.GetCodecId())
 
-    # decoder instance
-    viddec = dec.decodercpu(       
+    # decoder instance (CPU backend)
+    viddec = dec.decodercpu(
         codec_id,
         device_id,
         mem_type)
 
-    # Get device information (library) and a torch fallback
-    cfg = viddec.GetGpuInfo()
-    torch_info = _torch_device_info(device_id)
-
     # check if codec is supported
     if (viddec.IsCodecSupported(device_id, codec_id, demuxer.GetBitDepth()) == False):
-        print("ERROR: Codec is not supported on this device " + cfg.device_name)
+        print("ERROR: Codec is not supported on this device/backend.")
         exit()
 
-    #  print some device info out
-    device_name = torch_info["name"] if torch_info and torch_info["name"] else _safe_str(cfg.device_name)
-    gcn_arch = torch_info["gcn"] if torch_info and torch_info["gcn"] else _safe_str(cfg.gcn_arch_name)
-    pci_bus = torch_info["bus"] if torch_info and torch_info["bus"] is not None else cfg.pci_bus_id
-    pci_domain = torch_info["domain"] if torch_info and torch_info["domain"] is not None else cfg.pci_domain_id
-    pci_device = torch_info["device"] if torch_info and torch_info["device"] is not None else cfg.pci_device_id
-
-    print("\ninfo: Input file: " +
-          input_file_path +
-          '\n' +
-          "info: Using device " +
-          str(device_id) +
-          " - " +
-          device_name +
-          "[" +
-          gcn_arch +
-          "] on PCI bus " +
-          str(pci_bus) +
-          ":" +
-          str(pci_domain) +
-          "." +
-          str(pci_device))
+    #  print backend info
+    print("\ninfo: Input file: " + input_file_path)
+    print("info: Using CPU backend (device_id=" + str(device_id) + ", mem_type=" + str(mem_type) + ")")
     print("info: decoding started, please wait! \n")
 
     # -----------------
@@ -183,7 +133,7 @@ if __name__ == "__main__":
         '--device',
         type=int,
         default=0,
-        help='GPU device ID - optional, default 0',
+        help='Device ID (kept for API compatibility), default 0',
         required=False)
     parser.add_argument(
         '-m',
@@ -226,7 +176,7 @@ if __name__ == "__main__":
         print("ERROR: input file doesn't exist.")
         exit()
 
-    # torch GPU
+    # torch device
     print("\nPyTorch Using: ", torch.cuda.get_device_name(0))
 
     Decoder(
