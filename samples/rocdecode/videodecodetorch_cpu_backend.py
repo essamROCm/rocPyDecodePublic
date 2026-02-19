@@ -12,6 +12,33 @@ import pyRocVideoDecode.demuxer as dmx
 import pyRocVideoDecode.types as dectypes
 
 
+def _safe_str(val):
+    """Return a printable string even if the underlying value has bad encoding."""
+    try:
+        return str(val)
+    except UnicodeDecodeError:
+        if isinstance(val, (bytes, bytearray)):
+            return val.decode("utf-8", errors="replace")
+        return repr(val)
+    except Exception:
+        return repr(val)
+
+
+def _torch_device_info(device_id):
+    """Best-effort device info via torch; falls back to None on failure."""
+    try:
+        props = torch.cuda.get_device_properties(device_id)
+        return {
+            "name": props.name,
+            "gcn": getattr(props, "gcnArchName", ""),
+            "bus": getattr(props, "pci_bus_id", None),
+            "domain": getattr(props, "pci_domain_id", None),
+            "device": getattr(props, "pci_device_id", None),
+        }
+    except Exception:
+        return None
+
+
 def Decoder(
         input_file_path,
         output_file_path,
@@ -32,30 +59,37 @@ def Decoder(
         device_id,
         mem_type)
 
-    # Get GPU device information
+    # Get device information (library) and a torch fallback
     cfg = viddec.GetGpuInfo()
+    torch_info = _torch_device_info(device_id)
 
     # check if codec is supported
     if (viddec.IsCodecSupported(device_id, codec_id, demuxer.GetBitDepth()) == False):
-        print("ERROR: Codec is not supported on this GPU " + cfg.device_name)
+        print("ERROR: Codec is not supported on this device " + cfg.device_name)
         exit()
 
-    #  print some GPU info out
+    #  print some device info out
+    device_name = torch_info["name"] if torch_info and torch_info["name"] else _safe_str(cfg.device_name)
+    gcn_arch = torch_info["gcn"] if torch_info and torch_info["gcn"] else _safe_str(cfg.gcn_arch_name)
+    pci_bus = torch_info["bus"] if torch_info and torch_info["bus"] is not None else cfg.pci_bus_id
+    pci_domain = torch_info["domain"] if torch_info and torch_info["domain"] is not None else cfg.pci_domain_id
+    pci_device = torch_info["device"] if torch_info and torch_info["device"] is not None else cfg.pci_device_id
+
     print("\ninfo: Input file: " +
           input_file_path +
           '\n' +
-          "info: Using GPU device " +
+          "info: Using device " +
           str(device_id) +
           " - " +
-          cfg.device_name +
+          device_name +
           "[" +
-          cfg.gcn_arch_name +
+          gcn_arch +
           "] on PCI bus " +
-          str(cfg.pci_bus_id) +
+          str(pci_bus) +
           ":" +
-          str(cfg.pci_domain_id) +
+          str(pci_domain) +
           "." +
-          str(cfg.pci_device_id))
+          str(pci_device))
     print("info: decoding started, please wait! \n")
 
     # -----------------
