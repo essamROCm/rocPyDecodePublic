@@ -82,6 +82,18 @@ endif()
 message("-- ${BoldBlue}rocPyDecode Version -- ${VERSION}${ColourReset}")
 message("-- ${BoldBlue}rocPyDecode Install Path -- ${CMAKE_INSTALL_PREFIX}${ColourReset}")
 
+# Check if lib/rocm_sysdeps/lib exists in the ROCm path which indicates ROCm installation via TheRock
+set(USING_THE_ROCK OFF)
+if(EXISTS "${ROCM_PATH}/lib/rocm_sysdeps/lib")
+  set(USING_THE_ROCK ON)
+endif()
+if(USING_THE_ROCK)
+  if(NOT DEFINED ENV{HIP_DEVICE_LIB_PATH})
+    set(ENV{HIP_DEVICE_LIB_PATH} ${ROCM_PATH}/lib/llvm/amdgcn/bitcode)
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "HIP_DEVICE_LIB_PATH=${ROCM_PATH}/lib/llvm/amdgcn/bitcode")
+  endif()
+endif()
+
 # CMake Config location
 list(APPEND CMAKE_PREFIX_PATH ${ROCM_PATH}/lib/cmake)
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
@@ -142,6 +154,9 @@ endif()
 
 # rocPyDecode build
 set(CMAKE_SKIP_BUILD_RPATH true)
+
+# Force HIP to use the ROCm backend for this configure
+set (HIP_PLATFORM amd CACHE STRING "HIP platform")
 
 # Find dependencies
 find_package(HIP REQUIRED)
@@ -268,6 +283,11 @@ if(ROCPYDECODE_DEPENDENCY_READY OR ROCPYJPEG_DEPENDENCY_READY)
             set(TARGET_NAME_VERSIONED "${TARGET_NAME}_${PY_VERSION_SUFFIX}")
             pybind11_add_module(${TARGET_NAME_VERSIONED} MODULE ${sources})
             target_link_libraries(${TARGET_NAME_VERSIONED} PRIVATE ${LINK_LIBRARY_LIST} ${Python3_LIBRARIES})
+
+            if(USING_THE_ROCK)
+                set_target_properties(${TARGET_NAME_VERSIONED} PROPERTIES INSTALL_RPATH "$ORIGIN;$ORIGIN/rocm_sysdeps/lib" BUILD_WITH_INSTALL_RPATH TRUE)
+            endif()
+
             target_compile_definitions(${TARGET_NAME_VERSIONED} PRIVATE ROCPYDECODE_ENABLE_HOST=$<BOOL:${ROCPYDECODE_HOST_LIBRARY_FOUND}>)
 
             target_include_directories(${TARGET_NAME_VERSIONED} PRIVATE ${pybind11_INCLUDE_DIRS} ${Python3_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -300,6 +320,9 @@ if(ROCPYDECODE_DEPENDENCY_READY OR ROCPYJPEG_DEPENDENCY_READY)
             set(TARGET_NAME_JPEG_VERSIONED "${TARGET_NAME_JPEG}_${PY_VERSION_SUFFIX}")
             pybind11_add_module(${TARGET_NAME_JPEG_VERSIONED} MODULE ${sources_jpeg})
             target_link_libraries(${TARGET_NAME_JPEG_VERSIONED} PRIVATE ${LINK_LIBRARY_LIST_JPEG} ${Python3_LIBRARIES})
+            if(USING_THE_ROCK)
+                set_target_properties(${TARGET_NAME_JPEG_VERSIONED} PROPERTIES INSTALL_RPATH "$ORIGIN;$ORIGIN/rocm_sysdeps/lib" BUILD_WITH_INSTALL_RPATH TRUE)
+            endif()
             target_include_directories(${TARGET_NAME_JPEG_VERSIONED} PRIVATE ${pybind11_INCLUDE_DIRS} ${Python3_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/src)
             foreach(filename ${pyfiles_jpeg})
                 get_filename_component(target "${filename}" REALPATH)

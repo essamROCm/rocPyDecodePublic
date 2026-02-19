@@ -188,6 +188,12 @@ if(NOT JPEG_DECODE_PYBIND_SCRIPTS)
   message("-- ${Yellow}NOTE: ${PROJECT_NAME} requires the JPEG decode bindings to be built (build tree or installed) before running CTests${ColourReset}")
 endif()
 
+# Check if lib/rocm_sysdeps/lib exists in the ROCm path which indicates ROCm installation via TheRock
+set(USING_THE_ROCK OFF)
+if(EXISTS "${ROCM_PATH}/lib/rocm_sysdeps/lib")
+  set(USING_THE_ROCK ON)
+endif()
+
 if(RUN_ROCPYDECODE_TESTS OR RUN_ROCPYJPEG_TESTS)
   # Tests
   execute_process(COMMAND ${Python3_EXECUTABLE} -c "import torch" RESULT_VARIABLE TORCH_PYTHON_RESULT OUTPUT_QUIET ERROR_QUIET)
@@ -241,7 +247,13 @@ if(RUN_ROCPYDECODE_TESTS)
     -i ${ROCM_PATH}/share/rocdecode/video/AMD_driving_virtual_20-H265.mp4
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   )
-  set_property(TEST video_decode_perf_python_H265 PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYDECODE_PYTHONPATH}:$PYTHONPATH")
+  if(USING_THE_ROCK)
+    set_property(TEST video_decode_perf_python_H265 PROPERTY ENVIRONMENT
+      "PYTHONPATH=${ROCPYDECODE_PYTHONPATH}:$ENV{PYTHONPATH}"
+      "LD_LIBRARY_PATH=${ROCM_PATH}/lib:$ENV{LD_LIBRARY_PATH}")
+  else()
+    set_property(TEST video_decode_perf_python_H265 PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYDECODE_PYTHONPATH}:$PYTHONPATH")
+  endif()
   # 7 - video_decode_rgb_python_H265 test
   add_test(NAME video_decode_rgb_python_H265
     COMMAND ${Python3_EXECUTABLE} ${ROCPYDECODE_SAMPLE_DIR}/videodecodergb.py
@@ -263,7 +275,13 @@ if(RUN_ROCPYDECODE_TESTS)
     -i ${ROCM_PATH}/share/rocdecode/video/AMD_driving_virtual_20-H264.mp4
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   )
-  set_property(TEST video_decode_perf_python_H264 PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYDECODE_PYTHONPATH}:$PYTHONPATH")
+  if(USING_THE_ROCK)
+    set_property(TEST video_decode_perf_python_H264 PROPERTY ENVIRONMENT
+      "PYTHONPATH=${ROCPYDECODE_PYTHONPATH}:$ENV{PYTHONPATH}"
+      "LD_LIBRARY_PATH=${ROCM_PATH}/lib:$ENV{LD_LIBRARY_PATH}")
+  else()
+    set_property(TEST video_decode_perf_python_H264 PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYDECODE_PYTHONPATH}:$PYTHONPATH")
+  endif()
   # 10 - video_decode_python_AV1 test
   add_test(NAME video_decode_python_AV1
     COMMAND ${Python3_EXECUTABLE} ${ROCPYDECODE_SAMPLE_DIR}/videodecode.py
