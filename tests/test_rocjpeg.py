@@ -99,12 +99,14 @@ def exercise_utils(rj):
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description="Full-surface coverage driver for rocpyjpegdecode")
     parser.add_argument("--jpeg", type=str, required=True, help="Path to a JPEG file or directory containing JPEGs")
+    parser.add_argument("--backend", type=int, default=0, choices=[0, 1], help="rocjpeg backend: 0=GPU (hardware), 1=CPU (hybrid)")
+    parser.add_argument("--device", type=int, default=0, help="GPU device id (when backend=0)")
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)  # internal use
     args = parser.parse_args(argv)
 
     # Launch heavy decode work in a subprocess so backend failures (exit from C++) don't kill the main test runner.
     if not args.worker:
-        cmd = [sys.executable, __file__, "--worker", "--jpeg", args.jpeg]
+        cmd = [sys.executable, __file__, "--worker", "--jpeg", args.jpeg, "--backend", str(args.backend), "--device", str(args.device)]
         result = subprocess.run(cmd)
         if result.returncode == 0:
             return 0
@@ -119,6 +121,9 @@ def main(argv: list[str]) -> int:
 
     import rocpyjpegdecode as rj
 
+    device_id = args.device
+    requested_backend = args.backend
+
     exercise_utils(rj)
 
     # constructors coverage using the first sample
@@ -126,13 +131,23 @@ def main(argv: list[str]) -> int:
     code_streams = build_code_streams(rj, first_sample)
     decode_sources = [rj.DecodeSource(cs) for cs in code_streams]
 
-    backend = rj.jpegTypes.ROCJPEG_BACKEND_HARDWARE
-    try:
-        decoder = rj.Decoder(0, backend, rj.jpegTypes.ROCJPEG_OUTPUT_RGB)
-    except Exception as exc:
-        # signal subprocess failure so parent tries another backend
-        print(f"Decoder init failed for backend {backend}: {exc}")
-        return 1
+    backends = [(requested_backend, "requested")]
+    if requested_backend == rj.jpegTypes.ROCJPEG_BACKEND_HARDWARE:
+        backends.append((rj.jpegTypes.ROCJPEG_BACKEND_HYBRID, "CPU fallback"))
+
+    decoder = None
+    last_exc = None
+    for b, label in backends:
+        try:
+            decoder = rj.Decoder(device_id, b, rj.jpegTypes.ROCJPEG_OUTPUT_RGB)
+            print(f"Using rocjpeg backend {b} ({label})")
+            break
+        except Exception as exc:
+            print(f"rocjpeg backend {b} ({label}) unavailable: {exc}")
+            last_exc = exc
+    if decoder is None:
+        print(f"No rocjpeg backend available; skipping. Last error: {last_exc}")
+        return 0
 
     # single decode in multiple formats
     for out_fmt in [
