@@ -351,4 +351,17 @@ if(RUN_ROCPYJPEG_TESTS)
     --jpeg ${ROCM_PATH}/share/rocjpeg/images/
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
   set_property(TEST rocpyjpeg_full_coverage PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYJPEG_PYTHONPATH}:$PYTHONPATH")
+  # (19) - rocjpeg format coverage helper (stable formats only)
+  add_test(NAME rocpyjpeg_formats
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_rocjpeg_formats.py
+    --jpeg ${ROCM_PATH}/share/rocjpeg/images/
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+  set_property(TEST rocpyjpeg_formats PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYJPEG_PYTHONPATH}:$PYTHONPATH")
 endif()
+
+# Ensure all tests see the required shared libraries at runtime
+get_property(_all_tests DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY TESTS)
+set(_COMMON_LD_PATH "${ROCM_PATH}/lib:${ROCPYDECODE_LIB_DIR}:${ROCPYJPEG_LIB_DIR}:$ENV{LD_LIBRARY_PATH}")
+foreach(t ${_all_tests})
+  set_property(TEST ${t} APPEND PROPERTY ENVIRONMENT "LD_LIBRARY_PATH=${_COMMON_LD_PATH}")
+endforeach()

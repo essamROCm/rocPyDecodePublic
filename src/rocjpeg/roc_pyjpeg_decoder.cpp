@@ -198,12 +198,19 @@ std::pair<float, std::vector<PyJpegImages>> Decoder::decode(std::vector<DecodeSo
 
 // set the user desired output_format
 void Decoder::SetOutputFormat(RocJpegOutputFormat output_format) {
-    if(output_format != ROCJPEG_OUTPUT_RGB && output_format != ROCJPEG_OUTPUT_RGB_PLANAR) {
-        std::cerr << "ERROR: Unsupported output format, defaulting to ROCJPEG_OUTPUT_RGB." << std::endl;
-        user_output_format = ROCJPEG_OUTPUT_RGB; // default
-        return;
+    switch (output_format) {
+        case ROCJPEG_OUTPUT_RGB:
+        case ROCJPEG_OUTPUT_RGB_PLANAR:
+        case ROCJPEG_OUTPUT_YUV_PLANAR:
+        case ROCJPEG_OUTPUT_Y:
+        case ROCJPEG_OUTPUT_NATIVE:
+            user_output_format = output_format;
+            break;
+        default:
+            std::cerr << "ERROR: Unsupported output format, defaulting to ROCJPEG_OUTPUT_RGB." << std::endl;
+            user_output_format = ROCJPEG_OUTPUT_RGB; // default
+            break;
     }
-    user_output_format = output_format;
 }
 
 Decoder::~Decoder() {
