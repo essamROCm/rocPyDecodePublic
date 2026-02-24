@@ -49,25 +49,18 @@ parser.add_argument('--rocm_path', type=str, default='/opt/rocm',
                     help='ROCm Installation Path - optional (default:/opt/rocm) - ROCm Installation Required')
 
 args = parser.parse_args()
-ROCM_PATH = args.rocm_path
-
-# Detect TheRock layout first: default install prefix at $HOME/install
-home_install = os.path.join(str(Path.home()), 'install')
-the_rock_sysdeps_home = os.path.join(home_install, 'lib', 'rocm_sysdeps', 'lib')
 USING_THE_ROCK = False
-if os.path.exists(the_rock_sysdeps_home):
-    USING_THE_ROCK = True
-    ROCM_PATH = home_install
-    os.environ['ROCM_PATH'] = ROCM_PATH  # keep in-process environment consistent
-    print("\nTheRock ROCm installation detected (found: " + the_rock_sysdeps_home + ")\n")
+
+# ROCm path selection: prefer explicit CLI arg, else environment, else default
+rocm_arg_provided = '--rocm_path' in sys.argv
+if rocm_arg_provided and args.rocm_path:
+    ROCM_PATH = args.rocm_path
+elif "ROCM_PATH" in os.environ:
+    ROCM_PATH = os.environ.get('ROCM_PATH')
 else:
-    # CMake-style ROCM_PATH selection: env override, then user arg, else default (/opt/rocm from argparse)
-    if "ROCM_PATH" in os.environ:
-        ROCM_PATH = os.environ.get('ROCM_PATH')
-    elif args.rocm_path:
-        ROCM_PATH = args.rocm_path
-    else:
-        ROCM_PATH = '/opt/rocm'
+    ROCM_PATH = parser.get_default('rocm_path')
+
+os.environ['ROCM_PATH'] = ROCM_PATH  # keep in-process environment consistent
 
 print("\nROCm PATH set to -- "+ROCM_PATH+"\n")
 
