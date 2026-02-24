@@ -24,6 +24,11 @@ THE SOFTWARE.
 
 #include <iostream>
 
+#ifndef ROCPYDECODE_USE_FFMPEG
+#define ROCPYDECODE_USE_FFMPEG 1
+#endif
+
+#if ROCPYDECODE_USE_FFMPEG
 extern "C" {
     #include <libavcodec/avcodec.h>
     #include <libavformat/avformat.h>
@@ -31,6 +36,7 @@ extern "C" {
         #include <libavcodec/bsf.h>
     #endif
 }
+#endif
 
 #include "roc_video_dec.h"
 #include "common/roc_pybuffer.h"
@@ -71,11 +77,13 @@ struct ConfigInfo {
     int         pci_device_id;
 };
 
-// defined in roc_pyvideodemuxer.cpp
+// defined in roc_pyvideodemuxer.cpp (FFmpeg dependent)
+#if ROCPYDECODE_USE_FFMPEG
 void PyVideoDemuxerInitializer(py::module& m);
 void PyVideoStreamProviderInitializer(py::module& m);
 rocDecVideoCodec ConvertAVCodec2RocDecVideoCodec(int av_codec);
 rocDecVideoCodec ConvertAVCodecString2RocDecVideoCodec(std::string codec_name);
+#endif
 
 // defined in roc_pyvideodecoder.cpp
 void PyRocVideoDecoderInitializer(py::module& m);

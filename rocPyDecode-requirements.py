@@ -51,9 +51,24 @@ parser.add_argument('--rocm_path', type=str, default='/opt/rocm',
 args = parser.parse_args()
 ROCM_PATH = args.rocm_path
 
-# override default path if env path set 
-if "ROCM_PATH" in os.environ:
-    ROCM_PATH = os.environ.get('ROCM_PATH')
+# Detect TheRock layout first: default install prefix at $HOME/install
+home_install = os.path.join(str(Path.home()), 'install')
+the_rock_sysdeps_home = os.path.join(home_install, 'lib', 'rocm_sysdeps', 'lib')
+USING_THE_ROCK = False
+if os.path.exists(the_rock_sysdeps_home):
+    USING_THE_ROCK = True
+    ROCM_PATH = home_install
+    os.environ['ROCM_PATH'] = ROCM_PATH  # keep in-process environment consistent
+    print("\nTheRock ROCm installation detected (found: " + the_rock_sysdeps_home + ")\n")
+else:
+    # CMake-style ROCM_PATH selection: env override, then user arg, else default (/opt/rocm from argparse)
+    if "ROCM_PATH" in os.environ:
+        ROCM_PATH = os.environ.get('ROCM_PATH')
+    elif args.rocm_path:
+        ROCM_PATH = args.rocm_path
+    else:
+        ROCM_PATH = '/opt/rocm'
+
 print("\nROCm PATH set to -- "+ROCM_PATH+"\n")
 
 # check ROCm installation
@@ -65,6 +80,12 @@ else:
         "WARNING: If ROCm installed, set ROCm Path with \"--rocm_path\" option for full installation [Default:/opt/rocm]\n")
     print("ERROR: rocPyDecode Setup requires ROCm install\n")
     exit(-1)
+
+# Detect TheRock style ROCm installation (bundles libs under rocm_sysdeps)
+THE_ROCK_SYSDEPS = os.path.join(ROCM_PATH, 'lib', 'rocm_sysdeps', 'lib')
+if os.path.exists(THE_ROCK_SYSDEPS):
+    USING_THE_ROCK = True
+    print("\nTheRock ROCm installation detected (found: " + THE_ROCK_SYSDEPS + ")\n")
 
 # get platform info
 platformInfo = platform.platform()
@@ -173,6 +194,12 @@ coreRPMPackages = [
     'python3-pip',
     'python3-numpy'
 ]
+
+# TheRock installs bundle rocdecode/rocjpeg into rocm_sysdeps, so skip those packages
+if USING_THE_ROCK:
+    coreDebianPackages = [pkg for pkg in coreDebianPackages if not pkg.startswith(('rocdecode', 'rocjpeg'))]
+    coreRPMPackages = [pkg for pkg in coreRPMPackages if not pkg.startswith(('rocdecode', 'rocjpeg'))]
+    print("Skipping rocdecode/rocjpeg package installs for TheRock ROCm layout\n")
 
 # update
 ERROR_CHECK(os.system('sudo '+linuxFlag+' '+linuxSystemInstall +' '+linuxSystemInstall_check+' '+osUpdate))
