@@ -24,10 +24,6 @@ THE SOFTWARE.
 
 #include <iostream>
 
-#ifndef ROCPYDECODE_USE_FFMPEG
-#define ROCPYDECODE_USE_FFMPEG 1
-#endif
-
 #if ROCPYDECODE_USE_FFMPEG
 extern "C" {
     #include <libavcodec/avcodec.h>

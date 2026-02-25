@@ -97,17 +97,6 @@ endif()
 # CMake Config location
 list(APPEND CMAKE_PREFIX_PATH ${ROCM_PATH}/lib/cmake)
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
-# Ensure HIP package config can be found
-if(NOT DEFINED HIP_DIR)
-    if(EXISTS "${ROCM_PATH}/lib/cmake/hip")
-        set(HIP_DIR "${ROCM_PATH}/lib/cmake/hip")
-    elseif(EXISTS "${ROCM_PATH}/hip/lib/cmake/hip")
-        set(HIP_DIR "${ROCM_PATH}/hip/lib/cmake/hip")
-    endif()
-endif()
-if(DEFINED HIP_DIR)
-    list(APPEND CMAKE_PREFIX_PATH "${HIP_DIR}")
-endif()
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "${DEFAULT_BUILD_TYPE}" CACHE STRING "rocPyDecode Default Build Type" FORCE)
