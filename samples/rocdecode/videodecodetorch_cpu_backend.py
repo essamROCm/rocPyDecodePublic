@@ -32,30 +32,8 @@ def Decoder(
         device_id,
         mem_type)
 
-    # Get GPU device information
-    cfg = viddec.GetGpuInfo()
-
-    # check if codec is supported
-    if (viddec.IsCodecSupported(device_id, codec_id, demuxer.GetBitDepth()) == False):
-        print("ERROR: Codec is not supported on this GPU " + cfg.device_name)
-        exit()
-
-    #  print some GPU info out
-    print("\ninfo: Input file: " +
-          input_file_path +
-          '\n' +
-          "info: Using GPU device " +
-          str(device_id) +
-          " - " +
-          cfg.device_name +
-          "[" +
-          cfg.gcn_arch_name +
-          "] on PCI bus " +
-          str(cfg.pci_bus_id) +
-          ":" +
-          str(cfg.pci_domain_id) +
-          "." +
-          str(cfg.pci_device_id))
+    # Print basic info
+    print("\ninfo: Input file: " + input_file_path)
     print("info: decoding started, please wait! \n")
 
     # -----------------
