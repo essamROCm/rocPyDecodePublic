@@ -16,12 +16,10 @@ def _resolve_codec(codec_arg, input_path):
         name = codec_arg.lower()
     else:
         name = Path(input_path).suffix.lower().lstrip(".")
-
     if name in ("h264", "264", "avc"):
         return dectypes.rocDecVideoCodec_AVC, "H.264/AVC"
     if name in ("h265", "265", "hevc"):
         return dectypes.rocDecVideoCodec_HEVC, "H.265/HEVC"
-
     raise ValueError(
         "Unable to infer codec. Pass --codec {h264|h265} or use a .h264/.h265 filename."
     )
@@ -33,12 +31,31 @@ def _normalize_output_path(output_arg, input_path):
     output_path = Path(output_arg)
     if output_path.is_dir():
         output_path = output_path / (Path(input_path).stem + ".yuv")
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    return str(output_path)
+    return output_path
+
+
+def _surface_format_tag(surface_format: int) -> str:
+    if surface_format == dectypes.rocDecVideoSurfaceFormat_NV12 or surface_format == dectypes.rocDecVideoSurfaceFormat_P016:
+        return "YUV420"
+    if surface_format == dectypes.rocDecVideoSurfaceFormat_YUV444:
+        return "YUV444"
+    if surface_format == dectypes.rocDecVideoSurfaceFormat_YUV444_16Bit:
+        return "YUV444_16"
+    return "YUV"
+
+
+def _format_output_path(base_path: Path, input_path: str, width: int, height: int, bit_depth: int, fmt_tag: str) -> Path:
+    # Append resolution/bitdepth/format to filename before extension.
+    p = base_path
+    if p.is_dir():
+        p = p / Path(input_path).stem
+    stem = p.stem
+    suffix = p.suffix if p.suffix else ".yuv"
+    return p.with_name(f"{stem}_{width}x{height}_{bit_depth}Bit_{fmt_tag}{suffix}")
 
 
 def _annexb_slices(data: memoryview):
-    """Yield memoryview slices for each Annex-B NAL unit (includes start code)."""
+    # memoryview slices for each Annex-B NAL unit (includes start code).
     starts = []
     i = 0
     n = len(data)
@@ -78,10 +95,6 @@ def decode_raw(
         max_height=0,
         clk_rate=1000,
     )
-    # configure flush behavior/output path
-    flush_mode = 1 if output_path else 0
-    decoder.SetReconfigParams(flush_mode, output_path if output_path else "")
-
     gpu_info = decoder.GetGpuInfo()
     print(
         f"info: Input={input_path}\n"
@@ -93,9 +106,11 @@ def decode_raw(
     frame_count = 0
     start_time = time.time()
     frame_index = 0
+    output_final_path = None
+    flush_mode = 1 if output_path else 0
 
     def feed_packet(buf, is_eos=False):
-        nonlocal frame_count, frame_index
+        nonlocal frame_count, frame_index, output_final_path
         packet = dec.GetRocPyDecPacket(frame_index, len(buf), buf)
         packet.pkt_flags = 0
         packet.end_of_stream = False
@@ -104,8 +119,17 @@ def decode_raw(
         decoded_now = decoder.DecodeFrame(packet)
         for _ in range(decoded_now):
             decoder.GetFrameYuv(packet, False)
+            if output_path and output_final_path is None:
+                width = decoder.GetWidth()
+                height = decoder.GetHeight()
+                bit_depth = decoder.GetBitDepth()
+                fmt_tag = "YUV"  # default; surface format not exposed in this wrapper
+                output_final = _format_output_path(Path(output_path), input_path, width, height, bit_depth, fmt_tag)
+                decoder.SetReconfigParams(flush_mode, str(output_final))
+                output_final_path = output_final
             if output_path:
-                decoder.SaveFrameToFile(output_path, packet.frame_adrs)
+                target = output_final_path if output_final_path else output_path
+                decoder.SaveFrameToFile(str(target), packet.frame_adrs)
             decoder.ReleaseFrame(packet)
             frame_count += 1
             frame_index += 1
@@ -163,7 +187,7 @@ def main():
     parser.add_argument(
         "-o",
         "--output",
-        help="Output path to save decoded YUV frames (optional). If a directory, a .yuv file is created inside.",
+        help=("Output file to save decoded YUV frames (optional). Provide a filename or full path."),
     )
     parser.add_argument(
         "-d",
