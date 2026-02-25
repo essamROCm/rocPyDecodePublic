@@ -319,8 +319,15 @@ if(RUN_ROCPYDECODE_TESTS)
       )
       set_property(TEST video_decode_python_ffmpeg PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYDECODE_PYTHONPATH}:$PYTHONPATH")
     endif()
+    # 14 - video_decode_raw_python (Annex-B raw bitstream)
+    add_test(NAME video_decode_raw_python
+      COMMAND ${Python3_EXECUTABLE} ${ROCPYDECODE_SAMPLE_DIR}/videodecoderaw.py
+      -i ${ROCM_PATH}/share/rocdecode/video/AMD_driving_virtual_20-H264.264
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    )
+    set_property(TEST video_decode_raw_python PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYDECODE_PYTHONPATH}:$PYTHONPATH")
   endif()
-  # 14 - all_other_decoder_apis test
+  # 15 - all_other_decoder_apis test
   add_test(NAME all_other_decoder_apis
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/decoder_api_test.py
     -i ${ROCM_PATH}/share/rocdecode/video/AMD_driving_virtual_20-H264.mp4
@@ -330,7 +337,7 @@ if(RUN_ROCPYDECODE_TESTS)
 endif()
 
 if(RUN_ROCPYJPEG_TESTS)
-  # 15 - jpeg_decode_single_file_test
+  # 16 - jpeg_decode_single_file_test
   if(TORCH_PYTHON_RESULT EQUAL 0)
     add_test(NAME jpeg_decode_python
       COMMAND ${Python3_EXECUTABLE} ${ROCPYJPEG_SAMPLE_DIR}/jpegdecode.py
@@ -344,7 +351,7 @@ if(RUN_ROCPYJPEG_TESTS)
       set_property(TEST jpeg_decode_python PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYJPEG_PYTHONPATH}:$PYTHONPATH")
     endif()
   endif(TORCH_PYTHON_RESULT EQUAL 0)
-  # 16 - jpegdecodebatched_test
+  # 17 - jpegdecodebatched_test
   add_test(NAME jpeg_decode_batched_python
     COMMAND ${Python3_EXECUTABLE} ${ROCPYJPEG_SAMPLE_DIR}/jpegdecodebatched.py
     -i ${ROCM_PATH}/share/rocjpeg/images/
