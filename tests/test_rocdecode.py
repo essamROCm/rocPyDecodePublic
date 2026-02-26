@@ -29,7 +29,7 @@ except ImportError as exc:  # numpy is required for buffer crafting
     raise SystemExit("numpy is required to run test_rocdecode.py") from exc
 
 
-def exercise_common_api(rd_module):
+def exercise_common_api(rd_module, has_ffmpeg: bool):
     # DLPack end-to-end smoke
     if hasattr(rd_module, "DLPackPyTensor"):
         rd_module.DLPackPyTensor.test_all()
@@ -39,10 +39,13 @@ def exercise_common_api(rd_module):
     assert pkt.frame_pts == 1234
     assert pkt.bitstream_size == len(sample)
     assert pkt.bitstream_adrs != 0
-    # codec helpers
-    rd_module.AVCodecString2RocDecVideoCodec("h264")
-    rd_module.AVCodecString2RocDecVideoCodec("hevc")
-    rd_module.AVCodecString2RocDecVideoCodec("unknown_codec_name")
+    # codec helpers (available only when FFmpeg bindings are built)
+    if has_ffmpeg and hasattr(rd_module, "AVCodecString2RocDecVideoCodec"):
+        rd_module.AVCodecString2RocDecVideoCodec("h264")
+        rd_module.AVCodecString2RocDecVideoCodec("hevc")
+        rd_module.AVCodecString2RocDecVideoCodec("unknown_codec_name")
+    else:
+        print("FFmpeg codec helpers not built; skipping codec helper coverage.")
 
 
 def _decode_single(decoder, demuxer, dec_types, rgb_format, tag: str):
@@ -132,10 +135,17 @@ def main(argv: list[str]) -> int:
 
     import rocpydecode as rd
 
-    exercise_common_api(rd)
-    if video_path:
+    has_ffmpeg = all(
+        hasattr(rd, attr) for attr in ["PyVideoDemuxer", "AVCodec2RocDecVideoCodec", "AVCodecString2RocDecVideoCodec"]
+    )
+
+    exercise_common_api(rd, has_ffmpeg)
+    if has_ffmpeg and video_path:
         exercise_decode_paths(rd, video_path)
-    exercise_extra_tests(rd, video_path)
+    else:
+        print("FFmpeg-dependent decode paths not available; skipping demux/decode coverage.")
+
+    exercise_extra_tests(rd, video_path if has_ffmpeg else None)
 
     return 0
 

@@ -342,7 +342,7 @@ if(RUN_ROCPYDECODE_TESTS)
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   )
   set_property(TEST all_other_decoder_apis PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYDECODE_PYTHONPATH}:$PYTHONPATH")
-  # (15) - full API coverage helper (Python-driven)
+  # 17 - full API coverage helper (Python-driven)
   add_test(NAME rocpydecode_full_coverage
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_rocdecode.py
     --video ${ROCM_PATH}/share/rocdecode/video/AMD_driving_virtual_20-H265.mp4
@@ -352,7 +352,7 @@ if(RUN_ROCPYDECODE_TESTS)
 endif()
 
 if(RUN_ROCPYJPEG_TESTS)
-  # 17 - jpeg_decode_single_file_test
+  # 18 - jpeg_decode_single_file_test
   if(TORCH_PYTHON_RESULT EQUAL 0)
     add_test(NAME jpeg_decode_python
       COMMAND ${Python3_EXECUTABLE} ${ROCPYJPEG_SAMPLE_DIR}/jpegdecode.py
@@ -366,7 +366,7 @@ if(RUN_ROCPYJPEG_TESTS)
       set_property(TEST jpeg_decode_python PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYJPEG_PYTHONPATH}:$PYTHONPATH")
     endif()
   endif(TORCH_PYTHON_RESULT EQUAL 0)
-  # 18 - jpegdecodebatched_test
+  # 19 - jpegdecodebatched_test
   add_test(NAME jpeg_decode_batched_python
     COMMAND ${Python3_EXECUTABLE} ${ROCPYJPEG_SAMPLE_DIR}/jpegdecodebatched.py
     -i ${ROCM_PATH}/share/rocjpeg/images/
@@ -377,6 +377,30 @@ if(RUN_ROCPYJPEG_TESTS)
       "LD_LIBRARY_PATH=${ROCM_PATH}/lib:$ENV{LD_LIBRARY_PATH}")
   else()
     set_property(TEST jpeg_decode_batched_python PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYJPEG_PYTHONPATH}:$PYTHONPATH")
+  endif()
+  # 20 - rocjpeg_full_coverage helper
+  add_test(NAME rocpyjpeg_full_coverage
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_rocjpeg.py
+    --jpeg ${ROCM_PATH}/share/rocjpeg/images/
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+  if(USING_THE_ROCK)
+    set_property(TEST rocpyjpeg_full_coverage PROPERTY ENVIRONMENT
+      "PYTHONPATH=${ROCPYJPEG_PYTHONPATH}:$ENV{PYTHONPATH}"
+      "LD_LIBRARY_PATH=${ROCM_PATH}/lib:$ENV{LD_LIBRARY_PATH}")
+  else()
+    set_property(TEST rocpyjpeg_full_coverage PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYJPEG_PYTHONPATH}:$PYTHONPATH")
+  endif()
+  # 21 - rocjpeg_format_coverage helper
+  add_test(NAME rocpyjpeg_format_coverage
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_rocjpeg_formats.py
+    --jpeg ${ROCM_PATH}/share/rocjpeg/images/
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+  if(USING_THE_ROCK)
+    set_property(TEST rocpyjpeg_format_coverage PROPERTY ENVIRONMENT
+      "PYTHONPATH=${ROCPYJPEG_PYTHONPATH}:$ENV{PYTHONPATH}"
+      "LD_LIBRARY_PATH=${ROCM_PATH}/lib:$ENV{LD_LIBRARY_PATH}")
+  else()
+    set_property(TEST rocpyjpeg_format_coverage PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYJPEG_PYTHONPATH}:$PYTHONPATH")
   endif()
 endif()
 
