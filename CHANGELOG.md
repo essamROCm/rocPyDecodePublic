@@ -2,13 +2,16 @@
 
 Full documentation for for rocPyDecode is available at [https://rocm.docs.amd.com/projects/rocPyDecode/en/latest/](https://rocm.docs.amd.com/projects/rocPyDecode/en/latest/)
 
-## rocPyDecode 0.8.0 (Unreleased)
+## (Unreleased) rocPyDecode 0.8.0
 
 ### Added
-* 
+
+* videodecoderaw.py sample
 
 ### Changed
-* CXX Compiler location - Use default `${ROCM_PATH}/lib/llvm/bin` for amd clang
+
+* The default AMD clang compiler location has changed to `${ROCM_PATH}/lib/llvm/bin`.
+* rocPyDecode now installs even when FFmpeg isn't installed.
 
 ### Resolved issues
 * 
