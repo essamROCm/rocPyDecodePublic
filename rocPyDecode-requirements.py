@@ -49,11 +49,19 @@ parser.add_argument('--rocm_path', type=str, default='/opt/rocm',
                     help='ROCm Installation Path - optional (default:/opt/rocm) - ROCm Installation Required')
 
 args = parser.parse_args()
-ROCM_PATH = args.rocm_path
+USING_THE_ROCK = False
 
-# override default path if env path set 
-if "ROCM_PATH" in os.environ:
+# ROCm path selection: prefer explicit CLI arg, else environment, else default
+rocm_arg_provided = '--rocm_path' in sys.argv
+if rocm_arg_provided and args.rocm_path:
+    ROCM_PATH = args.rocm_path
+elif "ROCM_PATH" in os.environ:
     ROCM_PATH = os.environ.get('ROCM_PATH')
+else:
+    ROCM_PATH = parser.get_default('rocm_path')
+
+os.environ['ROCM_PATH'] = ROCM_PATH  # keep in-process environment consistent
+
 print("\nROCm PATH set to -- "+ROCM_PATH+"\n")
 
 # check ROCm installation
@@ -65,6 +73,12 @@ else:
         "WARNING: If ROCm installed, set ROCm Path with \"--rocm_path\" option for full installation [Default:/opt/rocm]\n")
     print("ERROR: rocPyDecode Setup requires ROCm install\n")
     exit(-1)
+
+# Detect TheRock style ROCm installation (bundles libs under rocm_sysdeps)
+THE_ROCK_SYSDEPS = os.path.join(ROCM_PATH, 'lib', 'rocm_sysdeps', 'lib')
+if os.path.exists(THE_ROCK_SYSDEPS):
+    USING_THE_ROCK = True
+    print("\nTheRock ROCm installation detected (found: " + THE_ROCK_SYSDEPS + ")\n")
 
 # get platform info
 platformInfo = platform.platform()
@@ -173,6 +187,12 @@ coreRPMPackages = [
     'python3-pip',
     'python3-numpy'
 ]
+
+# TheRock installs bundle rocdecode/rocjpeg into rocm_sysdeps, so skip those packages
+if USING_THE_ROCK:
+    coreDebianPackages = [pkg for pkg in coreDebianPackages if not pkg.startswith(('rocdecode', 'rocjpeg'))]
+    coreRPMPackages = [pkg for pkg in coreRPMPackages if not pkg.startswith(('rocdecode', 'rocjpeg'))]
+    print("Skipping rocdecode/rocjpeg package installs for TheRock ROCm layout\n")
 
 # update
 ERROR_CHECK(os.system('sudo '+linuxFlag+' '+linuxSystemInstall +' '+linuxSystemInstall_check+' '+osUpdate))

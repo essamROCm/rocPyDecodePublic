@@ -151,3 +151,31 @@ The following are full list of arguments that can be passed to the sample.
 -i INPUT, --input INPUT                       : Input File Path - required
 -o OUTPUT, --output OUTPUT                    : Output File Path - optional
 ```
+
+## videodecoderaw.py
+
+This sample decodes a raw (Annex-B) H.264/H.265 bitstream directly without using FFmpeg or the Python demuxer. It can optionally dump decoded YUV frames to a file. Provide a raw bitstream file; other arguments are optional.
+
+### Arguments
+The following are full list of arguments that can be passed to the sample.
+```bash
+-h, --help                                    : Show detail help message and exit
+-i INPUT, --input INPUT                       : Raw input bitstream file - required
+-o OUTPUT, --output OUTPUT                    : Output YUV file or directory - optional
+-d DEVICE, --device DEVICE                    : GPU device ID - optional, default 0
+-m MEM_TYPE, --mem_type MEM_TYPE              : Output surface memory type [0:internal 1:dev_copied 2:host_copied 3:not_mapped] - optional, default 0
+-f FRAMES, --frames FRAMES                    : Number of frames to decode (-1 = all) - optional, default -1
+-z, --zero_latency                            : Force zero latency (flush ASAP) - optional
+-crop LEFT TOP RIGHT BOTTOM, --crop_rect ...  : Crop rectangle - optional, default none
+-c CODEC, --codec CODEC                       : Codec of raw stream [h264|h265]; guessed from extension if omitted
+```
+### Example
+How to launch it:
+```bash
+python3 ../samples/rocdecode/videodecoderaw.py \
+  -i $ROCM_PATH/share/rocdecode/video/AMD_driving_virtual_20-H264.264 \
+  --codec h264 \
+  -o /tmp/output.yuv \
+  -d 0
+```
+
