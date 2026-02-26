@@ -2,6 +2,22 @@
 
 Full documentation for for rocPyDecode is available at [https://rocm.docs.amd.com/projects/rocPyDecode/en/latest/](https://rocm.docs.amd.com/projects/rocPyDecode/en/latest/)
 
+## rocPyDecode 0.9.0 (Unreleased)
+
+### Added
+* Added raw Annex‑B Python sample and CTest cases for H.264/H.265.
+* Build no longer stops if rocDecode/FFmpeg are missing: rocPyDecode builds GPU-only, and rocPyJPEG builds independently.
+
+### Changed
+* Tests no longer depend on FFmpeg to run the raw sample.
+* CPU backend samples no longer queries GPU info (pure CPU path).
+* The default AMD clang compiler location has changed to `${ROCM_PATH}/lib/llvm/bin`.
+* rocPyDecode now installs even when FFmpeg isn't installed.
+
+### Resolved issues
+* Fixed missing raw sample tests when FFmpeg is absent.
+* Prevented CPU torch sample crash from invalid device name decoding.
+
 ## rocPyDecode 0.8.0 (Unreleased)
 
 ### Added
