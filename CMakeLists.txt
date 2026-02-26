@@ -164,7 +164,8 @@ find_package(rocdecode 1.0.0 QUIET)
 find_package(rocjpeg 1.0.0 QUIET)
 find_package(pybind11 REQUIRED)
 find_package(DLPACK REQUIRED)
-find_package(FFmpeg REQUIRED)
+find_package(FFmpeg QUIET)
+set(ROCPYDECODE_USE_FFMPEG ${FFMPEG_FOUND})
 
 set(ROCPYDECODE_DEPENDENCY_READY FALSE)
 set(ROCPYJPEG_DEPENDENCY_READY FALSE)
@@ -174,7 +175,12 @@ set(ROCPYDECODE_HOST_LIBRARY_FOUND FALSE)
 set(LINK_LIBRARY_LIST hip::device)
 set(LINK_LIBRARY_LIST_JPEG hip::device)
 # rocDecode
+set(pyfiles "")
 if(rocdecode_FOUND)
+    include_directories(src)
+    file(GLOB pyfiles pyRocVideoDecode/*.py pyRocVideoDecode/*.pyi)
+
+    # Always build the GPU path
     include_directories(${rocdecode_INCLUDE_DIR}
         ${ROCM_PATH}/include/rocdecode
         ${ROCM_PATH}/share/rocdecode/utils
@@ -195,23 +201,25 @@ if(rocdecode_FOUND)
     endif()
 
     set(ROCPYDECODE_DEPENDENCY_READY TRUE)
-    # rocPyDecode
-    include_directories(src)
-    file(GLOB pyfiles pyRocVideoDecode/*.py pyRocVideoDecode/*.pyi)
+
+    # Core GPU sources
     file(GLOB include_base src/rocdecode/*.h src/common/*.h ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.h)
-    file(GLOB sources_base src/rocdecode/roc_pydecode.cpp src/rocdecode/roc_pyvideodecode.cpp src/rocdecode/roc_pyvideodemuxer.cpp src/common/*.cpp ${ROCM_PATH}/share/rocdecode/utils/*.cpp ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.cpp)
+    file(GLOB sources_base src/rocdecode/roc_pydecode.cpp src/rocdecode/roc_pyvideodecode.cpp src/common/*.cpp ${ROCM_PATH}/share/rocdecode/utils/*.cpp ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.cpp)
     set(include ${include_base})
     set(sources ${sources_base})
-    if(ROCPYDECODE_HOST_LIBRARY_FOUND)
-        include_directories(${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode)
-        file(GLOB include_host ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.h)
-        file(GLOB sources_host src/rocdecode/roc_pyvideodecodecpu.cpp src/rocdecode/roc_pydecode_test.cpp ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.cpp)
-        list(APPEND include ${include_host})
-        list(APPEND sources ${sources_host})
+
+    if(ROCPYDECODE_USE_FFMPEG)
+        # Demux + CPU backend (FFmpeg-dependent)
+        file(GLOB sources_ffmpeg src/rocdecode/roc_pyvideodemuxer.cpp src/rocdecode/roc_pyvideodecodecpu.cpp src/rocdecode/roc_pydecode_test.cpp ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.cpp)
+        file(GLOB include_ffmpeg ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.h)
+        list(APPEND include ${include_ffmpeg})
+        list(APPEND sources ${sources_ffmpeg})
+        include_directories(${AVUTIL_INCLUDE_DIR} ${AVCODEC_INCLUDE_DIR} ${AVFORMAT_INCLUDE_DIR})
+        set(LINK_LIBRARY_LIST ${LINK_LIBRARY_LIST} ${FFMPEG_LIBRARIES})
+    else()
+        message(STATUS "FFmpeg not found; building rocPyDecode without demux/CPU backend (GPU decode only).")
+        set(ROCPYDECODE_HOST_LIBRARY_FOUND FALSE)
     endif()
-    # FFMPEG
-    include_directories(${AVUTIL_INCLUDE_DIR} ${AVCODEC_INCLUDE_DIR} ${AVFORMAT_INCLUDE_DIR})
-    set(LINK_LIBRARY_LIST ${LINK_LIBRARY_LIST} ${FFMPEG_LIBRARIES})
 else()
     message(WARNING "rocdecode not found. rocPyDecode will not be built or installed.")
 endif()
@@ -288,15 +296,19 @@ if(ROCPYDECODE_DEPENDENCY_READY OR ROCPYJPEG_DEPENDENCY_READY)
                 set_target_properties(${TARGET_NAME_VERSIONED} PROPERTIES INSTALL_RPATH "$ORIGIN;$ORIGIN/rocm_sysdeps/lib" BUILD_WITH_INSTALL_RPATH TRUE)
             endif()
 
-            target_compile_definitions(${TARGET_NAME_VERSIONED} PRIVATE ROCPYDECODE_ENABLE_HOST=$<BOOL:${ROCPYDECODE_HOST_LIBRARY_FOUND}>)
+            target_compile_definitions(${TARGET_NAME_VERSIONED} PRIVATE
+                ROCPYDECODE_ENABLE_HOST=$<BOOL:${ROCPYDECODE_HOST_LIBRARY_FOUND}>
+                ROCPYDECODE_USE_FFMPEG=$<BOOL:${ROCPYDECODE_USE_FFMPEG}>)
 
             target_include_directories(${TARGET_NAME_VERSIONED} PRIVATE ${pybind11_INCLUDE_DIRS} ${Python3_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
             # FFMPEG multi-version support
-            if(_FFMPEG_AVCODEC_VERSION VERSION_LESS_EQUAL 58.134.100)
-                target_compile_definitions(${TARGET_NAME_VERSIONED} PUBLIC USE_AVCODEC_GREATER_THAN_58_134=0)
-            else()
-                target_compile_definitions(${TARGET_NAME_VERSIONED} PUBLIC USE_AVCODEC_GREATER_THAN_58_134=1)
+            if(ROCPYDECODE_USE_FFMPEG)
+                if(_FFMPEG_AVCODEC_VERSION VERSION_LESS_EQUAL 58.134.100)
+                    target_compile_definitions(${TARGET_NAME_VERSIONED} PUBLIC USE_AVCODEC_GREATER_THAN_58_134=0)
+                else()
+                    target_compile_definitions(${TARGET_NAME_VERSIONED} PUBLIC USE_AVCODEC_GREATER_THAN_58_134=1)
+                endif()
             endif()
 
             foreach(filename ${pyfiles})

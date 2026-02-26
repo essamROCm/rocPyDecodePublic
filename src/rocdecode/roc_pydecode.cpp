@@ -41,9 +41,11 @@ PYBIND11_MODULE(rocpydecode, m) {
  
     m.doc() = "Python bindings for the C++ portions of rocDecode ..";
 
-    // convert betweeen demuxer & decoder
+    // convert between demuxer & decoder
+#if ROCPYDECODE_USE_FFMPEG
     m.def("AVCodec2RocDecVideoCodec", &ConvertAVCodec2RocDecVideoCodec, "Convert AVCodecID to rocDecVideoCodec ID");
     m.def("AVCodecString2RocDecVideoCodec", &ConvertAVCodecString2RocDecVideoCodec, "Convert AVCodec string to rocDecVideoCodec ID");
+#endif
     
     // Testing (works only in DEBUG build)
 #if defined(ROCPYDECODE_ENABLE_HOST) && ROCPYDECODE_ENABLE_HOST
@@ -129,12 +131,14 @@ PYBIND11_MODULE(rocpydecode, m) {
     // -----------------------------
     // User Demuxer 'PyVideoDemuxer'
     // -----------------------------
+#if ROCPYDECODE_USE_FFMPEG
     PyVideoDemuxerInitializer(m);
 
     // ------------------------------------------------
     // StreamProvider 'PyVideoStreamProvider' for demux
     // ------------------------------------------------
     PyVideoStreamProviderInitializer(m);
+#endif
 
     // --------------------------------------
     // AMD Video Decoder 'PyRocVideoDecoder'

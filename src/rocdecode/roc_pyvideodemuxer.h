@@ -25,16 +25,19 @@ THE SOFTWARE.
 #include "video_demuxer.h"
 #include "roc_pydecode.h"
 
+#if ROCPYDECODE_USE_FFMPEG
 extern "C" {
     #include <libavformat/avio.h>
     #include <libavutil/file.h>
     #include <libavutil/mem.h>
 }
+#endif
 
 
 //
 // AMD Video Demuxer Python Interface class
 //
+#if ROCPYDECODE_USE_FFMPEG
 class PyVideoDemuxer : public VideoDemuxer {
 
     protected:
@@ -85,7 +88,8 @@ public:
 
     size_t GetBufferSize() { return buffer_size_; };    
 
-private:
-    uint8_t *buf_ptr_ = nullptr;
-    size_t buffer_size_ = 0; ///< size left in the buffer
+	private:
+	    uint8_t *buf_ptr_ = nullptr;
+	    size_t buffer_size_ = 0; ///< size left in the buffer
 };
+#endif

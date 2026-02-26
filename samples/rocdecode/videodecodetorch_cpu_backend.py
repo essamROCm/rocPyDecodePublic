@@ -32,14 +32,8 @@ def Decoder(
         device_id,
         mem_type)
 
-    # check if codec is supported
-    if (viddec.IsCodecSupported(device_id, codec_id, demuxer.GetBitDepth()) == False):
-        print("ERROR: Codec is not supported on this device/backend.")
-        exit()
-
-    #  print backend info
+    # Print basic info
     print("\ninfo: Input file: " + input_file_path)
-    print("info: Using CPU backend (device_id=" + str(device_id) + ", mem_type=" + str(mem_type) + ")")
     print("info: decoding started, please wait! \n")
 
     # -----------------

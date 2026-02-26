@@ -25,6 +25,8 @@ THE SOFTWARE.
 
 using namespace std;
 
+#if ROCPYDECODE_USE_FFMPEG
+
 std::map<std::string, int> av_codec_map = { {"mpeg1", AV_CODEC_ID_MPEG1VIDEO},
                                              {"mpeg2", AV_CODEC_ID_MPEG2VIDEO},
                                              {"mpeg4", AV_CODEC_ID_MPEG4},
@@ -121,3 +123,5 @@ int PyVideoDemuxer::GetCodecId() {
 uint32_t PyVideoDemuxer::PyGetBitDepth() {
     return GetBitDepth();
 }
+
+#endif
