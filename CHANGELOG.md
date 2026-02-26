@@ -2,7 +2,7 @@
 
 Full documentation for for rocPyDecode is available at [https://rocm.docs.amd.com/projects/rocPyDecode/en/latest/](https://rocm.docs.amd.com/projects/rocPyDecode/en/latest/)
 
-## rocPyDecode 0.9.0 (Unreleased)
+## (Unreleased) rocPyDecode 0.9.0 
 
 ### Added
 * Added raw Annex‑B Python sample and CTest cases for H.264/H.265.
