@@ -18,7 +18,7 @@ Full documentation for for rocPyDecode is available at [https://rocm.docs.amd.co
 * Fixed missing raw sample tests when FFmpeg is absent.
 * Prevented CPU torch sample crash from invalid device name decoding.
 
-## rocPyDecode 0.8.0 (Unreleased)
+##  (Unreleased) rocPyDecode 0.8.0
 
 ### Added
 * 
