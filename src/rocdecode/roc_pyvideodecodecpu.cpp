@@ -351,13 +351,13 @@ uint32_t PyRocVideoDecoderCpu::PyGetBitDepth() {
 
 #if ROCDECODE_CHECK_VERSION(0,6,0)
 // for python binding, Session overhead refers to decoder initialization and deinitialization time
-py::object PyRocVideoDecoderCpu::PyAddDecoderSessionOverHead(int session_id, double duration) {
+py::object PyRocVideoDecoderCpu::PyAddDecoderSessionOverHead(std::uintptr_t session_id, double duration) {
     AddDecoderSessionOverHead(static_cast<std::thread::id>(session_id), duration);
     return py::cast<py::none>(Py_None);
 }
 
 // for python binding, Session overhead refers to decoder initialization and deinitialization time
-py::object PyRocVideoDecoderCpu::PyGetDecoderSessionOverHead(int session_id) {
+py::object PyRocVideoDecoderCpu::PyGetDecoderSessionOverHead(std::uintptr_t session_id) {
     return py::cast(GetDecoderSessionOverHead(static_cast<std::thread::id>(session_id)));
 }
 

@@ -37,6 +37,10 @@ void Test_PyReconfigureFlushCallback();
 void Test_CalculateRgbImageSize();
 #endif
 
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
+#endif
 PYBIND11_MODULE(rocpydecode, m) {
  
     m.doc() = "Python bindings for the C++ portions of rocDecode ..";
@@ -222,8 +226,8 @@ PYBIND11_MODULE(rocpydecode, m) {
             }, "Get the data type of the buffer")
         .def("__dlpack__", [](std::shared_ptr<PyPacketData>& self, py::object stream) {
             return self->ext_buf[0]->dlpack(stream);
-            }, py::arg("stream") = NULL, "Export the buffer as a DLPack tensor")
-        .def("__dlpack_device__", [](std::shared_ptr<PyPacketData>& self) {
+            }, py::arg("stream") = py::none(), "Export the buffer as a DLPack tensor")
+        .def("__dlpack_device__", [](std::shared_ptr<PyPacketData>& /*self*/) {
                 return py::make_tuple(py::int_(static_cast<int>(DLDeviceType::kDLROCM)),
                         py::int_(static_cast<int>(0)));
             }, "Get the device associated with the buffer");   
@@ -241,3 +245,6 @@ PYBIND11_MODULE(rocpydecode, m) {
         .def(py::init<>())
         .def_static("test_all", &DLPackPyTensor::test_all);
 }
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif

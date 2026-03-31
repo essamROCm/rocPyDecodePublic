@@ -90,8 +90,8 @@ class PyRocVideoDecoderCpu : public FFMpegVideoDecoder {
 
 #if ROCDECODE_CHECK_VERSION(0,6,0)
         // Session overhead refers to decoder initialization and deinitialization time
-        py::object PyAddDecoderSessionOverHead(int session_id, double duration);
-        py::object PyGetDecoderSessionOverHead(int session_id);
+        py::object PyAddDecoderSessionOverHead(std::uintptr_t session_id, double duration);
+        py::object PyGetDecoderSessionOverHead(std::uintptr_t session_id);
 #endif
     private:
         std::shared_ptr <ConfigInfo> configInfo;

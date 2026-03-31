@@ -20,6 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
+#include <algorithm>
 #include <pybind11/stl.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
@@ -27,48 +28,78 @@ THE SOFTWARE.
 namespace py = pybind11;
 #include "roc_pydlpack.h"
 #include <iostream>
+#include <limits>
+#include <memory>
 #include <vector>
 
+namespace {
+void ReleaseTensorMetadata(DLManagedTensor *self) {
+    delete[] self->dl_tensor.shape;
+    self->dl_tensor.shape = nullptr;
+    delete[] self->dl_tensor.strides;
+    self->dl_tensor.strides = nullptr;
+}
+
+template <typename Target, typename Source>
+Target CheckedNumericCast(Source value, const char *context) {
+    if (value < 0 || value > static_cast<Source>(std::numeric_limits<Target>::max())) {
+        throw std::runtime_error(std::string(context) + " is out of range");
+    }
+    return static_cast<Target>(value);
+}
+
+DLManagedTensor MakeManagedTensor(const DLTensor &tensor) {
+    DLManagedTensor managed_tensor{};
+    managed_tensor.dl_tensor = tensor;
+    return managed_tensor;
+}
+} // namespace
+
 DLPackPyTensor::DLPackPyTensor() noexcept : m_tensor{} {
+    m_tensor.deleter = ReleaseTensorMetadata;
 }
 
 DLPackPyTensor::DLPackPyTensor(DLManagedTensor &&managedTensor) : m_tensor{std::move(managedTensor)} {
     managedTensor = {};
 }
 
-DLPackPyTensor::DLPackPyTensor(const DLTensor &tensor) : DLPackPyTensor(DLManagedTensor{tensor}) {
+DLPackPyTensor::DLPackPyTensor(const DLTensor &tensor) : DLPackPyTensor(MakeManagedTensor(tensor)) {
 }
 
 DLPackPyTensor::DLPackPyTensor(const py::buffer_info &info, const DLDevice &dev) : m_tensor{} {
     DLTensor &dlTensor = m_tensor.dl_tensor;
+    const auto rank = CheckedNumericCast<size_t>(info.ndim, "tensor rank");
     dlTensor.data      = info.ptr;
     //TBD dtype
     dlTensor.dtype.code = kDLInt;
     dlTensor.dtype.bits = 8;
     dlTensor.dtype.lanes = 1;
-    dlTensor.ndim        = info.ndim;
+    dlTensor.ndim        = CheckedNumericCast<int32_t>(info.ndim, "tensor rank");
     dlTensor.device      = dev;
     dlTensor.byte_offset = 0;
 
-    m_tensor.deleter = [](DLManagedTensor *self) {
-        delete[] self->dl_tensor.shape;
-        self->dl_tensor.shape = nullptr;
-        delete[] self->dl_tensor.strides;
-        self->dl_tensor.strides = nullptr;
-    };
+    m_tensor.deleter = ReleaseTensorMetadata;
 
     try {
-        dlTensor.shape = new int64_t[info.ndim];
-        std::copy_n(info.shape.begin(), info.shape.size(), dlTensor.shape);
+        std::vector<int64_t> shape_values(rank);
+        std::transform(info.shape.begin(), info.shape.end(), shape_values.begin(), [](ssize_t dimension) {
+            return static_cast<int64_t>(dimension);
+        });
+        auto shape = std::make_unique<int64_t[]>(rank);
+        std::copy(shape_values.begin(), shape_values.end(), shape.get());
+        dlTensor.shape = shape.release();
 
-        dlTensor.strides = new int64_t[info.ndim];
-        for (int i = 0; i < info.ndim; ++i) {
-            if (info.strides[i] % info.itemsize != 0) {
+        std::vector<int64_t> stride_values(rank);
+        for (size_t i = 0; i < rank; ++i) {
+            const auto stride = info.strides[i];
+            if (stride % info.itemsize != 0) {
                 throw std::runtime_error("Stride must be a multiple of the element size in bytes");
             }
-
-            dlTensor.strides[i] = info.strides[i] / info.itemsize;
+            stride_values[i] = static_cast<int64_t>(stride / info.itemsize);
         }
+        auto strides = std::make_unique<int64_t[]>(rank);
+        std::copy(stride_values.begin(), stride_values.end(), strides.get());
+        dlTensor.strides = strides.release();
     } catch (...) {
         m_tensor.deleter(&m_tensor);
         throw;

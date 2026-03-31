@@ -32,6 +32,10 @@ using namespace std;
 namespace py = pybind11;
 using namespace py::literals;
 
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
+#endif
 PYBIND11_MODULE(rocpyjpegdecode, m) {
  
     m.doc() = "Python bindings for the C++ portions of rocJPEG ..";
@@ -108,3 +112,6 @@ PYBIND11_MODULE(rocpyjpegdecode, m) {
         .def("init_hip_device",&PyRocJpegUtils::InitHipDevice);
 
 }
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif

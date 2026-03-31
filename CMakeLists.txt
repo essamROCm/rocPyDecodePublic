@@ -114,6 +114,33 @@ else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -DNDEBUG -fPIC")
 endif()
 
+option(ROCPYDECODE_ENABLE_ALL_WARNINGS "Enable broad compiler warnings for C++ targets" ON)
+set(ROCPYDECODE_WARNING_FLAGS "")
+if(ROCPYDECODE_ENABLE_ALL_WARNINGS)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        list(APPEND ROCPYDECODE_WARNING_FLAGS
+            -Weverything
+            -Wno-c++98-compat
+            -Wno-c++98-compat-pedantic
+            -Wno-pre-c++14-compat
+            -Wno-pre-c++17-compat
+            -Wno-pre-c++20-compat)
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        list(APPEND ROCPYDECODE_WARNING_FLAGS
+            -Wall
+            -Wextra
+            -Wpedantic)
+    elseif(MSVC)
+        list(APPEND ROCPYDECODE_WARNING_FLAGS
+            /W4
+            /permissive-)
+    endif()
+
+    if(ROCPYDECODE_WARNING_FLAGS)
+        add_compile_options(${ROCPYDECODE_WARNING_FLAGS})
+    endif()
+endif()
+
 # Set supported GPU Targets
 if(NOT GPU_TARGETS AND NOT AMDGPU_TARGETS)
     set(DEFAULT_GPU_TARGETS "gfx908;gfx90a;gfx942;gfx1030;gfx1031;gfx1032;gfx1100;gfx1101;gfx1102;gfx950;gfx1200;gfx1201")
@@ -160,12 +187,19 @@ set (HIP_PLATFORM amd CACHE STRING "HIP platform")
 
 # Find dependencies
 find_package(HIP REQUIRED)
-find_package(rocdecode 1.0.0 QUIET)
-find_package(rocjpeg 1.0.0 QUIET)
+# ROCm package versions are currently 0.x even though the APIs used here are stable.
+find_package(rocdecode QUIET)
+find_package(rocjpeg QUIET)
 find_package(pybind11 REQUIRED)
 find_package(DLPACK REQUIRED)
 find_package(FFmpeg QUIET)
-set(ROCPYDECODE_USE_FFMPEG ${FFMPEG_FOUND})
+set(ROCPYDECODE_USE_FFMPEG FALSE)
+set(ROCPYDECODE_FFMPEG_UTILS_DIR "${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode")
+if(FFMPEG_FOUND AND EXISTS "${ROCPYDECODE_FFMPEG_UTILS_DIR}/ffmpeg_video_dec.h")
+    set(ROCPYDECODE_USE_FFMPEG TRUE)
+elseif(FFMPEG_FOUND)
+    message(STATUS "FFmpeg found, but rocdecode FFmpeg utility sources are unavailable; building without demux/CPU backend.")
+endif()
 
 set(ROCPYDECODE_DEPENDENCY_READY FALSE)
 set(ROCPYJPEG_DEPENDENCY_READY FALSE)
@@ -180,8 +214,17 @@ if(rocdecode_FOUND)
     include_directories(src)
     file(GLOB pyfiles pyRocVideoDecode/*.py pyRocVideoDecode/*.pyi)
 
+    # TBD (essam):
+    # # The always-built rocdecode utility sources use libavutil's MD5 helpers.
+    # if(AVUTIL_LIBRARY)
+    #     list(APPEND LINK_LIBRARY_LIST ${AVUTIL_LIBRARY})
+    # else()
+    #     message(FATAL_ERROR "libavutil is required to build rocPyDecode because ROCm's roc_video_dec utilities use av_md5_* symbols.")
+    # endif()
+
     # Always build the GPU path
-    include_directories(${rocdecode_INCLUDE_DIR}
+    include_directories(SYSTEM
+        ${rocdecode_INCLUDE_DIR}
         ${ROCM_PATH}/include/rocdecode
         ${ROCM_PATH}/share/rocdecode/utils
         ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode)
@@ -205,17 +248,25 @@ if(rocdecode_FOUND)
     # Core GPU sources
     file(GLOB include_base src/rocdecode/*.h src/common/*.h ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.h)
     file(GLOB sources_base src/rocdecode/roc_pydecode.cpp src/rocdecode/roc_pyvideodecode.cpp src/common/*.cpp ${ROCM_PATH}/share/rocdecode/utils/*.cpp ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.cpp)
+    file(GLOB sources_external_rocdecode ${ROCM_PATH}/share/rocdecode/utils/*.cpp ${ROCM_PATH}/share/rocdecode/utils/rocvideodecode/*.cpp)
     set(include ${include_base})
     set(sources ${sources_base})
+    if(sources_external_rocdecode)
+        set_source_files_properties(${sources_external_rocdecode} PROPERTIES COMPILE_OPTIONS "-w")
+    endif()
 
     if(ROCPYDECODE_USE_FFMPEG)
         # Demux + CPU backend (FFmpeg-dependent)
         file(GLOB sources_ffmpeg src/rocdecode/roc_pyvideodemuxer.cpp src/rocdecode/roc_pyvideodecodecpu.cpp src/rocdecode/roc_pydecode_test.cpp ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.cpp)
         file(GLOB include_ffmpeg ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.h)
+        file(GLOB sources_external_ffmpeg ${ROCM_PATH}/share/rocdecode/utils/ffmpegvideodecode/*.cpp)
         list(APPEND include ${include_ffmpeg})
         list(APPEND sources ${sources_ffmpeg})
-        include_directories(${AVUTIL_INCLUDE_DIR} ${AVCODEC_INCLUDE_DIR} ${AVFORMAT_INCLUDE_DIR})
+        include_directories(SYSTEM ${AVUTIL_INCLUDE_DIR} ${AVCODEC_INCLUDE_DIR} ${AVFORMAT_INCLUDE_DIR})
         set(LINK_LIBRARY_LIST ${LINK_LIBRARY_LIST} ${FFMPEG_LIBRARIES})
+        if(sources_external_ffmpeg)
+            set_source_files_properties(${sources_external_ffmpeg} PROPERTIES COMPILE_OPTIONS "-w")
+        endif()
     else()
         message(STATUS "FFmpeg not found; building rocPyDecode without demux/CPU backend (GPU decode only).")
         set(ROCPYDECODE_HOST_LIBRARY_FOUND FALSE)
@@ -225,7 +276,7 @@ else()
 endif()
 # rocJPEG
 if(rocjpeg_FOUND)
-    include_directories(${rocjpeg_INCLUDE_DIR} ${ROCM_PATH}/share/rocjpeg/samples)
+    include_directories(SYSTEM ${ROCM_PATH}/include ${rocjpeg_INCLUDE_DIR} ${ROCM_PATH}/share/rocjpeg/samples)
     set(LINK_LIBRARY_LIST_JPEG ${LINK_LIBRARY_LIST_JPEG} rocjpeg::rocjpeg)
 
     file(GLOB pyfiles_jpeg pyRocJpegDecode/*.py pyRocJpegDecode/*.pyi)
@@ -247,6 +298,7 @@ else()
     message("-- ${Yellow}rocPyJPEG skipped -- missing rocjpeg dependency${ColourReset}")
 endif()
 message("-- ${White}rocPyDecode/rocPyJPEG -- CMAKE_CXX_FLAGS:${CMAKE_CXX_FLAGS}${ColourReset}")
+message("-- ${White}rocPyDecode/rocPyJPEG -- Warning Flags:${ROCPYDECODE_WARNING_FLAGS}${ColourReset}")
 
 # set license information
 set(CPACK_RPM_PACKAGE_LICENSE "MIT")

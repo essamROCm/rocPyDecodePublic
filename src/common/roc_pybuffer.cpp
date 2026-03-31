@@ -21,13 +21,34 @@ THE SOFTWARE.
 */
 
 #include "roc_pybuffer.h"
+#include <algorithm>
 #include <iostream>
+#include <limits>
+#include <memory>
 
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
 
 using namespace std;
 using namespace py::literals;
+
+namespace {
+template <typename Target, typename Source>
+Target CheckedNumericCast(Source value, const char *context) {
+    using Limit = std::numeric_limits<Target>;
+    if (value > static_cast<Source>(Limit::max())) {
+        throw std::runtime_error(std::string(context) + " is too large");
+    }
+    return static_cast<Target>(value);
+}
+
+void ResetTensorMetadata(DLTensor &tensor) {
+    delete[] tensor.shape;
+    tensor.shape = nullptr;
+    delete[] tensor.strides;
+    tensor.strides = nullptr;
+}
+} // namespace
 
 static void CheckValidBuffer(const void *ptr) {
     if (ptr == nullptr) {
@@ -43,18 +64,31 @@ BufferInterface::BufferInterface(DLPackPyTensor &&dlTensor) {
 }
 
 py::tuple BufferInterface::shape() const {
-    py::tuple shape(m_dlTensor->ndim);
-    for (size_t i = 0; i < shape.size(); ++i) {
-        shape[i] = m_dlTensor->shape[i];
+    const auto ndim = static_cast<size_t>(m_dlTensor->ndim);
+    py::tuple shape(ndim);
+    if (m_dlTensor->shape == nullptr) {
+        return shape;
+    }
+
+    std::vector<int64_t> values(ndim);
+    std::copy_n(m_dlTensor->shape, ndim, values.begin());
+    for (size_t i = 0; i < ndim; ++i) {
+        shape[i] = values[i];
     }
     return shape;
 }
 
 py::tuple BufferInterface::strides() const {
-    py::tuple strides(m_dlTensor->ndim);
+    const auto ndim = static_cast<size_t>(m_dlTensor->ndim);
+    py::tuple strides(ndim);
+    if (m_dlTensor->strides == nullptr) {
+        return strides;
+    }
 
-    for (size_t i = 0; i < strides.size(); ++i) {
-        strides[i] = m_dlTensor->strides[i];
+    std::vector<int64_t> values(ndim);
+    std::copy_n(m_dlTensor->strides, ndim, values.begin());
+    for (size_t i = 0; i < ndim; ++i) {
+        strides[i] = values[i];
     }
     return strides;
 }
@@ -72,7 +106,8 @@ void *BufferInterface::data() const {
 }
 
 py::capsule BufferInterface::dlpack(py::object stream) const {
-    
+    static_cast<void>(stream);
+
     struct ManagerCtx {
         DLManagedTensor tensor;
         std::shared_ptr<const BufferInterface> extBuffer;
@@ -83,8 +118,8 @@ py::capsule BufferInterface::dlpack(py::object stream) const {
     // Set up tensor deleter to delete the ManagerCtx
     ctx->tensor.manager_ctx = ctx.get();
     ctx->tensor.deleter = [](DLManagedTensor *tensor) {
-        auto *ctx = static_cast<ManagerCtx *>(tensor->manager_ctx);
-        delete ctx;
+        auto *manager_ctx = static_cast<ManagerCtx *>(tensor->manager_ctx);
+        delete manager_ctx;
     };
 
     // Copy tensor data
@@ -131,7 +166,11 @@ void BufferInterface::ExportToPython(py::module &m) {
         .def("__dlpack_device__", &BufferInterface::dlpackDevice, "Get the device associated with the buffer");
 }
 
-int BufferInterface::LoadDLPack(std::vector<size_t>& _shape, std::vector<size_t>& _stride, uint32_t bit_depth, std::string& _type_str, void* _data, int device_id_) {
+int BufferInterface::LoadDLPack(const std::vector<size_t>& _shape, const std::vector<size_t>& _stride, uint32_t bit_depth, const std::string& _type_str, void* _data, int device_id_) {
+    if (_shape.size() != _stride.size()) {
+        throw std::runtime_error("Shape and stride rank must match");
+    }
+
     m_dlTensor->byte_offset = 0;
     m_dlTensor->device.device_type = kDLROCM;   // TODO: infer the device type from the memory buffer
     m_dlTensor->device.device_id = device_id_;
@@ -144,41 +183,42 @@ int BufferInterface::LoadDLPack(std::vector<size_t>& _shape, std::vector<size_t>
     // Convert DataType
     if (_type_str != "|u1" && _type_str != "|u2") {  // TODO: can also be other letters
         throw std::runtime_error("Could not create DL Pack tensor! Invalid typstr: " + _type_str);
-        return -1;
     }
 
-    int itemSizeDT;
-
     m_dlTensor->dtype.code = kDLUInt;
-
-    if (bit_depth == 8) {
-        m_dlTensor->dtype.bits = 8;
-        itemSizeDT = sizeof(uint8_t);
-    } else if (bit_depth == 10) {
-        m_dlTensor->dtype.bits = 16;
-        itemSizeDT = sizeof(uint16_t);
+    int item_size_dt = 0;
+    if (bit_depth == 8U) {
+        m_dlTensor->dtype.bits = 8U;
+        item_size_dt = static_cast<int>(sizeof(uint8_t));
+    } else if (bit_depth == 10U) {
+        m_dlTensor->dtype.bits = 16U;
+        item_size_dt = static_cast<int>(sizeof(uint16_t));
+    } else {
+        throw std::runtime_error("Unsupported bit depth for DLPack export");
     }
     m_dlTensor->dtype.lanes = 1;
 
     // Convert ndim
-    m_dlTensor->ndim = _shape.size();
+    ResetTensorMetadata(*m_dlTensor);
+    const auto ndim = CheckedNumericCast<int>(_shape.size(), "tensor rank");
+    m_dlTensor->ndim = ndim;
 
     // Convert shape
-    m_dlTensor->shape = new int64_t[m_dlTensor->ndim];
-    for (int i = 0; i < m_dlTensor->ndim; ++i) {
-        m_dlTensor->shape[i] = _shape[i];
+    auto shape = std::make_unique<int64_t[]>(static_cast<size_t>(ndim));
+    for (size_t i = 0; i < _shape.size(); ++i) {
+        shape[i] = CheckedNumericCast<int64_t>(_shape[i], "shape dimension");
     }
+    m_dlTensor->shape = shape.release();
     
     // Convert strides
-    int strides_dim = _stride.size();
-    m_dlTensor->strides = new int64_t[strides_dim];
-    for (int i = 0; i < strides_dim; ++i) {
-        m_dlTensor->strides[i] = _stride[i];
-        if (m_dlTensor->strides[i] % itemSizeDT != 0) {
+    auto strides = std::make_unique<int64_t[]>(static_cast<size_t>(ndim));
+    for (size_t i = 0; i < _stride.size(); ++i) {
+        const auto stride_bytes = CheckedNumericCast<int64_t>(_stride[i], "stride");
+        if (stride_bytes % item_size_dt != 0) {
             throw std::runtime_error("Stride must be a multiple of the element size in bytes");
-            return -1;
         }
-        m_dlTensor->strides[i] /= itemSizeDT;
+        strides[i] = stride_bytes / item_size_dt;
     }
+    m_dlTensor->strides = strides.release();
     return 0;
 }

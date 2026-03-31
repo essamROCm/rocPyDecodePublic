@@ -24,6 +24,7 @@ THE SOFTWARE.
 #define PY_ROC_JPEG_IMAGES_HEADER
 #pragma once
 
+#include <cstring>
 #include <iostream>
 #include "rocjpeg/rocjpeg.h"
 #include "common/roc_pybuffer.h"
@@ -45,16 +46,14 @@ public:
         num_channels = 0;
         subsampling = ROCJPEG_CSS_UNKNOWN;
     }
-    ~PyJpegImages() {};
-
     static void ExportToPython(py::module& m);
  
     // The image in the GPU MEM represented with dlpack via this ext_buf (for external buffer)
     std::vector<std::shared_ptr<BufferInterface>> ext_buf; // external buffer, a view on the GPU MEM of the decoded image
 
     // public to be accessed by python pybind
-    int m_width;
-    int m_height;
+    int m_width = 0;
+    int m_height = 0;
     py::array_t<uint8_t> to_numpy(int index = 0);
     RocJpegChromaSubsampling subsampling;
 
@@ -66,6 +65,7 @@ public:
 
 private:
     bool GetOutputDims(std::vector<uint32_t>& widths, std::vector<uint32_t>& heights, uint32_t img_width, uint32_t img_height, RocJpegOutputFormat output_format, RocJpegChromaSubsampling subsampling);
+    [[maybe_unused]] uint32_t padding_ = 0;
 };
 
 #endif // PY_ROC_JPEG_IMAGES_HEADER
