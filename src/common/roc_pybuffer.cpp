@@ -25,6 +25,7 @@ THE SOFTWARE.
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <type_traits>
 
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
@@ -35,9 +36,24 @@ using namespace py::literals;
 namespace {
 template <typename Target, typename Source>
 Target CheckedNumericCast(Source value, const char *context) {
-    using Limit = std::numeric_limits<Target>;
-    if (value > static_cast<Source>(Limit::max())) {
-        throw std::runtime_error(std::string(context) + " is too large");
+    if constexpr (std::is_signed_v<Source> && std::is_signed_v<Target>) {
+        if (value < static_cast<Source>(std::numeric_limits<Target>::min()) ||
+            value > static_cast<Source>(std::numeric_limits<Target>::max())) {
+            throw std::runtime_error(std::string(context) + " is out of range");
+        }
+    } else if constexpr (std::is_signed_v<Source> && !std::is_signed_v<Target>) {
+        using UnsignedSource = std::make_unsigned_t<Source>;
+        if (value < 0 ||
+            static_cast<UnsignedSource>(value) > std::numeric_limits<Target>::max()) {
+            throw std::runtime_error(std::string(context) + " is out of range");
+        }
+    } else if constexpr (!std::is_signed_v<Source> && std::is_signed_v<Target>) {
+        using UnsignedTarget = std::make_unsigned_t<Target>;
+        if (value > static_cast<UnsignedTarget>(std::numeric_limits<Target>::max())) {
+            throw std::runtime_error(std::string(context) + " is out of range");
+        }
+    } else if (value > std::numeric_limits<Target>::max()) {
+        throw std::runtime_error(std::string(context) + " is out of range");
     }
     return static_cast<Target>(value);
 }

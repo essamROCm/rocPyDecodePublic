@@ -30,6 +30,7 @@ namespace py = pybind11;
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <type_traits>
 #include <vector>
 
 namespace {
@@ -42,7 +43,23 @@ void ReleaseTensorMetadata(DLManagedTensor *self) {
 
 template <typename Target, typename Source>
 Target CheckedNumericCast(Source value, const char *context) {
-    if (value < 0 || value > static_cast<Source>(std::numeric_limits<Target>::max())) {
+    if constexpr (std::is_signed_v<Source> && std::is_signed_v<Target>) {
+        if (value < static_cast<Source>(std::numeric_limits<Target>::min()) ||
+            value > static_cast<Source>(std::numeric_limits<Target>::max())) {
+            throw std::runtime_error(std::string(context) + " is out of range");
+        }
+    } else if constexpr (std::is_signed_v<Source> && !std::is_signed_v<Target>) {
+        using UnsignedSource = std::make_unsigned_t<Source>;
+        if (value < 0 ||
+            static_cast<UnsignedSource>(value) > std::numeric_limits<Target>::max()) {
+            throw std::runtime_error(std::string(context) + " is out of range");
+        }
+    } else if constexpr (!std::is_signed_v<Source> && std::is_signed_v<Target>) {
+        using UnsignedTarget = std::make_unsigned_t<Target>;
+        if (value > static_cast<UnsignedTarget>(std::numeric_limits<Target>::max())) {
+            throw std::runtime_error(std::string(context) + " is out of range");
+        }
+    } else if (value > std::numeric_limits<Target>::max()) {
         throw std::runtime_error(std::string(context) + " is out of range");
     }
     return static_cast<Target>(value);
