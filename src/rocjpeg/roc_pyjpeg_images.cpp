@@ -34,6 +34,11 @@ using namespace std;
 
 #include <pybind11/numpy.h>
 
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcovered-switch-default"
+#endif
+
 void PyJpegImages::ExportToPython(py::module& m) {
     // PyJpegImages
     py::class_<PyJpegImages, shared_ptr<PyJpegImages>>(m, "PyJpegImages", py::module_local())
@@ -137,6 +142,9 @@ bool PyJpegImages::GetOutputDims(std::vector<uint32_t>& widths, std::vector<uint
                 case ROCJPEG_CSS_UNKNOWN:
                     std::cout << "Unknown chroma subsampling!" << std::endl;
                     return false;
+                default:
+                    std::cout << "Unknown chroma subsampling!" << std::endl;
+                    return false;
             }
             break;
         case ROCJPEG_OUTPUT_YUV_PLANAR:
@@ -169,6 +177,9 @@ bool PyJpegImages::GetOutputDims(std::vector<uint32_t>& widths, std::vector<uint
                 case ROCJPEG_CSS_UNKNOWN:
                     std::cout << "Unknown chroma subsampling!" << std::endl;
                     return false;
+                default:
+                    std::cout << "Unknown chroma subsampling!" << std::endl;
+                    return false;
             }
             break;
         case ROCJPEG_OUTPUT_Y:
@@ -184,6 +195,9 @@ bool PyJpegImages::GetOutputDims(std::vector<uint32_t>& widths, std::vector<uint
             heights[2] = heights[1] = heights[0] = img_height;
             break;
         case ROCJPEG_OUTPUT_FORMAT_MAX:
+            std::cout << "Unknown output format!" << std::endl;
+            return false;
+        default:
             std::cout << "Unknown output format!" << std::endl;
             return false;
     }
@@ -227,6 +241,12 @@ bool PyJpegImages::ToDlpackTensor(RocJpegOutputFormat output_format, int device_
             ext_buf[0]->LoadDLPack(shape, stride, bit_depth, type_str, static_cast<void *>(channels[0]), device_id); // device_id was set/saved at the constructor
         }
         break;
+        default:
+            return false;
     }
     return true;
 }
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif

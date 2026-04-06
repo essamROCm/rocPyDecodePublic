@@ -44,16 +44,19 @@ int PyReconfigureFlushCallback(void *p_viddec_obj, uint32_t flush_mode, void * p
 //
 // AMD Video Decoder Python Interface class
 //
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wweak-vtables"
+#endif
 class PyRocVideoDecoder : public RocVideoDecoder {
 
     public:
         PyRocVideoDecoder(int device_id, int mem_type, rocDecVideoCodec codec, bool force_zero_latency = false,
                           const Rect *p_crop_rect = nullptr, int max_width = 0, int max_height = 0,
                           uint32_t clk_rate = 0) : RocVideoDecoder(device_id, static_cast<OutputSurfaceMemoryType>(mem_type), codec, force_zero_latency,
-                          p_crop_rect, false, 0U, max_width, max_height, clk_rate) { 
-                InitConfigStructure();
-                device_id_ = device_id; }
-        ~PyRocVideoDecoder();
+                          p_crop_rect, false, 0U, max_width, max_height, clk_rate) {
+                InitConfigStructure(); }
+        ~PyRocVideoDecoder() override;
          
         // for python binding
         int PyDecodeFrame(PyPacketData& packet);
@@ -113,6 +116,7 @@ class PyRocVideoDecoder : public RocVideoDecoder {
         py::object PyGetDecoderSessionOverHead(std::uintptr_t session_id);
 #endif
     private:
+        virtual void VTableAnchor();
         std::shared_ptr <ConfigInfo> configInfo;
         void InitConfigStructure();
 
@@ -128,8 +132,7 @@ class PyRocVideoDecoder : public RocVideoDecoder {
         uint8_t *frame_ptr_resized = nullptr;
         size_t resized_image_size_in_bytes = 0;
         OutputSurfaceInfo *resized_surf_info = nullptr;
-
-    private:
-        int device_id_ = 0;
-        [[maybe_unused]] int padding_ = 0;
 };
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif

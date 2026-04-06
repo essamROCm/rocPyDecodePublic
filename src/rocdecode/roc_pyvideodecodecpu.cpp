@@ -92,6 +92,8 @@ PyRocVideoDecoderCpu::~PyRocVideoDecoderCpu() {
     }
 }
 
+void PyRocVideoDecoderCpu::VTableAnchor() {}
+
 int PyRocVideoDecoderCpu::PyDecodeFrame(PyPacketData& packet) {
     if(packet.bitstream_size == 0)
         packet.pkt_flags |= ROCDEC_PKT_ENDOFSTREAM;
@@ -237,7 +239,7 @@ uintptr_t PyRocVideoDecoderCpu::PyResizeFrame(PyPacketData& packet, Dim *resized
                 return 0;
             }
         }
-        memcpy(resized_surf_info, surf_info, sizeof(OutputSurfaceInfo));
+        *resized_surf_info = *surf_info;
         resized_surf_info->output_width = resized_dim->w;
         resized_surf_info->output_height = resized_dim->h;
         resized_surf_info->output_pitch = resized_dim->w * surf_info->bytes_per_pixel;

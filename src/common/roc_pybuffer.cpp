@@ -48,6 +48,15 @@ void ResetTensorMetadata(DLTensor &tensor) {
     delete[] tensor.strides;
     tensor.strides = nullptr;
 }
+
+std::unique_ptr<int64_t[]> MakeTensorMetadataArray(const std::vector<size_t> &values, const char *context) {
+    std::vector<int64_t> converted(values.size());
+    std::transform(values.begin(), values.end(), converted.begin(),
+                   [context](size_t value) { return CheckedNumericCast<int64_t>(value, context); });
+    auto data = std::make_unique<int64_t[]>(values.size());
+    std::copy(converted.begin(), converted.end(), data.get());
+    return data;
+}
 } // namespace
 
 static void CheckValidBuffer(const void *ptr) {
@@ -204,21 +213,20 @@ int BufferInterface::LoadDLPack(const std::vector<size_t>& _shape, const std::ve
     m_dlTensor->ndim = ndim;
 
     // Convert shape
-    auto shape = std::make_unique<int64_t[]>(static_cast<size_t>(ndim));
-    for (size_t i = 0; i < _shape.size(); ++i) {
-        shape[i] = CheckedNumericCast<int64_t>(_shape[i], "shape dimension");
-    }
+    auto shape = MakeTensorMetadataArray(_shape, "shape dimension");
     m_dlTensor->shape = shape.release();
     
     // Convert strides
-    auto strides = std::make_unique<int64_t[]>(static_cast<size_t>(ndim));
+    std::vector<size_t> stride_values;
+    stride_values.reserve(_stride.size());
     for (size_t i = 0; i < _stride.size(); ++i) {
         const auto stride_bytes = CheckedNumericCast<int64_t>(_stride[i], "stride");
         if (stride_bytes % item_size_dt != 0) {
             throw std::runtime_error("Stride must be a multiple of the element size in bytes");
         }
-        strides[i] = stride_bytes / item_size_dt;
+        stride_values.push_back(static_cast<size_t>(stride_bytes / item_size_dt));
     }
+    auto strides = MakeTensorMetadataArray(stride_values, "stride element");
     m_dlTensor->strides = strides.release();
     return 0;
 }

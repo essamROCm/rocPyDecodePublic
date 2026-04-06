@@ -70,6 +70,10 @@ namespace fs = std::experimental::filesystem;
  * This class provides utility functions such as getting file paths, initializing HIP device, 
  * getting chroma subsampling string, getting channel pitch and sizes, getting output file extension, and saving images.
  */
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcovered-switch-default"
+#endif
 class PyRocJpegUtils {
 public:
     using ChannelArray = std::array<uint32_t, ROCJPEG_MAX_COMPONENT>;
@@ -136,6 +140,9 @@ public:
                 chroma_sub_sampling = "YUV 4:0:0";
                 break;
             case ROCJPEG_CSS_UNKNOWN:
+                chroma_sub_sampling = "UNKNOWN";
+                break;
+            default:
                 chroma_sub_sampling = "UNKNOWN";
                 break;
         }
@@ -207,6 +214,9 @@ public:
                     case ROCJPEG_CSS_UNKNOWN:
                         std::cout << "Unknown chroma subsampling!" << std::endl;
                         return EXIT_FAILURE;
+                    default:
+                        std::cout << "Unknown chroma subsampling!" << std::endl;
+                        return EXIT_FAILURE;
                 }
                 break;
             case ROCJPEG_OUTPUT_YUV_PLANAR:
@@ -230,6 +240,9 @@ public:
                         case ROCJPEG_CSS_UNKNOWN:
                             std::cout << "Unknown chroma subsampling!" << std::endl;
                             return EXIT_FAILURE;
+                        default:
+                            std::cout << "Unknown chroma subsampling!" << std::endl;
+                            return EXIT_FAILURE;
                     }
                 }
                 break;
@@ -248,6 +261,9 @@ public:
                 set_channel(2U, full_width, full_height);
                 break;
             case ROCJPEG_OUTPUT_FORMAT_MAX:
+                std::cout << "Unknown output format!" << std::endl;
+                return EXIT_FAILURE;
+            default:
                 std::cout << "Unknown output format!" << std::endl;
                 return EXIT_FAILURE;
         }
@@ -273,5 +289,8 @@ private:
         return static_cast<uint32_t>(aligned);
     }
 };
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 
 #endif //ROC_PY_JPEG_UTILS

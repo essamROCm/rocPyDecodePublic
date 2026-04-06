@@ -40,9 +40,6 @@ public:
         ext_buf.push_back(std::make_shared<BufferInterface>());
         ext_buf.push_back(std::make_shared<BufferInterface>());
         ext_buf.push_back(std::make_shared<BufferInterface>());
-        // default, reset
-        memset(&decode_params, 0, sizeof(RocJpegDecodeParams));
-        memset(&output_image, 0, sizeof(RocJpegImage));
         num_channels = 0;
         subsampling = ROCJPEG_CSS_UNKNOWN;
     }
@@ -59,8 +56,8 @@ public:
 
     // not exposed to outside
     uint32_t num_channels = 0;
-    RocJpegImage output_image;
-    RocJpegDecodeParams decode_params;
+    RocJpegImage output_image{};
+    RocJpegDecodeParams decode_params{};
     bool ToDlpackTensor(RocJpegOutputFormat output_format, int device_id);
 
 private:
