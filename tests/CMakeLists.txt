@@ -330,13 +330,11 @@ endif()
 
 if(RUN_ROCPYJPEG_TESTS)
   # 17 - jpeg_decode_single_file_test
-  if(TORCH_PYTHON_RESULT EQUAL 0)
-    add_test(NAME jpeg_decode_python
-      COMMAND ${Python3_EXECUTABLE} ${ROCPYJPEG_SAMPLE_DIR}/jpegdecode.py
-      -i ${ROCM_PATH}/share/rocjpeg/images/mug_420.jpg
-      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-    set_rocpy_test_env(jpeg_decode_python "${ROCPYJPEG_PYTHONPATH}")
-  endif(TORCH_PYTHON_RESULT EQUAL 0)
+  add_test(NAME jpeg_decode_python
+    COMMAND ${Python3_EXECUTABLE} ${ROCPYJPEG_SAMPLE_DIR}/jpegdecode.py
+    -i ${ROCM_PATH}/share/rocjpeg/images/mug_420.jpg
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+  set_rocpy_test_env(jpeg_decode_python "${ROCPYJPEG_PYTHONPATH}")
   # 18 - jpegdecodebatched_test
   add_test(NAME jpeg_decode_batched_python
     COMMAND ${Python3_EXECUTABLE} ${ROCPYJPEG_SAMPLE_DIR}/jpegdecodebatched.py
