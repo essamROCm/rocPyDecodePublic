@@ -5,6 +5,7 @@ ARG ROCM_SERIES=10.1
 ARG GPU_TARGET=gfx1250
 ARG ROCM_BUILD=20260821-32431166035
 ARG ROCM_PACKAGE_VERSION=10.1.0~20260821-32431166035
+ARG ALLOW_UNSIGNED_ROCM_REPOSITORY=false
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -16,7 +17,15 @@ RUN apt-get update \
     && wget -qO- https://repo.amd.com/rocm/packages-multi-arch/gpg/rocm.gpg \
         | gpg --dearmor -o /etc/apt/keyrings/amdrocm.gpg
 
-RUN echo "deb [signed-by=/etc/apt/keyrings/amdrocm.gpg] https://rocm.nightlies.amd.com/packages-multi-arch/deb/${ROCM_BUILD} stable main" \
+RUN if [ "${ALLOW_UNSIGNED_ROCM_REPOSITORY}" = "true" ]; then \
+        repository_options="trusted=yes"; \
+    elif [ "${ALLOW_UNSIGNED_ROCM_REPOSITORY}" = "false" ]; then \
+        repository_options="signed-by=/etc/apt/keyrings/amdrocm.gpg"; \
+    else \
+        echo "ALLOW_UNSIGNED_ROCM_REPOSITORY must be true or false" >&2; \
+        exit 2; \
+    fi \
+    && echo "deb [${repository_options}] https://rocm.nightlies.amd.com/packages-multi-arch/deb/${ROCM_BUILD} stable main" \
         > /etc/apt/sources.list.d/rocm-nightly.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
