@@ -9,16 +9,22 @@ ARG ROCM_PACKAGE_VERSION=10.1.0~20260821-32431166035
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
+        gnupg \
         wget \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /etc/apt/keyrings \
+    && wget -qO- https://repo.amd.com/rocm/packages-multi-arch/gpg/rocm.gpg \
+        | gpg --dearmor -o /etc/apt/keyrings/amdrocm.gpg
 
-RUN echo "deb [trusted=yes] https://rocm.nightlies.amd.com/packages-multi-arch/deb/${ROCM_BUILD} stable main" \
+RUN echo "deb [signed-by=/etc/apt/keyrings/amdrocm.gpg] https://rocm.nightlies.amd.com/packages-multi-arch/deb/${ROCM_BUILD} stable main" \
         > /etc/apt/sources.list.d/rocm-nightly.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
         "amdrocm-core-sdk${ROCM_SERIES}-${GPU_TARGET}=${ROCM_PACKAGE_VERSION}" \
         "amdrocm-decode-dev${ROCM_SERIES}=${ROCM_PACKAGE_VERSION}" \
         "amdrocm-decode-test${ROCM_SERIES}=${ROCM_PACKAGE_VERSION}" \
+        "amdrocm-jpeg-dev${ROCM_SERIES}=${ROCM_PACKAGE_VERSION}" \
+        "amdrocm-jpeg-test${ROCM_SERIES}=${ROCM_PACKAGE_VERSION}" \
         build-essential \
         cmake \
         git \
@@ -49,7 +55,8 @@ ENV LD_LIBRARY_PATH=/opt/rocm/lib
 RUN hipconfig --full \
     && test -d /opt/rocm/share/rocdecode/utils \
     && test -d /opt/rocm/share/rocdecode/test \
-    && test -d /opt/rocm/share/rocdecode/video
+    && test -d /opt/rocm/share/rocdecode/video \
+    && test -d /opt/rocm/share/rocjpeg/images
 
 WORKDIR /workspace/EssamWork/ROCPYDECODE
 
