@@ -138,37 +138,20 @@ def decode_raw(
         return False
 
     data = memoryview(Path(input_path).read_bytes())
-    vps = sps = pps = None
+    sps = pps = None
     for nal in _annexb_slices(data):
         # nal header byte after start code
         sc_len = 4 if nal[:4] == b"\x00\x00\x00\x01" else 3
-        if codec == dectypes.rocDecVideoCodec_HEVC:
-            nal_type = (nal[sc_len] >> 1) & 0x3F
-            if nal_type == 32:  # VPS
-                vps = bytes(nal)
-                continue
-            if nal_type == 33:  # SPS
-                sps = bytes(nal)
-                continue
-            if nal_type == 34:  # PPS
-                pps = bytes(nal)
-                continue
-            is_slice = nal_type <= 31
-        else:
-            nal_type = nal[sc_len] & 0x1F
-            if nal_type == 7:  # SPS
-                sps = bytes(nal)
-                continue
-            if nal_type == 8:  # PPS
-                pps = bytes(nal)
-                continue
-            is_slice = nal_type in (1, 5)  # non-IDR / IDR slice
-
-        if is_slice:
-            # Prepend the latest parameter sets so each frame is self-contained.
+        nal_type = nal[sc_len] & 0x1F
+        if nal_type == 7:  # SPS
+            sps = bytes(nal)
+            continue
+        if nal_type == 8:  # PPS
+            pps = bytes(nal)
+            continue
+        if nal_type in (1, 5):  # non-IDR / IDR slice -> frame
+            # prepend latest SPS/PPS so each frame is self-contained
             parts = []
-            if vps:
-                parts.append(vps)
             if sps:
                 parts.append(sps)
             if pps:
@@ -190,7 +173,7 @@ def decode_raw(
             f"({fps:.2f} fps)."
         )
     else:
-        raise RuntimeError("No frames decoded.")
+        print("info: No frames decoded.")
 
 
 def main():

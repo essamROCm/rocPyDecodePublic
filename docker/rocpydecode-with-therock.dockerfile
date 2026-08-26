@@ -2,15 +2,29 @@ FROM ubuntu:24.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG ROCM_SERIES=10.1
-ARG GPU_TARGET=gfx1250
-ARG ROCM_BUILD=20260821-32431166035
-ARG ROCM_PACKAGE_VERSION=10.1.0~20260821-32431166035
+ARG GPU_TARGET
+ARG ROCM_BUILD=20260825-32791995050
+ARG ROCM_PACKAGE_VERSION=10.1.0~20260825-32791995050
 ARG ALLOW_UNSIGNED_ROCM_REPOSITORY=false
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
+        build-essential \
         ca-certificates \
+        cmake \
+        git \
         gnupg \
+        libavcodec-dev \
+        libavformat-dev \
+        libavutil-dev \
+        libdlpack-dev \
+        libnuma-dev \
+        libswscale-dev \
+        ninja-build \
+        pkg-config \
+        pybind11-dev \
+        python3-numpy \
+        python3-pytest \
         wget \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /etc/apt/keyrings \
@@ -25,48 +39,27 @@ RUN if [ "${ALLOW_UNSIGNED_ROCM_REPOSITORY}" = "true" ]; then \
         echo "ALLOW_UNSIGNED_ROCM_REPOSITORY must be true or false" >&2; \
         exit 2; \
     fi \
-    && echo "deb [${repository_options}] https://rocm.nightlies.amd.com/packages-multi-arch/deb/${ROCM_BUILD} stable main" \
+    && test -n "${GPU_TARGET}" \
+    && echo "deb [${repository_options}] https://nightly.repo.amd.com/rocm/core/packages/ubuntu2404/${ROCM_BUILD} stable main" \
         > /etc/apt/sources.list.d/rocm-nightly.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
         "amdrocm-core-sdk${ROCM_SERIES}-${GPU_TARGET}=${ROCM_PACKAGE_VERSION}" \
-        "amdrocm-decode-dev${ROCM_SERIES}=${ROCM_PACKAGE_VERSION}" \
         "amdrocm-decode-test${ROCM_SERIES}=${ROCM_PACKAGE_VERSION}" \
-        "amdrocm-jpeg-dev${ROCM_SERIES}=${ROCM_PACKAGE_VERSION}" \
         "amdrocm-jpeg-test${ROCM_SERIES}=${ROCM_PACKAGE_VERSION}" \
-        build-essential \
-        cmake \
-        git \
-        libavcodec-dev \
-        libavformat-dev \
-        libavutil-dev \
-        libdlpack-dev \
-        libnuma-dev \
-        libswscale-dev \
-        ninja-build \
-        pkg-config \
-        python3.12 \
-        python3.12-dev \
-        python3.12-venv \
     && rm -rf /var/lib/apt/lists/*
 
-RUN python3.12 -m venv /opt/venv \
-    && /opt/venv/bin/python -m pip install --no-cache-dir --upgrade pip setuptools wheel \
-    && /opt/venv/bin/python -m pip install --no-cache-dir numpy pybind11 pytest
-
-ENV VIRTUAL_ENV=/opt/venv
 ENV ROCM_PATH=/opt/rocm
 ENV ROCM_HOME=/opt/rocm
-ENV PATH=/opt/venv/bin:/opt/rocm/bin:/opt/rocm/lib/llvm/bin:${PATH}
-ENV CMAKE_PREFIX_PATH=/opt/rocm/lib/cmake:/opt/venv/lib/python3.12/site-packages/pybind11/share/cmake/pybind11
+ENV PATH=/opt/rocm/bin:/opt/rocm/lib/llvm/bin:${PATH}
+ENV CMAKE_PREFIX_PATH=/opt/rocm/lib/cmake
 ENV LD_LIBRARY_PATH=/opt/rocm/lib
 
 RUN hipconfig --full \
-    && test -d /opt/rocm/share/rocdecode/utils \
-    && test -d /opt/rocm/share/rocdecode/test \
-    && test -d /opt/rocm/share/rocdecode/video \
-    && test -d /opt/rocm/share/rocjpeg/images
+    && test -d "${ROCM_PATH}/share/rocdecode/utils" \
+    && test -d "${ROCM_PATH}/share/rocdecode/video" \
+    && test -d "${ROCM_PATH}/share/rocjpeg/images"
 
-WORKDIR /workspace/EssamWork/ROCPYDECODE
+WORKDIR /workspace/rocPyDecode
 
 CMD ["bash"]
