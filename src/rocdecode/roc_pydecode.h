@@ -58,7 +58,6 @@ struct PyPacketData {
     std::vector<std::shared_ptr<BufferInterface>> ext_buf;
     int       pkt_flags = 0;
     bool      end_of_stream = false;
-    unsigned char padding_[3]{};
     PyPacketData(){
         ext_buf.push_back(std::make_shared<BufferInterface>()); //index[0]: always Y Tensor
         ext_buf.push_back(std::make_shared<BufferInterface>()); //index[1]: UV tensor in case of NV12, otherwise only U tensor when YUV444/P016 is supported
@@ -72,7 +71,6 @@ struct ConfigInfo {
     int         pci_bus_id = 0;
     int         pci_domain_id = 0;
     int         pci_device_id = 0;
-    int         padding_ = 0;
 };
 
 // defined in roc_pyvideodemuxer.cpp (FFmpeg dependent)

@@ -38,8 +38,8 @@ public:
     CodeStream(py::array_t<uint8_t>);
     CodeStream(const CodeStream&);
     CodeStream& operator=(const CodeStream&);
-    CodeStream(CodeStream&&) noexcept = default;
-    CodeStream& operator=(CodeStream&&) noexcept = default;
+    CodeStream(CodeStream&&) noexcept;
+    CodeStream& operator=(CodeStream&&) noexcept;
     ~CodeStream();
     CodeStream();
 

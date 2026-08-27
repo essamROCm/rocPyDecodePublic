@@ -146,8 +146,6 @@ PyRocVideoDecoder::~PyRocVideoDecoder() {
     }
 }
 
-void PyRocVideoDecoder::VTableAnchor() {}
-
 int PyRocVideoDecoder::PyDecodeFrame(PyPacketData& packet) {
     if(packet.bitstream_size == 0)
         packet.pkt_flags |= ROCDEC_PKT_ENDOFSTREAM;
@@ -180,8 +178,9 @@ py::object PyRocVideoDecoder::PyGetFrameYuv(PyPacketData& packet, bool SeparateY
         }
         // for NV12 format (also YUV444 & P016 when supported), Y always in ext_buf vector index [0]
         // The tensor shape->height will be all the Yuv planes if user specify 'FALSE' in 'SeparateYuvPlanes' argument
-        const double plane_height_multiplier = SeparateYuvPlanes ? 1.0 : 1.5; // 1.5 for YUV NV12
-        std::vector<size_t> shape{ static_cast<size_t>(static_cast<double>(height) * plane_height_multiplier), static_cast<size_t>(width)};
+        const size_t tensor_height = static_cast<size_t>(height) +
+                                     (SeparateYuvPlanes ? 0U : static_cast<size_t>(height >> 1U));
+        std::vector<size_t> shape{tensor_height, static_cast<size_t>(width)};
         packet.ext_buf[0]->LoadDLPack(shape, stride, bit_depth, type_str, reinterpret_cast<void *>(packet.frame_adrs), device_id_);
         if (SeparateYuvPlanes) {
             // get surface format
@@ -414,14 +413,15 @@ uint32_t PyRocVideoDecoder::PyGetBitDepth() {
 
 #if ROCDECODE_CHECK_VERSION(0,6,0)
 // for python binding, Session overhead refers to decoder initialization and deinitialization time
-py::object PyRocVideoDecoder::PyAddDecoderSessionOverHead(std::uintptr_t session_id, double duration) {
-    AddDecoderSessionOverHead(static_cast<std::thread::id>(session_id), duration);
+py::object PyRocVideoDecoder::PyAddDecoderSessionOverHead(std::uintptr_t /*session_id*/, double duration) {
+    // Keep the Python argument for compatibility; rocDecode keys overhead by the calling C++ thread.
+    AddDecoderSessionOverHead(std::this_thread::get_id(), duration);
     return py::cast<py::none>(Py_None);
 }
 
 // for python binding, Session overhead refers to decoder initialization and deinitialization time
-py::object PyRocVideoDecoder::PyGetDecoderSessionOverHead(std::uintptr_t session_id) {
-    return py::cast(GetDecoderSessionOverHead(static_cast<std::thread::id>(session_id)));
+py::object PyRocVideoDecoder::PyGetDecoderSessionOverHead(std::uintptr_t /*session_id*/) {
+    return py::cast(GetDecoderSessionOverHead(std::this_thread::get_id()));
 }
 
 #endif

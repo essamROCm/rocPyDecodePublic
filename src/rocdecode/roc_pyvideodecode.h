@@ -35,7 +35,6 @@ typedef enum ReconfigFlushMode_enum {
 // this struct is used by videodecode and videodecodeMultiFiles to dump last frames to file
 typedef struct ReconfigDumpFileStruct_t {
     bool b_dump_frames_to_file = false;
-    unsigned char padding_[7]{};
     std::string output_file_name;
 } ReconfigDumpFileStruct;
 
@@ -44,10 +43,6 @@ int PyReconfigureFlushCallback(void *p_viddec_obj, uint32_t flush_mode, void * p
 //
 // AMD Video Decoder Python Interface class
 //
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wweak-vtables"
-#endif
 class PyRocVideoDecoder : public RocVideoDecoder {
 
     public:
@@ -116,7 +111,6 @@ class PyRocVideoDecoder : public RocVideoDecoder {
         py::object PyGetDecoderSessionOverHead(std::uintptr_t session_id);
 #endif
     private:
-        virtual void VTableAnchor();
         std::shared_ptr <ConfigInfo> configInfo;
         void InitConfigStructure();
 
@@ -133,6 +127,3 @@ class PyRocVideoDecoder : public RocVideoDecoder {
         size_t resized_image_size_in_bytes = 0;
         OutputSurfaceInfo *resized_surf_info = nullptr;
 };
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif

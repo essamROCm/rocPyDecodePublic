@@ -31,10 +31,6 @@ THE SOFTWARE.
 //
 // AMD Video Decoder Python Interface class
 //
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wweak-vtables"
-#endif
 class PyRocVideoDecoderCpu : public FFMpegVideoDecoder {
     public:
         PyRocVideoDecoderCpu(int device_id, int mem_type = OUT_SURFACE_MEM_HOST_COPIED, rocDecVideoCodec codec = rocDecVideoCodec_HEVC, bool force_zero_latency = false,
@@ -98,7 +94,6 @@ class PyRocVideoDecoderCpu : public FFMpegVideoDecoder {
         py::object PyGetDecoderSessionOverHead(std::uintptr_t session_id);
 #endif
     private:
-        virtual void VTableAnchor();
         std::shared_ptr <ConfigInfo> configInfo;
         void InitConfigStructure();
 
@@ -111,6 +106,3 @@ class PyRocVideoDecoderCpu : public FFMpegVideoDecoder {
         size_t resized_image_size_in_bytes = 0;
         OutputSurfaceInfo *resized_surf_info = nullptr;
 };
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif

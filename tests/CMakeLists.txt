@@ -185,9 +185,11 @@ if(EXISTS "${ROCM_PATH}/lib/rocm_sysdeps/lib")
 endif()
 
 function(set_rocpy_test_env test_name pythonpath)
-  set_property(TEST ${test_name} PROPERTY ENVIRONMENT
-    "PYTHONPATH=${pythonpath}"
-    "LD_LIBRARY_PATH=${ROCM_PATH}/lib:$ENV{LD_LIBRARY_PATH}")
+  set(test_environment "PYTHONPATH=${pythonpath}")
+  if(USING_THE_ROCK)
+    list(APPEND test_environment "LD_LIBRARY_PATH=${ROCM_PATH}/lib:$ENV{LD_LIBRARY_PATH}")
+  endif()
+  set_property(TEST ${test_name} PROPERTY ENVIRONMENT ${test_environment})
 endfunction()
 
 if(RUN_ROCPYDECODE_TESTS OR RUN_ROCPYJPEG_TESTS)
@@ -354,5 +356,5 @@ if(RUN_ROCPYDECODE_TESTS AND ROCPYDECODE_USE_FFMPEG)
     -i ${ROCM_PATH}/share/rocdecode/video/AMD_driving_virtual_20-H264.mp4
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   )
-  set_property(TEST rocpydecode_test_decoder_rgb_dlpack PROPERTY ENVIRONMENT "PYTHONPATH=${ROCPYDECODE_PYTHONPATH}:$PYTHONPATH")
+  set_rocpy_test_env(rocpydecode_test_decoder_rgb_dlpack "${ROCPYDECODE_PYTHONPATH}")
 endif()

@@ -58,7 +58,7 @@ Target CheckedNumericCast(Source value, const char *context) {
     return static_cast<Target>(value);
 }
 
-void ResetTensorMetadata(DLTensor &tensor) {
+void ReleaseTensorShapeAndStrides(DLTensor &tensor) {
     delete[] tensor.shape;
     tensor.shape = nullptr;
     delete[] tensor.strides;
@@ -224,7 +224,8 @@ int BufferInterface::LoadDLPack(const std::vector<size_t>& _shape, const std::ve
     m_dlTensor->dtype.lanes = 1;
 
     // Convert ndim
-    ResetTensorMetadata(*m_dlTensor);
+    // Preserve the DLTensor object and replace only its owned shape metadata.
+    ReleaseTensorShapeAndStrides(*m_dlTensor);
     const auto ndim = CheckedNumericCast<int>(_shape.size(), "tensor rank");
     m_dlTensor->ndim = ndim;
 

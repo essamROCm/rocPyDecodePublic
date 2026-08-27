@@ -37,10 +37,6 @@ void Test_PyReconfigureFlushCallback();
 void Test_CalculateRgbImageSize();
 #endif
 
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
-#endif
 PYBIND11_MODULE(rocpydecode, m) {
  
     m.doc() = "Python bindings for the C++ portions of rocDecode ..";
@@ -245,6 +241,3 @@ PYBIND11_MODULE(rocpydecode, m) {
         .def(py::init<>())
         .def_static("test_all", &DLPackPyTensor::test_all);
 }
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif

@@ -26,6 +26,7 @@ THE SOFTWARE.
 #include <algorithm>
 #include <vector>
 #include <functional>
+#include <utility>
 
 using namespace std;
 using namespace py::literals;
@@ -170,6 +171,25 @@ CodeStream& CodeStream::operator=(const CodeStream& other) {
     if (other.stream_handle != nullptr) {
         InitializeStreamFromCurrentData();
     }
+    return *this;
+}
+
+CodeStream::CodeStream(CodeStream&& other) noexcept
+    : stream_handle(std::exchange(other.stream_handle, nullptr)),
+      file_data(std::move(other.file_data)),
+      data_ref_bytes_(std::move(other.data_ref_bytes_)),
+      data_ref_arr_(std::move(other.data_ref_arr_)) {}
+
+CodeStream& CodeStream::operator=(CodeStream&& other) noexcept {
+    if (this == &other) {
+        return *this;
+    }
+
+    Release();
+    stream_handle = std::exchange(other.stream_handle, nullptr);
+    file_data = std::move(other.file_data);
+    data_ref_bytes_ = std::move(other.data_ref_bytes_);
+    data_ref_arr_ = std::move(other.data_ref_arr_);
     return *this;
 }
 

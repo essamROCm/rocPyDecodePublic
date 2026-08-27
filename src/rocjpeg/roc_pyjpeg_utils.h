@@ -226,14 +226,36 @@ public:
                 } else {
                     switch (subsampling) {
                         case ROCJPEG_CSS_444:
-                        case ROCJPEG_CSS_440:
-                        case ROCJPEG_CSS_422:
-                        case ROCJPEG_CSS_420:
                             num_channels = 3U;
                             set_channel(0U, full_width, full_height);
-                            set_channel(1U, is_roi_valid ? roi_width : widths[1], is_roi_valid ? roi_height : heights[1]);
-                            set_channel(2U, is_roi_valid ? roi_width : widths[2], is_roi_valid ? roi_height : heights[2]);
+                            set_channel(1U, full_width, full_height);
+                            set_channel(2U, full_width, full_height);
                             break;
+                        case ROCJPEG_CSS_440: {
+                            const uint32_t chroma_height = is_roi_valid ? (full_height >> 1U) : heights[1];
+                            num_channels = 3U;
+                            set_channel(0U, full_width, full_height);
+                            set_channel(1U, full_width, chroma_height);
+                            set_channel(2U, full_width, chroma_height);
+                            break;
+                        }
+                        case ROCJPEG_CSS_422: {
+                            const uint32_t chroma_width = is_roi_valid ? (full_width >> 1U) : widths[1];
+                            num_channels = 3U;
+                            set_channel(0U, full_width, full_height);
+                            set_channel(1U, chroma_width, full_height);
+                            set_channel(2U, chroma_width, full_height);
+                            break;
+                        }
+                        case ROCJPEG_CSS_420: {
+                            const uint32_t chroma_width = is_roi_valid ? (full_width >> 1U) : widths[1];
+                            const uint32_t chroma_height = is_roi_valid ? (full_height >> 1U) : heights[1];
+                            num_channels = 3U;
+                            set_channel(0U, full_width, full_height);
+                            set_channel(1U, chroma_width, chroma_height);
+                            set_channel(2U, chroma_width, chroma_height);
+                            break;
+                        }
                         case ROCJPEG_CSS_400:
                             break;
                         case ROCJPEG_CSS_411:
