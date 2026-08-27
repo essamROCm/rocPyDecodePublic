@@ -114,22 +114,11 @@ else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -DNDEBUG -fPIC")
 endif()
 
-option(ROCPYDECODE_ENABLE_ALL_WARNINGS "Enable broad compiler warnings for C++ targets" ON)
+option(ROCPYDECODE_ENABLE_WARNINGS "Enable compiler warnings for C++ targets" ON)
 set(ROCPYDECODE_WARNING_FLAGS "")
-if(ROCPYDECODE_ENABLE_ALL_WARNINGS)
-    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        list(APPEND ROCPYDECODE_WARNING_FLAGS
-            -Weverything
-            -Wno-c++98-compat
-            -Wno-c++98-compat-pedantic
-            -Wno-pre-c++14-compat
-            -Wno-pre-c++17-compat
-            -Wno-pre-c++20-compat)
-    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-        list(APPEND ROCPYDECODE_WARNING_FLAGS
-            -Wall
-            -Wextra
-            -Wpedantic)
+if(ROCPYDECODE_ENABLE_WARNINGS)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+        list(APPEND ROCPYDECODE_WARNING_FLAGS -Wall)
     elseif(MSVC)
         list(APPEND ROCPYDECODE_WARNING_FLAGS
             /W4
@@ -199,9 +188,8 @@ set (HIP_PLATFORM amd CACHE STRING "HIP platform")
 
 # Find dependencies
 find_package(HIP REQUIRED)
-# ROCm package versions are currently 0.x even though the APIs used here are stable.
-find_package(rocdecode QUIET)
-find_package(rocjpeg QUIET)
+find_package(rocdecode 1.0.0 QUIET)
+find_package(rocjpeg 1.0.0 QUIET)
 find_package(pybind11 REQUIRED)
 find_package(DLPACK REQUIRED)
 find_package(FFmpeg QUIET)

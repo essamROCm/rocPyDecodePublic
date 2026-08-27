@@ -73,9 +73,9 @@ set(ROCPYJPEG_LIB_DIR "${ROCM_PATH}/lib")
 set(ROCPYJPEG_PY_DIR "${ROCM_PATH}/lib/pyRocJpegDecode")
 
 # In-tree build locations (match pybind target layout)
-set(ROCPYDECODE_BUILD_LIB_DIR "${CMAKE_BINARY_DIR}/rocpydecode/lib")
+set(ROCPYDECODE_BUILD_LIB_DIR "${CMAKE_BINARY_DIR}/rocpydecode_${PY_VERSION_SUFFIX}/lib")
 set(ROCPYDECODE_BUILD_PY_DIR "${CMAKE_BINARY_DIR}/rocpydecode_${PY_VERSION_SUFFIX}/pyRocVideoDecode")
-set(ROCPYJPEG_BUILD_LIB_DIR "${CMAKE_BINARY_DIR}/rocpyjpegdecode/lib")
+set(ROCPYJPEG_BUILD_LIB_DIR "${CMAKE_BINARY_DIR}/rocpyjpegdecode_${PY_VERSION_SUFFIX}/lib")
 set(ROCPYJPEG_BUILD_PY_DIR "${CMAKE_BINARY_DIR}/rocpyjpegdecode_${PY_VERSION_SUFFIX}/pyRocJpegDecode")
 
 # check installed or build-tree pybind bindings
@@ -139,8 +139,8 @@ else()
 endif()
 
 # find requirements (optional to allow skipping tests)
-find_package(rocdecode QUIET)
-find_package(rocjpeg QUIET)
+find_package(rocdecode 1.0.0 QUIET)
+find_package(rocjpeg 1.0.0 QUIET)
 find_library(rocdecode_HOST_LIBRARY NAMES rocdecodehost rocdecode-host PATHS ${ROCM_PATH}/lib)
 set(RUN_ROCPYDECODE_TESTS OFF)
 set(RUN_ROCPYJPEG_TESTS OFF)
@@ -330,11 +330,15 @@ endif()
 
 if(RUN_ROCPYJPEG_TESTS)
   # 17 - jpeg_decode_single_file_test
-  add_test(NAME jpeg_decode_python
-    COMMAND ${Python3_EXECUTABLE} ${ROCPYJPEG_SAMPLE_DIR}/jpegdecode.py
-    -i ${ROCM_PATH}/share/rocjpeg/images/mug_420.jpg
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-  set_rocpy_test_env(jpeg_decode_python "${ROCPYJPEG_PYTHONPATH}")
+  if(TORCH_PYTHON_RESULT EQUAL 0)
+    add_test(NAME jpeg_decode_python
+      COMMAND ${Python3_EXECUTABLE} ${ROCPYJPEG_SAMPLE_DIR}/jpegdecode.py
+      -i ${ROCM_PATH}/share/rocjpeg/images/mug_420.jpg
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+    set_rocpy_test_env(jpeg_decode_python "${ROCPYJPEG_PYTHONPATH}")
+  else()
+    message("-- ${Yellow}${PROJECT_NAME}: skipping jpeg_decode_python; PyTorch is not available.${ColourReset}")
+  endif()
   # 18 - jpegdecodebatched_test
   add_test(NAME jpeg_decode_batched_python
     COMMAND ${Python3_EXECUTABLE} ${ROCPYJPEG_SAMPLE_DIR}/jpegdecodebatched.py

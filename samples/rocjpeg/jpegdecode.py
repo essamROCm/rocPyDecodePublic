@@ -18,6 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+import torch
 import pyRocJpegDecode.decoder as jdec
 import rocpyjpegdecode.jpegTypes as jpegt
 import argparse
@@ -56,7 +57,8 @@ def jpeg_decode(
     # example how to save the decoded image as a file
     if (output_file_path is not None):
         filename = output_file_path.strip() + ".png"
-        arr = img_tensor.to_numpy()
+        img1 = torch.from_numpy(img_tensor.to_numpy())
+        arr = img1.cpu().numpy()
         img = Image.fromarray(arr.astype(np.uint8))
         img.save(filename)
         print(f"Image saved as: {filename}")
