@@ -33,7 +33,6 @@ THE SOFTWARE.
 #include <thread>
 #include <mutex>
 #include <algorithm>
-#include <array>
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
@@ -76,8 +75,6 @@ namespace fs = std::experimental::filesystem;
 #endif
 class PyRocJpegUtils {
 public:
-    using ChannelArray = std::array<uint32_t, ROCJPEG_MAX_COMPONENT>;
-
     /**
      * @brief Initializes the HIP device.
      *
@@ -164,9 +161,9 @@ public:
      * @return The channel pitch.
      */
     int GetChannelPitchAndSizes(RocJpegDecodeParams decode_params, RocJpegChromaSubsampling subsampling,
-                                const ChannelArray &widths, const ChannelArray &heights,
+                                const std::vector<uint32_t> &widths, const std::vector<uint32_t> &heights,
                                 uint32_t &num_channels, RocJpegImage &output_image,
-                                ChannelArray &channel_sizes) {
+                                std::vector<uint32_t> &channel_sizes) {
         const int roi_width_raw = decode_params.crop_rectangle.right - decode_params.crop_rectangle.left;
         const int roi_height_raw = decode_params.crop_rectangle.bottom - decode_params.crop_rectangle.top;
         const uint32_t roi_width = static_cast<uint32_t>(roi_width_raw);
@@ -174,8 +171,8 @@ public:
         const bool is_roi_valid = roi_width_raw > 0 && roi_height_raw > 0 && roi_width <= widths[0] && roi_height <= heights[0];
         const uint32_t full_width = is_roi_valid ? roi_width : widths[0];
         const uint32_t full_height = is_roi_valid ? roi_height : heights[0];
-        ChannelArray pitches{};
-        channel_sizes.fill(0U);
+        std::vector<uint32_t> pitches(ROCJPEG_MAX_COMPONENT, 0U);
+        std::fill(channel_sizes.begin(), channel_sizes.end(), 0U);
 
         const auto set_channel = [&](std::size_t index, uint32_t pitch, uint32_t height) {
             pitches[index] = pitch;

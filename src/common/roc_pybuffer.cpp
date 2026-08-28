@@ -66,11 +66,10 @@ void ReleaseTensorShapeAndStrides(DLTensor &tensor) {
 }
 
 std::unique_ptr<int64_t[]> MakeTensorMetadataArray(const std::vector<size_t> &values, const char *context) {
-    std::vector<int64_t> converted(values.size());
-    std::transform(values.begin(), values.end(), converted.begin(),
-                   [context](size_t value) { return CheckedNumericCast<int64_t>(value, context); });
     auto data = std::make_unique<int64_t[]>(values.size());
-    std::copy(converted.begin(), converted.end(), data.get());
+    for (size_t i = 0; i < values.size(); ++i) {
+        data[i] = CheckedNumericCast<int64_t>(values[i], context);
+    }
     return data;
 }
 } // namespace
@@ -92,7 +91,10 @@ py::tuple BufferInterface::shape() const {
     const auto ndim = static_cast<size_t>(m_dlTensor->ndim);
     py::tuple shape(ndim);
     if (m_dlTensor->shape == nullptr) {
-        return shape;
+        if (ndim == 0) {
+            return shape;
+        }
+        throw std::runtime_error("DLPack tensor shape is null");
     }
 
     std::vector<int64_t> values(ndim);
@@ -107,6 +109,23 @@ py::tuple BufferInterface::strides() const {
     const auto ndim = static_cast<size_t>(m_dlTensor->ndim);
     py::tuple strides(ndim);
     if (m_dlTensor->strides == nullptr) {
+        if (ndim == 0) {
+            return strides;
+        }
+        if (m_dlTensor->shape == nullptr) {
+            throw std::runtime_error("Cannot compute contiguous strides without a tensor shape");
+        }
+
+        int64_t current_stride = 1;
+        for (size_t i = ndim; i-- > 0;) {
+            const int64_t dimension = m_dlTensor->shape[i];
+            if (dimension < 0 ||
+                (dimension != 0 && current_stride > std::numeric_limits<int64_t>::max() / dimension)) {
+                throw std::runtime_error("Invalid tensor shape while computing contiguous strides");
+            }
+            strides[i] = current_stride;
+            current_stride *= dimension;
+        }
         return strides;
     }
 
@@ -143,8 +162,7 @@ py::capsule BufferInterface::dlpack(py::object stream) const {
     // Set up tensor deleter to delete the ManagerCtx
     ctx->tensor.manager_ctx = ctx.get();
     ctx->tensor.deleter = [](DLManagedTensor *tensor) {
-        auto *manager_ctx = static_cast<ManagerCtx *>(tensor->manager_ctx);
-        delete manager_ctx;
+        delete static_cast<ManagerCtx *>(tensor->manager_ctx);
     };
 
     // Copy tensor data
@@ -223,27 +241,22 @@ int BufferInterface::LoadDLPack(const std::vector<size_t>& _shape, const std::ve
     }
     m_dlTensor->dtype.lanes = 1;
 
-    // Convert ndim
-    // Preserve the DLTensor object and replace only its owned shape metadata.
-    ReleaseTensorShapeAndStrides(*m_dlTensor);
+    // Prepare replacement metadata before modifying the current tensor so an
+    // allocation or conversion failure leaves the existing metadata intact.
     const auto ndim = CheckedNumericCast<int>(_shape.size(), "tensor rank");
-    m_dlTensor->ndim = ndim;
-
-    // Convert shape
     auto shape = MakeTensorMetadataArray(_shape, "shape dimension");
-    m_dlTensor->shape = shape.release();
-    
-    // Convert strides
-    std::vector<size_t> stride_values;
-    stride_values.reserve(_stride.size());
+    auto strides = std::make_unique<int64_t[]>(_stride.size());
     for (size_t i = 0; i < _stride.size(); ++i) {
         const auto stride_bytes = CheckedNumericCast<int64_t>(_stride[i], "stride");
         if (stride_bytes % item_size_dt != 0) {
             throw std::runtime_error("Stride must be a multiple of the element size in bytes");
         }
-        stride_values.push_back(static_cast<size_t>(stride_bytes / item_size_dt));
+        strides[i] = stride_bytes / item_size_dt;
     }
-    auto strides = MakeTensorMetadataArray(stride_values, "stride element");
+
+    ReleaseTensorShapeAndStrides(*m_dlTensor);
+    m_dlTensor->ndim = ndim;
+    m_dlTensor->shape = shape.release();
     m_dlTensor->strides = strides.release();
     return 0;
 }

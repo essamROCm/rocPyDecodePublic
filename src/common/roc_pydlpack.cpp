@@ -86,6 +86,12 @@ DLPackPyTensor::DLPackPyTensor(const DLTensor &tensor) : DLPackPyTensor(MakeMana
 DLPackPyTensor::DLPackPyTensor(const py::buffer_info &info, const DLDevice &dev) : m_tensor{} {
     DLTensor &dlTensor = m_tensor.dl_tensor;
     const auto rank = CheckedNumericCast<size_t>(info.ndim, "tensor rank");
+    if (info.shape.size() != rank || info.strides.size() != rank) {
+        throw std::runtime_error("Buffer shape and stride rank must match tensor rank");
+    }
+    if (info.itemsize <= 0) {
+        throw std::runtime_error("Buffer item size must be positive");
+    }
     dlTensor.data      = info.ptr;
     //TBD dtype
     dlTensor.dtype.code = kDLInt;
@@ -98,24 +104,18 @@ DLPackPyTensor::DLPackPyTensor(const py::buffer_info &info, const DLDevice &dev)
     m_tensor.deleter = ReleaseTensorMetadata;
 
     try {
-        std::vector<int64_t> shape_values(rank);
-        std::transform(info.shape.begin(), info.shape.end(), shape_values.begin(), [](ssize_t dimension) {
-            return static_cast<int64_t>(dimension);
-        });
         auto shape = std::make_unique<int64_t[]>(rank);
-        std::copy(shape_values.begin(), shape_values.end(), shape.get());
-        dlTensor.shape = shape.release();
-
-        std::vector<int64_t> stride_values(rank);
+        auto strides = std::make_unique<int64_t[]>(rank);
         for (size_t i = 0; i < rank; ++i) {
+            shape[i] = CheckedNumericCast<int64_t>(info.shape[i], "shape dimension");
             const auto stride = info.strides[i];
             if (stride % info.itemsize != 0) {
                 throw std::runtime_error("Stride must be a multiple of the element size in bytes");
             }
-            stride_values[i] = static_cast<int64_t>(stride / info.itemsize);
+            strides[i] = CheckedNumericCast<int64_t>(stride / info.itemsize, "stride element");
         }
-        auto strides = std::make_unique<int64_t[]>(rank);
-        std::copy(stride_values.begin(), stride_values.end(), strides.get());
+
+        dlTensor.shape = shape.release();
         dlTensor.strides = strides.release();
     } catch (...) {
         m_tensor.deleter(&m_tensor);

@@ -219,9 +219,9 @@ Decoder::~Decoder() {
 // Get Image Info, Pitch, Sizes, and alloc GPU MEM
 int Decoder::GetImageInfo(RocJpegStreamHandle stream_handle, PyJpegImages& img) {
     uint8_t num_components = 0;
-    PyRocJpegUtils::ChannelArray widths{};
-    PyRocJpegUtils::ChannelArray heights{};
-    PyRocJpegUtils::ChannelArray channel_sizes{};
+    std::vector<uint32_t> widths(ROCJPEG_MAX_COMPONENT, 0U);
+    std::vector<uint32_t> heights(ROCJPEG_MAX_COMPONENT, 0U);
+    std::vector<uint32_t> channel_sizes(ROCJPEG_MAX_COMPONENT, 0U);
     // default, reset
     img.decode_params.output_format = user_output_format;
     // Get the image info
