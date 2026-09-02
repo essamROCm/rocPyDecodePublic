@@ -190,8 +190,7 @@ From the ``videodecode.py`` example:
 
 Decoder resources are destroyed when the Python class object is released.
 
-The rocPyDecode samples are available from the `rocPyDecode GitHub repository <https://github.com/ROCm/rocPyDecode/tree/develop/samples>`_.
+The rocPyDecode samples are available from the `videoDecode project <https://github.com/ROCm/rocPyDecode/tree/develop/videoDecode/samples>`_.
 
 .. |videodecode| replace:: ``videodecode.py``
-.. _videodecode: https://github.com/ROCm/rocPyDecode/blob/develop/samples/rocdecode/videodecode.py
-
+.. _videodecode: https://github.com/ROCm/rocPyDecode/blob/develop/videoDecode/samples/rocdecode/videodecode.py

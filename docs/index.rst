@@ -34,7 +34,6 @@ The rocPyDecode public repository is located at `https://github.com/ROCm/rocPyDe
   .. grid-item-card:: How to
 
     * :doc:`Use rocPyDecode <how-to/using-rocPydecode>` 
-    * :doc:`Create a rocPyDecode wheel file <how-to/rocPyDecode-wheel>`
 
   .. grid-item-card:: Samples
 

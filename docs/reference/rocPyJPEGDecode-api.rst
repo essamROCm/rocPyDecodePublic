@@ -6,7 +6,7 @@
 rocPyJpegDecode Python API
 *********************************
 
-The rocPyJpegDecode API is available in the rocDecode GitHub repository under the `pyRocJpegDecode <https://github.com/ROCm/rocPyDecode/tree/develop/pyRocJpegDecode>`_ directory.
+The rocPyJpegDecode API is available in the rocPyDecode GitHub repository under the `jpegDecode/pyRocJpegDecode <https://github.com/ROCm/rocPyDecode/tree/develop/jpegDecode/pyRocJpegDecode>`_ directory.
 
 The following rocPyJpegDecode API calls are used to decode a JPEG image. 
 
@@ -36,4 +36,3 @@ The following rocPyJpegDecode API calls are used to decode a JPEG image.
 	* Multiple images stored as memory buffers. The batch size must also be passed to the function.
 	* One image stored as a NumPy array.
 	* Multiple images stored as NumPy arrays. The batch size must also be passed to the function.
-		

@@ -13,13 +13,13 @@ The rocPyDecode samples are located in |rocpydecode|_ and rocPyJpegDecode sample
 rocPyDecode tests are located in |tests|_.
 
 .. |samples| replace:: ``samples``
-.. _samples: https://github.com/ROCm/rocPyDecode/tree/develop/samples
+.. _samples: https://github.com/ROCm/rocPyDecode/tree/develop/videoDecode/samples
 
 .. |tests| replace:: ``tests``
 .. _tests: https://github.com/ROCm/rocPyDecode/tree/develop/tests
 
-.. |rocpydecode| replace:: ``samples/rocdecode``
-.. _rocpydecode: https://github.com/ROCm/rocPyDecode/tree/develop/samples/rocdecode
+.. |rocpydecode| replace:: ``videoDecode/samples/rocdecode``
+.. _rocpydecode: https://github.com/ROCm/rocPyDecode/tree/develop/videoDecode/samples/rocdecode
 
-.. |rocpyjpeg| replace:: ``samples/rocjpeg``
-.. _rocpyjpeg: https://github.com/ROCm/rocPyDecode/tree/develop/samples/rocjpeg
+.. |rocpyjpeg| replace:: ``jpegDecode/samples/rocjpeg``
+.. _rocpyjpeg: https://github.com/ROCm/rocPyDecode/tree/develop/jpegDecode/samples/rocjpeg
