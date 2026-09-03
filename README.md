@@ -43,6 +43,11 @@ ctest --test-dir build --output-on-failure
 Both components are enabled by default. Use `-DBUILD_VIDEO_DECODE=OFF` or
 `-DBUILD_JPEG_DECODE=OFF` for a component-only umbrella build.
 
-See each child README for standalone commands and build-tree import paths. The
+See each child README and its local `docs` directory for standalone guidance:
+
+- [`videoDecode/docs`](videoDecode/docs/index.rst)
+- [`jpegDecode/docs`](jpegDecode/docs/index.rst)
+
+The umbrella documentation starts at [`docs/index.rst`](docs/index.rst). The
 published documentation is available at
 [rocPyDecode](https://rocm.docs.amd.com/projects/rocPyDecode/en/latest/).

@@ -2,6 +2,8 @@
 
 Python bindings and samples for the ROCm rocDecode library.
 
+Component-owned documentation is available in [`docs`](docs/index.rst).
+
 ## Build and test
 
 ```bash

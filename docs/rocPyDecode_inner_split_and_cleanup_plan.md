@@ -17,6 +17,9 @@ The root project must build and test either component alone or both together. Ea
 
 - `videoDecode` owns the rocDecode binding, `pyRocVideoDecode`, video samples, video tests, and its CMake discovery modules.
 - `jpegDecode` owns the rocJPEG binding, `pyRocJpegDecode`, JPEG samples, JPEG tests, and its CMake discovery modules.
+- Each child owns its component-specific documentation under a local `docs/`
+  directory. The umbrella `docs/` directory owns only shared project guidance
+  and provides the unified entry point to both component documentation trees.
 - Each child owns a private copy of the buffer and DLPack implementation directly under its `src/` directory. There is no child `src/common/` directory.
 - Types implemented independently by both native extensions are registered as
   module-local pybind11 types so both extensions can be imported in one Python
@@ -46,6 +49,7 @@ rocPyDecode/
 ├── videoDecode/
 │   ├── CMakeLists.txt
 │   ├── README.md
+│   ├── docs/
 │   ├── cmake/
 │   ├── pyRocVideoDecode/
 │   ├── samples/rocdecode/
@@ -57,6 +61,7 @@ rocPyDecode/
 └── jpegDecode/
     ├── CMakeLists.txt
     ├── README.md
+    ├── docs/
     ├── cmake/
     ├── pyRocJpegDecode/
     ├── samples/rocjpeg/
@@ -99,7 +104,15 @@ CTest must consume build-tree outputs without requiring a prior install. Install
 ## Cleanup and documentation
 
 - Remove all references to deleted Conda, wheel, requirements-script, and old root-relative paths.
-- Keep umbrella documentation at the root and add standalone build, install, test, dependency, sample, and import guidance to each child README.
+- Keep shared and umbrella documentation at the root. Move video- and
+  JPEG-specific pages into each child's `docs/` tree and link to those trees
+  from the root documentation.
+- Give each child a local documentation index plus standalone build, install,
+  test, dependency, API, and sample guidance. Keep concise quick-start and
+  local-documentation links in each child README.
+- Avoid duplicating component content in the root. This keeps documentation
+  colocated with the implementation and minimizes work if either component is
+  later extracted into a separate repository.
 - Update architecture documentation so ownership boundaries and duplicated private support code are explicit.
 - Record an ownership/movement map and the final validation evidence.
 
@@ -153,6 +166,8 @@ ROCm 10.1 nightly SDK environment. Results:
 - Root combined: build and install passed; 4/4 CTests passed.
 - Both installed native modules and both Python packages imported successfully
   from the combined installation.
+- Component-specific documentation is colocated under `videoDecode/docs` and
+  `jpegDecode/docs`; the umbrella documentation links to both component trees.
 
 Wheel creation was not performed and no wheel metadata was added, as approved
 for this PR.
