@@ -5,15 +5,15 @@
 # rocPyDecode
 
 rocPyDecode provides Python bindings for AMD's rocDecode and rocJPEG C/C++
-libraries. The repository is an umbrella for two independent projects:
+libraries. The repository contains two components:
 
 - [`videoDecode`](videoDecode/README.md): rocDecode video bindings,
   `pyRocVideoDecode`, samples, and tests.
 - [`jpegDecode`](jpegDecode/README.md): rocJPEG image bindings,
   `pyRocJpegDecode`, samples, and tests.
 
-Each child can be configured, built, installed, and tested independently. The
-root build orchestrates both without sharing child source files.
+Each component supports standalone configuration, build, installation, and
+testing. The top-level build supports building both components together.
 
 ## Prerequisites
 
@@ -41,13 +41,13 @@ ctest --test-dir build --output-on-failure
 ```
 
 Both components are enabled by default. Use `-DBUILD_VIDEO_DECODE=OFF` or
-`-DBUILD_JPEG_DECODE=OFF` for a component-only umbrella build.
+`-DBUILD_JPEG_DECODE=OFF` to build only one component from the repository root.
 
 See each child README and its local `docs` directory for standalone guidance:
 
 - [`videoDecode/docs`](videoDecode/docs/index.rst)
 - [`jpegDecode/docs`](jpegDecode/docs/index.rst)
 
-The umbrella documentation starts at [`docs/index.rst`](docs/index.rst). The
+The top-level documentation starts at [`docs/index.rst`](docs/index.rst). The
 published documentation is available at
 [rocPyDecode](https://rocm.docs.amd.com/projects/rocPyDecode/en/latest/).

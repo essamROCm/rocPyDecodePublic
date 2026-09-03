@@ -2,7 +2,7 @@
 
 ## Prerequisites
 * [rocDecode C/C++ Library](https://github.com/ROCm/rocDecode)
-* [rocPyDecode installed](https://github.com/ROCm/rocPyDecode/tree/develop/videoDecode)
+* [rocPyDecode installed](../../README.md)
 * [DLPack](https://pypi.org/project/dlpack/)
 * [pytorch for ROCm](https://pytorch.org/get-started/locally/)
 * [Python HIP](https://rocm.docs.amd.com/projects/hip-python/en/latest/user_guide/0_install.html)

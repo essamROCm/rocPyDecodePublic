@@ -88,7 +88,7 @@ The following is the complete list of parameters for ``decoder()``. Only ``codec
 
 After instantiating the demuxer and the decoder, verify that the codec is supported using ``IsCodecSupported()``. 
 
-From the |videodecode|_ example:
+From the ``videodecode.py`` example:
 
 .. code:: python
 
@@ -190,7 +190,4 @@ From the ``videodecode.py`` example:
 
 Decoder resources are destroyed when the Python class object is released.
 
-The rocPyDecode samples are available from the `videoDecode project <https://github.com/ROCm/rocPyDecode/tree/develop/videoDecode/samples>`_.
-
-.. |videodecode| replace:: ``videodecode.py``
-.. _videodecode: https://github.com/ROCm/rocPyDecode/blob/develop/videoDecode/samples/rocdecode/videodecode.py
+The rocPyDecode samples are available in ``samples/rocdecode``.

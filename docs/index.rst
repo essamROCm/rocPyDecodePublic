@@ -6,12 +6,12 @@
 rocPyDecode documentation
 ********************************************************************
 
-rocPyDecode is an umbrella project for two independent Python binding
-components: ``videoDecode`` for the
+rocPyDecode contains two Python binding components: ``videoDecode`` for the
 `rocDecode <https://rocm.docs.amd.com/projects/rocDecode/en/latest/>`_ APIs and
 ``jpegDecode`` for the
-`rocJPEG <https://rocm.docs.amd.com/projects/rocJPEG/en/latest/>`_ APIs. You can
-build either component independently or build both from the repository root.
+`rocJPEG <https://rocm.docs.amd.com/projects/rocJPEG/en/latest/>`_ APIs. Each
+component supports a standalone build, and the repository root builds both by
+default.
 
 The rocPyDecode public repository is located at `https://github.com/ROCm/rocPyDecode <https://github.com/ROCm/rocPyDecode>`_.
 

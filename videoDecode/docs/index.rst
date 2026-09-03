@@ -1,8 +1,8 @@
 rocPyVideoDecode documentation
 ==============================
 
-``videoDecode`` provides Python bindings for rocDecode and can be configured,
-built, installed, and tested independently of the JPEG component.
+``videoDecode`` provides Python bindings for rocDecode and supports standalone
+configuration, build, installation, and testing.
 
 .. toctree::
    :maxdepth: 2

@@ -1,12 +1,12 @@
 .. meta::
   :description: rocPyJpegDecode API documentation
-  :keywords: rocPyJpegDecode, rocDecode, rocJPEG, ROCm, API, documentation, video, decode, decoding, acceleration
+  :keywords: rocPyJpegDecode, rocJPEG, ROCm, API, documentation, JPEG, image, decode, acceleration
 
 *********************************
 rocPyJpegDecode Python API
 *********************************
 
-The rocPyJpegDecode API is available in the rocPyDecode GitHub repository under the `jpegDecode/pyRocJpegDecode <https://github.com/ROCm/rocPyDecode/tree/develop/jpegDecode/pyRocJpegDecode>`_ directory.
+The rocPyJpegDecode API is available in the ``pyRocJpegDecode`` directory.
 
 The following rocPyJpegDecode API calls are used to decode a JPEG image. 
 

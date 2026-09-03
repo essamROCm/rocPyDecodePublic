@@ -1,8 +1,8 @@
 rocPyJpegDecode documentation
 =============================
 
-``jpegDecode`` provides Python bindings for rocJPEG and can be configured,
-built, installed, and tested independently of the video component.
+``jpegDecode`` provides Python bindings for rocJPEG and supports standalone
+configuration, build, installation, and testing.
 
 .. toctree::
    :maxdepth: 2

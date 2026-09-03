@@ -18,6 +18,6 @@ Configure, build, install, and test both components from the repository root:
 
 ``BUILD_VIDEO_DECODE`` and ``BUILD_JPEG_DECODE`` are enabled by default. Set
 either option to ``OFF`` to omit that component. The same command sequence can
-be run from ``videoDecode`` or ``jpegDecode`` to build a child independently.
+be run from ``videoDecode`` or ``jpegDecode`` for a standalone component build.
 
 Set ``ROCM_PATH`` when ROCm is installed somewhere other than ``/opt/rocm``.
