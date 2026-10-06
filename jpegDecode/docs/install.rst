@@ -142,7 +142,7 @@ Test an installed package
 
 Packages built with ``BUILD_TESTING=ON`` (the default) include an independent
 CTest setup. It needs CMake 3.20 or newer, Python matching the installed extension,
-compatible ROCm runtime libraries, a supported GPU, and JPEG *.jpg fixtures.
+compatible ROCm runtime libraries, a supported GPU, and JPEG ``*.jpg`` fixtures.
 No source checkout, compiler, or Python development headers are required.
 Keep the SDK runtime library path from the setup above.
 
