@@ -48,10 +48,6 @@ class decodercpu:
             raise ValueError("Invalid crop rectangle")
         self._av = require_av()
         self._codec = self._av.CodecContext.create(self._decoder_name(codec), "r")
-        # Decode slices of one frame on CPU threads where the codec supports it.
-        # Unlike FRAME threading, this adds no inter-frame buffering delay;
-        # codec reordering (for example, B-frames) can still delay output.
-        self._codec.thread_type = "SLICE"
         self._device, self._memory, self._clock = device_id, mem_type, clk_rate
         self._frames = deque()
         self._surface = None
