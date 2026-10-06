@@ -1,6 +1,68 @@
-set(ROCPYVIDEO_TEST_PYTHONPATH
-    "${ROCPYVIDEO_OUTPUT_DIR}/lib:${ROCPYVIDEO_OUTPUT_DIR}:$ENV{PYTHONPATH}")
-set(ROCPYVIDEO_MEDIA_DIR "${ROCM_PATH}/share/rocdecode/video")
+cmake_minimum_required(VERSION 3.18)
+
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    project(rocpydecodeInstalledTests LANGUAGES NONE)
+    enable_testing()
+    find_package(Python3 3.9 REQUIRED COMPONENTS Interpreter)
+
+    if(NOT DEFINED ROCM_PATH)
+        if(DEFINED ENV{ROCM_PATH})
+            set(ROCM_PATH "$ENV{ROCM_PATH}")
+        else()
+            set(ROCM_PATH /opt/rocm)
+        endif()
+    endif()
+    set(ROCM_PATH "${ROCM_PATH}" CACHE PATH "ROCm runtime and test media prefix")
+
+    # This relative path is filled in when installing this CMakeLists.txt.
+    get_filename_component(_bindings_dir
+        "${CMAKE_CURRENT_SOURCE_DIR}/@ROCPYVIDEO_TEST_LIBDIR@" ABSOLUTE)
+    set(ROCPYVIDEO_TEST_PYTHONPATH "${_bindings_dir}" CACHE PATH
+        "Directory containing the installed rocpydecode extension and Python wrapper")
+    execute_process(
+        COMMAND "${CMAKE_COMMAND}" -E env
+            "PYTHONPATH=${ROCPYVIDEO_TEST_PYTHONPATH}" "${Python3_EXECUTABLE}" -c
+            [=[import pathlib, sys
+import rocpydecode as native
+import pyRocVideoDecode as wrapper
+expected = pathlib.Path(sys.argv[1]).resolve()
+if (pathlib.Path(native.__file__).resolve().parent != expected or
+        pathlib.Path(wrapper.__file__).resolve().parent.parent != expected):
+    raise ImportError("Bindings were imported from outside the selected package")
+print(int(hasattr(native, "PyRocVideoDecoderCpu")))]=]
+            "${ROCPYVIDEO_TEST_PYTHONPATH}"
+        RESULT_VARIABLE _import_status OUTPUT_VARIABLE _import_output
+        ERROR_VARIABLE _import_error OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(NOT _import_status EQUAL 0)
+        message(FATAL_ERROR
+            "Cannot import the installed rocpydecode bindings from ${ROCPYVIDEO_TEST_PYTHONPATH} "
+            "with ${Python3_EXECUTABLE}. Select a matching Python3_EXECUTABLE and ensure "
+            "the package and ROCm runtime libraries are on LD_LIBRARY_PATH.\n${_import_error}")
+    endif()
+    set(ROCPYVIDEO_ENABLE_HOST "${_import_output}")
+else()
+    set(ROCPYVIDEO_TEST_PYTHONPATH
+        "${ROCPYVIDEO_OUTPUT_DIR}/lib:${ROCPYVIDEO_OUTPUT_DIR}:$ENV{PYTHONPATH}")
+    # Keep the installed suite relocatable, including custom lib/data directories.
+    file(RELATIVE_PATH ROCPYVIDEO_TEST_LIBDIR
+        "${CMAKE_INSTALL_FULL_DATADIR}/rocpydecode/tests" "${CMAKE_INSTALL_FULL_LIBDIR}")
+    configure_file(CMakeLists.txt installed/CMakeLists.txt @ONLY)
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/installed/CMakeLists.txt"
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/rocpydecode/tests")
+    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/" DESTINATION
+        "${CMAKE_INSTALL_DATADIR}/rocpydecode/tests"
+        FILES_MATCHING PATTERN "*.py")
+endif()
+set(ROCPYVIDEO_MEDIA_DIR "${ROCM_PATH}/share/rocdecode/video" CACHE PATH
+    "Directory containing rocpydecode test media")
+
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    foreach(_media IN ITEMS AMD_driving_virtual_20-H264.264 AMD_driving_virtual_20-H265.265)
+        if(NOT EXISTS "${ROCPYVIDEO_MEDIA_DIR}/${_media}")
+            message(FATAL_ERROR "Missing ${ROCPYVIDEO_MEDIA_DIR}/${_media}. Install the rocDecode test media or set ROCPYVIDEO_MEDIA_DIR.")
+        endif()
+    endforeach()
+endif()
 
 function(rocpyvideo_add_test test_name)
     add_test(NAME ${test_name} COMMAND ${ARGN})
@@ -54,7 +116,3 @@ if(ROCPYVIDEO_ENABLE_HOST AND EXISTS "${_rocpyvideo_api_media}")
         message(STATUS "NumPy unavailable; skipping optional CPU API smoke test")
     endif()
 endif()
-
-install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/" DESTINATION
-    "${CMAKE_INSTALL_DATADIR}/rocpydecode/tests"
-    FILES_MATCHING PATTERN "*.py")

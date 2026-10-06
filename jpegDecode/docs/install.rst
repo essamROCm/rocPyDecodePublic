@@ -137,6 +137,31 @@ assets are present. A passing run with fewer tests does not establish full
 runtime coverage. Install the missing media and rerun CMake before CTest.
 Check that the JPEG test processes images and reports zero bad files.
 
+Test an installed package
+-------------------------
+
+Packages built with ``BUILD_TESTING=ON`` (the default) include an independent
+CTest setup. It needs CMake 3.20 or newer, Python matching the installed extension,
+compatible ROCm runtime libraries, a supported GPU, and JPEG *.jpg fixtures.
+No source checkout, compiler, or Python development headers are required.
+Keep the SDK runtime library path from the setup above.
+
+.. code-block:: shell
+
+   prefix=/path/to/installed/package
+   export LD_LIBRARY_PATH="$prefix/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+   cmake -S "$prefix/share/rocpyjpegdecode/tests" -B installed-tests \
+       -DPython3_EXECUTABLE="$(command -v python3.12)" -DROCM_PATH="$ROCM_PATH"
+   ctest --test-dir installed-tests --output-on-failure --no-tests=error
+
+
+CMake uses the installed bindings and fails configuration if they cannot be
+imported or the required test media is missing. Set ``ROCPYJPEG_MEDIA_DIR``
+to use media outside the SDK prefix. Adjust ``lib`` and ``share`` in the commands
+for custom installation directories; the test setup retains their relative layout
+when the package is moved. Use a fresh test build directory after moving a package
+or changing Python or SDKs.
+
 Use the installed bindings
 --------------------------
 

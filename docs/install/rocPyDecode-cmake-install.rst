@@ -84,6 +84,41 @@ Check that each raw-video test reports a positive decoded-frame count; zero
 frames is a failure.
 Check that the JPEG test processes images and reports zero bad files.
 
+Test an installed package
+-------------------------
+
+Packages built with ``BUILD_TESTING=ON`` (the default) install a CTest setup for
+each component. No source checkout, compiler, or Python development headers
+are needed to run these installed tests. Use CMake 3.20 or newer, a Python
+interpreter matching the installed extension, compatible ROCm runtime libraries,
+a supported GPU, and the SDK test media described above.
+
+Set ``prefix`` to the installed or extracted package directory. Keep the selected
+SDK's runtime library path from the setup above and add the package library directory:
+
+.. code-block:: shell
+
+   prefix=/path/to/installed/package
+   export LD_LIBRARY_PATH="$prefix/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+   cmake -S "$prefix/share/rocpydecode/tests" -B video-tests \
+       -DPython3_EXECUTABLE="$(command -v python3.12)" -DROCM_PATH="$ROCM_PATH"
+   ctest --test-dir video-tests --output-on-failure --no-tests=error
+
+   cmake -S "$prefix/share/rocpyjpegdecode/tests" -B jpeg-tests \
+       -DPython3_EXECUTABLE="$(command -v python3.12)" -DROCM_PATH="$ROCM_PATH"
+   ctest --test-dir jpeg-tests --output-on-failure --no-tests=error
+
+Run only the commands for installed components. CMake sets the test Python path
+to that package's bindings. Adjust ``lib`` and ``share`` in the commands if the
+package uses custom installation directories; the test setup retains their
+relative layout when the package is moved.
+
+Installed configuration fails if the bindings cannot be imported, either required
+raw video is missing, or no JPEG ``*.jpg`` fixtures are found. To use media outside
+the SDK prefix, set ``ROCPYVIDEO_MEDIA_DIR`` or ``ROCPYJPEG_MEDIA_DIR`` when configuring.
+Use a fresh test build directory after moving a package or changing Python or SDKs.
+The source-configuration regression suite remains a source-build test.
+
 Use the installed bindings
 --------------------------
 
