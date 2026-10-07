@@ -27,7 +27,7 @@ _NAMES = {"mpeg1video": "MPEG1", "mpeg2video": "MPEG2", "mpeg4": "MPEG4",
 _ALIASES = {"h265": "hevc", "mpeg1": "mpeg1video", "mpeg2": "mpeg2video"}
 # Stable numeric codec IDs exposed by demuxer.GetCodecId().
 _CODEC_IDS = {1: "mpeg1video", 2: "mpeg2video", 7: "mjpeg", 12: "mpeg4",
-              27: "h264", 139: "vp8", 167: "vp9", 173: "hevc", 225: "av1"}
+              27: "h264", 139: "vp8", 167: "vp9", 173: "hevc", 226: "av1"}
 
 def require_av():
     try:
