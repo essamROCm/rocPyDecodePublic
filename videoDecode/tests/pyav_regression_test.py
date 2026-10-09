@@ -314,9 +314,12 @@ def check_seeking(path, bframes):
                     assert actual.frame_pts == int(pts * time_base * 1000)
                     digest = hashlib.sha256(ctypes.string_at(actual.bitstream_adrs, actual.bitstream_size)).digest()
                     assert digest == packets[index][2]
-                    # Lookahead must not consume packets belonging to subsequent reads.
+                    # Retain all packets from the first candidate onward, including
+                    # larger PTS values encountered before the selected packet.
+                    first = min(i for _, i in candidates)
                     assert packet_digest(mux) == [(digest, int(pts * time_base * 1000))
-                                                 for pts, _, digest in packets[index + 1:]]
+                                                 for i, (pts, _, digest) in enumerate(packets)
+                                                 if i >= first and i != index]
             for value in (0, 11, 12, len(frames) - 1, 0):
                 target = int(Fraction(value, 1) / rate / time_base) + start
                 expected = max(pts for pts, key, _ in packets if key and pts <= target)
@@ -348,18 +351,32 @@ def check_seeking(path, bframes):
                 assert "presentation timestamps" in str(error)
             else:
                 raise AssertionError("Exact seeking accepted missing PTS")
-    # PTS-only streams must retain lookahead even when no DTS bounds are available.
-    with demuxer(path) as mux:
-        timestamps = [start + int(Fraction(n, 1) / time_base) for n in (4, 2, 3)]
-        packets = []
-        for pts in timestamps:
-            packet = av.Packet(b"packet")
-            packet.pts, packet.time_base = pts, time_base
-            packets.append(packet)
-        with patch.object(mux, "_next_packet", side_effect=[*packets, None]):
-            actual = mux.SeekFrame(1, 0, 1)
-        assert actual._av_packet is packets[1]
-        assert list(mux._pending) == packets[2:]
+    # Replacing a seek candidate must not lose it or any intervening lookahead.
+    # Exercise EOF, an exact match, repeated replacements and equal timestamps,
+    # both with DTS bounds and with PTS-only metadata.
+    for timestamps in ((4, 2, 3), (4, 3, 2, 5, 6), (4, 0, 1, 3), (4, 2, 2, 3)):
+        for with_dts in (False, True):
+            with demuxer(path) as mux:
+                packets = []
+                for index, value in enumerate(timestamps):
+                    packet = av.Packet(bytes([index]))
+                    packet.pts = start + int(Fraction(value, 1) / time_base)
+                    packet.time_base = time_base
+                    if with_dts:
+                        packet.dts = start + int(Fraction(index - 1, 1) / time_base)
+                    packets.append(packet)
+                # Keep the real queue logic, substituting only the container input.
+                source = SimpleNamespace(seek=mux._container.seek, demux=lambda stream: (p for p in packets))
+                with patch.object(mux, "_container", source), patch.object(mux, "_filter", None):
+                    actual = mux.SeekFrame(1, 0, 1)
+                    selected = min((p for p in packets if p.pts >= start + 1 / time_base),
+                                   key=lambda p: p.pts)
+                    assert actual._av_packet is selected
+                    remaining = []
+                    while not (packet := mux.DemuxFrame()).end_of_stream:
+                        remaining.append(packet._av_packet)
+                    assert remaining == [p for p in packets if p is not selected]
+                    assert mux.DemuxFrame().end_of_stream
     print("SEEK_PASS", path.name)
 
 

@@ -159,22 +159,23 @@ class demuxer:
             packet = self._next_packet()
             if seek_mode == 0:
                 selected = None
-                following = deque()
+                buffered = deque()
                 while packet is not None:
                     if packet.pts is None:
                         raise ValueError("Exact packet seeking requires presentation timestamps")
+                    if selected is not None or packet.pts >= target:
+                        buffered.append(packet)
                     if packet.pts >= target and (selected is None or packet.pts < selected.pts):
                         selected = packet
-                        following.clear()
-                    elif selected is not None:
-                        following.append(packet)
                     # PTS chooses the result. Monotonic DTS only bounds lookahead:
                     # later packets cannot present before their decoding timestamps.
                     if selected is not None and (selected.pts == target or
                             (packet.dts is not None and packet.dts >= selected.pts)):
                         break
                     packet = self._next_packet()
-                self._pending.extendleft(reversed(following))
+                # A closer PTS match must not discard earlier lookahead packets.
+                # Return the selected packet once and retain the others in input order.
+                self._pending.extendleft(p for p in reversed(buffered) if p is not selected)
                 packet = selected
             return self._wrap(packet)
 
