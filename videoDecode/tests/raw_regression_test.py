@@ -72,7 +72,8 @@ def codec_translation():
                 assert GetRocDecCodecID(value) == expected, value
         for alias, name in (("h265", "hevc"), ("mpeg1", "mpeg1video"), ("mpeg2", "mpeg2video")):
             assert GetRocDecCodecID(alias) == GetRocDecCodecID(name)
-        for value in (-1, 0, 2**31, "unknown"):
+        # ID 226 is bitpacked, not AV1, and must remain unsupported.
+        for value in (-1, 0, 226, 2**31, "unknown"):
             try:
                 GetRocDecCodecID(value)
             except ValueError:
